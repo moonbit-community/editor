@@ -33,7 +33,7 @@ priv struct ModelMarkerRegistration {
 /// secondary URI index preserves source-compatible URI queries while allowing
 /// distinct live models to share one URI.
 pub struct MarkerDecorationsService {
-  priv markers : MarkerService
+  priv markers : MarkerServiceHandle
   priv model_registrations : Map[Int, ModelMarkerRegistration]
   priv model_ids_by_uri : Map[String, Array[Int]]
   priv blocked_model_ids : Map[Int, Unit]
@@ -48,7 +48,7 @@ pub struct MarkerDecorationsService {
 /// Creates a decoration facade over the marker store and subscribes to its change
 /// event (`markerDecorationsService.ts:43`).
 pub fn MarkerDecorationsService::new(
-  markers : MarkerService,
+  markers : MarkerServiceHandle,
 ) -> MarkerDecorationsService {
   let service : MarkerDecorationsService = {
     markers,
@@ -83,7 +83,7 @@ pub fn MarkerDecorationsService::on_did_change_marker_decorations(
 /// Releases service-owned subscriptions and per-model owners (`dispose`,
 /// `markerDecorationsService.ts:46`). Ingress is blocked first; model watches
 /// and owners are then finalized exactly once; indexes are cleared last. The
-/// injected `MarkerService` and its host-owned diagnostics remain untouched.
+/// injected marker-store handle and its host-owned diagnostics remain untouched.
 pub fn MarkerDecorationsService::dispose(
   self : MarkerDecorationsService,
 ) -> Unit {

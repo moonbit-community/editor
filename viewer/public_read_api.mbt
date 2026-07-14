@@ -18,21 +18,6 @@
 let max_safe_column : Int = 2147483647
 
 ///|
-/// The live contribution instance for an id, Monaco's
-/// `ICodeEditor.getContribution` (`codeEditorWidget.getContribution` →
-/// `this._contributions.get(id)`). `None` after `dispose` or for an
-/// unregistered id.
-pub fn Viewer::get_contribution(
-  self : Viewer,
-  id : String,
-) -> EditorContribution? {
-  match self.contributions.get(id) {
-    Some(entry) => Some({ id: entry.id, dispose: () => entry.dispose(self) })
-    None => None
-  }
-}
-
-///|
 /// Full document text, Monaco's `CodeEditorWidget.getValue` (`cew:472`). No
 /// model → `''`. The `{preserveBOM, lineEnding}` option is dropped: the snapshot
 /// stores fixed-LF text, retains U+FEFF as ordinary content, and exposes no
@@ -67,7 +52,7 @@ pub fn Viewer::get_visible_ranges(self : Viewer) -> Array[@base_common.Range] {
 /// `linesAround = max(20, round(height / lineHeight))`, the completely-visible
 /// view range grown by `linesAround` and clamped to `[1, lineCount]`, then split.
 /// No model → `[]`.
-pub fn Viewer::get_visible_ranges_plus_viewport_above_below(
+fn Viewer::get_visible_ranges_plus_viewport_above_below(
   self : Viewer,
 ) -> Array[@base_common.Range] {
   guard self.get_view_model() is Some(view_model) else { return [] }
@@ -130,12 +115,11 @@ pub fn Viewer::get_top_for_position(
 pub fn Viewer::get_bottom_for_line_number(
   self : Viewer,
   line_number : Int,
-  include_view_zones? : Bool = false,
 ) -> Double {
   self.get_vertical_offset_after_position(
     line_number,
     max_safe_column,
-    include_view_zones~,
+    include_view_zones=false,
   )
 }
 
@@ -186,7 +170,7 @@ pub fn Viewer::get_visible_column_from_position(
 ///|
 /// 1-based "Col" value for a status bar (tabs snap to tab stops, code points),
 /// Monaco's `getStatusbarColumn` (`cew:652`). No model → the raw input column.
-pub fn Viewer::get_statusbar_column(
+fn Viewer::get_statusbar_column(
   self : Viewer,
   position : @base_common.Position,
 ) -> Int {
@@ -199,6 +183,17 @@ pub fn Viewer::get_statusbar_column(
     tab_size,
   )
 }
+
+///|
+/// Package-private geometry helpers are exercised only by root white-box
+/// tests; anchor them in the ordinary library build without reopening the
+/// public facade.
+let _public_read_geometry_test_seams_anchor : Unit = ignore(
+  (
+    Viewer::get_visible_ranges_plus_viewport_above_below,
+    Viewer::get_statusbar_column,
+  ),
+)
 
 ///|
 /// The primary cursor's model position, Monaco's `getPosition` (`cew:663`) →

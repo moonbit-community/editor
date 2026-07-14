@@ -358,7 +358,7 @@ impl @syntax.LineTokenizer for FirstCharKeywordToy with fn tokenize_line(
 }
 
 ///|
-/// Both `ViewerViewModelBuiltEvent.token_count` producer paths are passive:
+/// Both build-observation `token_count` producer paths are passive:
 /// the headless initial-build telemetry reads the default store without
 /// lexing, then a stabilized visible refresh lexes once and its token-change
 /// telemetry observes that stored result without another lexer call.
@@ -410,7 +410,7 @@ test "tokenizer registration stays passive until explicit demand" {
     calls,
   })
   // Registry change emits view/outgoing events, but neither they nor the
-  // `ViewerViewModelBuiltEvent.token_count` telemetry invoke the lexer.
+  // Build-observation `token_count` telemetry must not invoke the lexer.
   assert_eq(calls.val, 0)
   assert_eq(model.tokenization.token_count(), 2)
   assert_eq(calls.val, 0)

@@ -27,10 +27,12 @@ fn run_agent_feedback_test() -> Unit {
   )
   match mount_host() {
     Some((host, event_log)) => {
-      let services = @viewer.ViewerServices::new()
-      // Consume the feature service through its contrib package directly —
-      // the workbench-tier import class.
-      let feedback : @feedback_contrib.AgentFeedbackService = services.agent_feedback
+      // The page owns the concrete store for the lifetime of this interactive
+      // fixture. Viewer receives only its narrowed callback capability.
+      let feedback = @feedback_contrib.AgentFeedbackService::new()
+      let services = @viewer.ViewerServices::new(
+        agent_feedback=feedback.agent_feedback_handle(),
+      )
       let added = Ref(0)
       let replies = Ref(0)
       let submitted = Ref(0)
@@ -98,7 +100,7 @@ fn seed_item(
   uri : @base_common.Uri,
   line : Int,
   text : String,
-) -> @feedback_contrib.AgentFeedback {
+) -> @agent_feedback_api.AgentFeedback {
   {
     id,
     text,

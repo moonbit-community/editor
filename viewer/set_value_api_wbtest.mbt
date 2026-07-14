@@ -60,10 +60,10 @@ test "set_value resets the cursor to the origin" {
 
 ///|
 test "quick diff re-renders its gutter decorations after a flush (Track E)" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let viewer = Viewer::Viewer(services=backings.services)
   let model = test_model("alpha\nbravo")
-  services.quick_diff.set_original_content(model.uri, Some("alpha\nbravo"))
+  backings.quick_diff.set_original_content(model.uri, Some("alpha\nbravo"))
   viewer.set_model(Some(model))
   // identical content: no dirty-diff decorations yet
   assert_eq(model.get_all_decorations().length(), 0)
@@ -72,16 +72,17 @@ test "quick diff re-renders its gutter decorations after a flush (Track E)" {
   // against the new snapshot
   assert_eq(model.get_all_decorations().length(), 1)
   viewer.dispose()
+  backings.dispose()
 }
 
 ///|
 test "marker decorations re-seed after a flush (Track E)" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let viewer = Viewer::Viewer(services=backings.services)
   let model = test_model("alpha\nbravo")
   // Host diagnostics may predate attachment. Acquiring the model seeds them;
   // ordinary detach and set_value never clear the host-owned store.
-  services.markers.change_one("owner", model.uri, [
+  backings.markers.change_one("owner", model.uri, [
     @markers.MarkerData::new(
       severity=Error,
       message="broken",
@@ -98,4 +99,5 @@ test "marker decorations re-seed after a flush (Track E)" {
   // Viewer content delivery does not acquire another lease.
   assert_eq(model.get_all_decorations().length(), 1)
   viewer.dispose()
+  backings.dispose()
 }

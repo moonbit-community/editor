@@ -115,13 +115,17 @@ fn run_render_invalidation_test() -> Unit {
     "render-invalidation-rev-1",
     render_invalidation_source(),
   )
-  let services = @viewer.ViewerServices::new(
-    languages=@languages.Languages::new(),
-  )
-  services.languages.register_hover_provider(LanguageId("plaintext"), RenderInvalidationHoverProvider::{
+  let languages = @languages.Languages::new()
+  languages.register_hover_provider(LanguageId("plaintext"), RenderInvalidationHoverProvider::{
 
   })
   |> ignore
+  let log_service = @log.LogService::new()
+  let log_handle = log_service.log_handle()
+  let services = @viewer.ViewerServices::new(
+    languages=languages.language_handle(log_handle),
+    log_service=log_handle,
+  )
   let viewer = @viewer.Viewer::create(
     host,
     services~,
@@ -171,97 +175,85 @@ fn run_render_invalidation_test() -> Unit {
     mode => {
       match mode {
         "none" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_whitespace: None,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_whitespace(None),
+          )
         "boundary" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_whitespace: Boundary,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_whitespace(Boundary),
+          )
         "selection" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_whitespace: Selection,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_whitespace(Selection),
+          )
         "trailing" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_whitespace: Trailing,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_whitespace(Trailing),
+          )
         "all" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_whitespace: All,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_whitespace(All),
+          )
         _ => ()
       }
     },
     enabled => {
-      viewer.update_options({
-        ..viewer.get_options(),
-        render_control_characters: enabled,
-      })
+      viewer.update_options(
+        viewer.get_options().with_render_control_characters(enabled),
+      )
     },
     mode => {
       match mode {
         "none" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_line_highlight: None,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_line_highlight(None),
+          )
         "gutter" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_line_highlight: Gutter,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_line_highlight(Gutter),
+          )
         "line" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_line_highlight: Line,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_line_highlight(Line),
+          )
         "all" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_line_highlight: All,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_line_highlight(All),
+          )
         _ => ()
       }
     },
     enabled => {
-      viewer.update_options({
-        ..viewer.get_options(),
-        render_line_highlight_only_when_focus: enabled,
-      })
+      viewer.update_options(
+        viewer.get_options().with_render_line_highlight_only_when_focus(enabled),
+      )
     },
     mode => {
       match mode {
         "editable" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_validation_decorations: Editable,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_validation_decorations(Editable),
+          )
         "on" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_validation_decorations: On,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_validation_decorations(On),
+          )
         "off" =>
-          viewer.update_options({
-            ..viewer.get_options(),
-            render_validation_decorations: Off,
-          })
+          viewer.update_options(
+            viewer.get_options().with_render_validation_decorations(Off),
+          )
         _ => ()
       }
     },
-    tab_size => viewer.update_options({ ..viewer.get_options(), tab_size, }),
+    tab_size => {
+      viewer.update_options(viewer.get_options().with_tab_size(tab_size))
+    },
     enabled => {
-      viewer.update_options({ ..viewer.get_options(), soft_wrap: enabled })
+      viewer.update_options(viewer.get_options().with_soft_wrap(enabled))
     },
     () => {
       let original = viewer.get_options()
-      viewer.update_options({ ..original, render_whitespace: All })
+      viewer.update_options(original.with_render_whitespace(All))
       viewer.update_options(original)
     },
     (line, column) => {
@@ -306,18 +298,18 @@ fn run_render_invalidation_test() -> Unit {
     () => render_invalidation_position_json(viewer),
     () => viewer.focus(),
     () => {
-      viewer.update_options({
-        ..viewer.get_options(),
-        line_numbers_min_chars: 4,
-        line_decorations_width: 17,
-      })
+      viewer.update_options(
+        viewer
+        .get_options()
+        .with_line_numbers_min_chars(4)
+        .with_line_decorations_width(17),
+      )
     },
     () => render_invalidation_layout_json(viewer),
     min_chars => {
-      viewer.update_options({
-        ..viewer.get_options(),
-        line_numbers_min_chars: min_chars,
-      })
+      viewer.update_options(
+        viewer.get_options().with_line_numbers_min_chars(min_chars),
+      )
     },
     line_count => {
       let lines : Array[String] = []
@@ -351,7 +343,7 @@ fn run_render_invalidation_test() -> Unit {
         None => ()
       }
       token_registration.val = Some(
-        services.languages.set_tokens_provider("plaintext", RenderInvalidationTokenizer::{
+        languages.set_tokens_provider("plaintext", RenderInvalidationTokenizer::{
 
         }),
       )

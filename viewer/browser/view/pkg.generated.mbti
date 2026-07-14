@@ -142,7 +142,7 @@ pub fn View::emit_view_event(Self, ViewEvent) -> Unit
 pub fn View::emit_view_zones_changed_then(Self, () -> Unit) -> Unit
 pub fn View::end_view_event_batch(Self) -> Unit
 pub fn View::install_current_line_configuration_reader(Self, () -> (@editor_api.RenderLineHighlight, Bool, Bool, Double, Double)) -> Unit
-pub fn View::install_view_zones_context(Self, @view_model.ViewModel, @log.LogService, () -> (Int, Double, Double), () -> Unit) -> Unit
+pub fn View::install_view_zones_context(Self, @view_model.ViewModel, @log.LogHandle, () -> (Int, Double, Double), () -> Unit) -> Unit
 pub fn View::is_line_rendered(Self, Int) -> Bool
 pub fn View::line_width(Self, Int, Int) -> Double
 pub fn View::measure_line_selection(Self, Int, Int, Int, keep_empty? : Bool) -> Array[(Double, Double)]

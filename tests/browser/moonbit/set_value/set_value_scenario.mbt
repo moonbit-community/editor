@@ -43,7 +43,12 @@ fn run_set_value_test() -> Unit {
   host.set_attribute("class", "viewer-host")
   host.set_attribute("style", "height:200px;width:400px;")
   app.append_child(host.as_node())
-  let services = @viewer.ViewerServices::new()
+  // The page owns the mutable baseline store. The Viewer bundle receives a
+  // borrowed handle and remains live with the fixture until document teardown.
+  let quick_diff = @quick_diff.QuickDiffService::new()
+  let services = @viewer.ViewerServices::new(
+    quick_diff=quick_diff.quick_diff_handle(),
+  )
   let original = set_value_document("alpha_document_marker")
   let model = @model.TextModel(
     try! @base_common.Uri::from(
@@ -59,7 +64,7 @@ fn run_set_value_test() -> Unit {
   )
   // The quick-diff baseline equals the initial content: no gutter pieces
   // until set_value changes the modified side.
-  services.quick_diff.set_original_content(model.uri, Some(original))
+  quick_diff.set_original_content(model.uri, Some(original))
   let viewer = @viewer.Viewer::create(host, services~)
   viewer.set_model(Some(model))
   wait_for_text(ctx, "alpha_document_marker", 80, () => {

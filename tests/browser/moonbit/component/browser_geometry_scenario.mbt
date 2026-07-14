@@ -315,9 +315,15 @@ fn BrowserGeometryFixture::new(
 
   })
   |> ignore
+  let log_service = @log.LogService::new()
+  let log_handle = log_service.log_handle()
+  let services = @viewer.ViewerServices::new(
+    languages=languages.language_handle(log_handle),
+    log_service=log_handle,
+  )
   let viewer = @viewer.Viewer::create(
     host,
-    services=@viewer.ViewerServices::new(languages~),
+    services~,
     options=ViewerOptions(
       soft_wrap=false,
       tab_size=4,
@@ -334,7 +340,7 @@ fn BrowserGeometryFixture::new(
     ),
   )
   let view_line_count = Ref(0)
-  @viewer.debug_on_did_render_model(viewer, event => {
+  @viewer_testing.on_did_render_model(viewer.get_id(), event => {
     view_line_count.val = event.line_count
   })
   |> ignore
@@ -378,7 +384,7 @@ fn BrowserGeometryFixture::set_wrap(
   self : BrowserGeometryFixture,
   enabled : Bool,
 ) -> Unit {
-  self.viewer.update_options({ ..self.viewer.get_options(), soft_wrap: enabled })
+  self.viewer.update_options(self.viewer.get_options().with_soft_wrap(enabled))
 }
 
 ///|
@@ -408,7 +414,7 @@ fn BrowserGeometryFixture::state_json(
   }
   Json::object({
     "name": self.name.to_json(),
-    "softWrap": self.viewer.get_options().soft_wrap.to_json(),
+    "softWrap": self.viewer.get_options().soft_wrap().to_json(),
     "modelLines": self.model.get_line_count().to_json(),
     "viewLines": self.view_line_count.val.to_json(),
     "contentWidth": Json::number(self.viewer.get_content_width()),
@@ -501,7 +507,8 @@ fn run_browser_geometry_test() -> Unit {
       (name, wide) => fixture(name).set_injected_text(wide),
       (name, enabled) => fixture(name).set_hidden_widest(enabled),
       (name, hidden) => {
-        fixture(name).viewer.set_hidden_areas(
+        @viewer_testing.set_hidden_areas(
+          fixture(name).viewer.get_id(),
           if hidden {
             [Range(3, 1, 3, 1)]
           } else {
@@ -509,6 +516,7 @@ fn run_browser_geometry_test() -> Unit {
           },
           source="browser-geometry",
         )
+        |> ignore
       },
       () => iframe_geometry.run_matrix(),
     )

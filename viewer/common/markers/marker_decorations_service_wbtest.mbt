@@ -62,7 +62,7 @@ test "MarkerDecorations diff preserves duplicate multiplicity" {
 ///|
 test "MarkerDecorationsService fires change event and honors suppression" {
   let markers = MarkerService::new()
-  let svc = MarkerDecorationsService::new(markers)
+  let svc = MarkerDecorationsService::new(markers.marker_service_handle())
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -91,7 +91,7 @@ test "MarkerDecorationsService fires change event and honors suppression" {
 ///|
 test "MarkerDecorationsService take caps at 500" {
   let markers = MarkerService::new()
-  let svc = MarkerDecorationsService::new(markers)
+  let svc = MarkerDecorationsService::new(markers.marker_service_handle())
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",

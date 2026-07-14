@@ -6,7 +6,7 @@
 // Deviations, following the `GuidesTextModelPart` precedent: `tab_size` is a
 // parameter defaulting to 4 rather than `model.getOptions().tabSize` (the
 // viewer's `TextModel` carries no editor options), and the provider takes
-// the `Languages` registry in place of `ILanguageConfigurationService`.
+// a `LanguageHandle` in place of `ILanguageConfigurationService`.
 
 ///|
 /// `MAX_FOLDING_REGIONS_FOR_INDENT_DEFAULT` (`indentRangeProvider.ts:14`).
@@ -21,7 +21,7 @@ pub const ID_INDENT_PROVIDER : String = "indent"
 /// (`indentRangeProvider.ts:18`).
 pub struct IndentRangeProvider {
   priv editor_model : @model.TextModel
-  priv language_configuration_service : @languages.Languages
+  priv language_configuration_service : @languages.LanguageHandle
   priv folding_ranges_limit : FoldingLimitReporter
   priv tab_size : Int
 }
@@ -29,7 +29,7 @@ pub struct IndentRangeProvider {
 ///|
 pub fn IndentRangeProvider::new(
   editor_model : @model.TextModel,
-  language_configuration_service : @languages.Languages,
+  language_configuration_service : @languages.LanguageHandle,
   folding_ranges_limit : FoldingLimitReporter,
   tab_size? : Int = 4,
 ) -> IndentRangeProvider {

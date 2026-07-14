@@ -43,9 +43,14 @@ fn run_quick_diff_test() -> Unit {
   host.set_attribute("style", "height:300px;width:400px;")
   shell.append_child(host.as_node())
   app.append_child(shell.as_node())
-  let services = @viewer.ViewerServices::new()
+  // Keep the host-owned baseline store concrete; Viewer receives only the
+  // callback capability and never owns or disposes this page-lifetime store.
+  let quick_diff = @quick_diff_service.QuickDiffService::new()
+  let services = @viewer.ViewerServices::new(
+    quick_diff=quick_diff.quick_diff_handle(),
+  )
   let model = quick_diff_fixture_model()
-  services.quick_diff.set_original_content(
+  quick_diff.set_original_content(
     model.uri,
     Some(["alpha", "bravo", "charlie", "delta", "echo"].join("\n")),
   )

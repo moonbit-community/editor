@@ -1,7 +1,6 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/language",
-  "moonbit-community/editor/platform/log",
   "moonbit-community/editor/syntax",
   "moonbit-community/editor/viewer/common" @viewer_common,
   "moonbit-community/editor/viewer/common/model",
@@ -15,5 +14,6 @@ import {
 }
 
 import {
+  "moonbit-community/editor/platform/log",
   "moonbitlang/async",
 } for "wbtest"

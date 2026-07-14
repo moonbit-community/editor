@@ -18,7 +18,7 @@ fn run_render_perf_test() -> Unit {
         host,
         options=ViewerOptions(placeholder="Loading performance fixture..."),
       )
-      @viewer.debug_on_did_render_model(viewer, event => {
+      @viewer_testing.on_did_render_model(viewer.get_id(), event => {
         if event.fresh && event.model.uri.to_string().contains("large") {
           record_sample(
             ctx, viewer_ref, large_text, done, sample_index, sample_start, samples,

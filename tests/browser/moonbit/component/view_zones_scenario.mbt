@@ -88,8 +88,9 @@ fn run_view_zones_test() -> Unit {
     view_zones_source(),
   )
   let memory = @log.MemoryLogger::new()
+  let log_service = @log.LogService::new(level=Trace, logger=memory)
   let services = @viewer.ViewerServices::new(
-    log_service=@log.LogService::new(level=Trace, logger=memory),
+    log_service=log_service.log_handle(),
   )
   let viewer = @viewer.Viewer::create(host, services~)
   let public_zone_events = Ref(0)
@@ -119,7 +120,7 @@ fn run_view_zones_test() -> Unit {
     }
   })
   |> ignore
-  @viewer.debug_on_did_render_model(viewer, _ => {
+  @viewer_testing.on_did_render_model(viewer.get_id(), _ => {
     record_view_zones_order("rendered")
   })
   |> ignore
@@ -397,7 +398,7 @@ fn run_view_zones_test() -> Unit {
         "safeTopCount": safe_top_count.val.to_json(),
         "lineHeightComputedCount": line_height_computed_count.val.to_json(),
         "lineHeightLastComputed": Json::number(line_height_last_computed.val),
-        "lineHeight": Json::number(viewer.get_options().line_height),
+        "lineHeight": Json::number(viewer.get_options().line_height()),
         "offscreenTopCount": offscreen_top_count.val.to_json(),
         "offscreenLastTop": Json::number(offscreen_last_top.val),
         "railSpacerId": rail_spacer_id.val.to_json(),
@@ -540,7 +541,7 @@ fn run_view_zones_test() -> Unit {
     suppress => suppress_zone.suppress_mouse_down = Some(suppress),
     line_height => {
       let options = viewer.get_options()
-      viewer.update_options({ ..options, line_height, })
+      viewer.update_options(options.with_line_height(line_height))
     },
     suppress => primary.suppress_mouse_down = Some(suppress),
     () => {
@@ -553,7 +554,10 @@ fn run_view_zones_test() -> Unit {
       viewer.set_scroll_top(viewer.get_top_for_line_number(1))
     },
     line_count => model.set_value(view_zones_source_with_line_count(line_count)),
-    () => viewer.dispose(),
+    () => {
+      viewer.dispose()
+      services.dispose()
+    },
     () => model.dispose(),
     () => {
       viewer.change_view_zones(accessor => {

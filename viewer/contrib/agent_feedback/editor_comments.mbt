@@ -15,12 +15,12 @@
 pub(all) struct SessionEditorComment {
   id : String
   source_id : String
-  kind : AgentFeedbackKind
+  kind : @agent_feedback_api.AgentFeedbackKind
   resource : @base_common.Uri
   range : @base_common.Range
   text : String
   replies : Array[String]
-  state : AgentFeedbackState
+  state : @agent_feedback_api.AgentFeedbackState
 } derive(Debug)
 
 ///|
@@ -37,7 +37,7 @@ pub fn to_session_editor_comment_id(source_id : String) -> String {
 /// `compare_session_editor_comments`. (The upstream PR-mirror dedup rules vanish with
 /// the PR source.)
 pub fn get_session_editor_comments(
-  items : Array[AgentFeedback],
+  items : Array[@agent_feedback_api.AgentFeedback],
 ) -> Array[SessionEditorComment] {
   let comments : Array[SessionEditorComment] = []
   for item in items {

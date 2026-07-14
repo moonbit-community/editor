@@ -53,3 +53,26 @@ test "quick diff service stores, clears, and reports originals per resource" {
   service.set_original_content(b, Some("x"))
   assert_eq(fired.length(), 3)
 }
+
+///|
+test "quick_diff_handle adapts the concrete baseline store" {
+  let service = QuickDiffService::new()
+  let resource = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/handle.txt",
+  )
+  let handle = service.quick_diff_handle()
+  let mut change_count = 0
+  let changed_resources : Array[String] = []
+  let subscription = handle.on_did_change_original(changed => {
+    changed_resources.push(changed.to_string())
+    change_count += 1
+  })
+  assert_true(handle.get_original_content(resource) is None)
+  service.set_original_content(resource, Some("baseline"))
+  assert_true(handle.get_original_content(resource) is Some("baseline"))
+  assert_eq(change_count, 1)
+  assert_eq(changed_resources.join(","), resource.to_string())
+  subscription.dispose()
+}

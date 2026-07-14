@@ -26,12 +26,11 @@ test "contributions instantiate centrally in the reviewed order and expose every
   }
   assert_eq(actual, expected)
   for id in expected {
-    guard viewer.get_contribution(id) is Some(contribution) else {
+    guard viewer.contributions.get(id) is Some(_) else {
       fail("missing known contribution: " + id)
     }
-    assert_eq(contribution.id, id)
   }
-  assert_true(viewer.get_contribution("editor.contrib.unknown") is None)
+  assert_false(viewer.contributions.contains("editor.contrib.unknown"))
   assert_true(viewer.agent_feedback_input_contribution() is Some(_))
   assert_true(viewer.agent_feedback_widget_contribution() is Some(_))
   assert_true(viewer.folding_controller() is Some(_))
@@ -43,7 +42,6 @@ test "contributions instantiate centrally in the reviewed order and expose every
   let quick_diff_entry = viewer.contributions["quickDiff.decorator"]
   let hover = viewer.content_hover_controller().unwrap()
   viewer.contributions["quickDiff.decorator"] = EditorContributionEntry(
-    "quickDiff.decorator",
     ContentHover(hover),
   )
   assert_true(viewer.quick_diff_contribution() is None)
@@ -51,7 +49,7 @@ test "contributions instantiate centrally in the reviewed order and expose every
 
   viewer.dispose()
   for id in expected {
-    assert_true(viewer.get_contribution(id) is None)
+    assert_false(viewer.contributions.contains(id))
   }
 }
 
@@ -114,35 +112,34 @@ test "duplicate contribution ids are first-wins before later side effects" {
   assert_eq(first_initialized.val, 1)
   assert_eq(second_constructed.val, 0)
   assert_eq(second_initialized.val, 0)
-  guard viewer.get_contribution("test.duplicate") is Some(contribution) else {
+  guard viewer.contributions.get("test.duplicate") is Some(entry) else {
     fail("first duplicate row was not installed")
   }
-  (contribution.dispose)()
-  (contribution.dispose)()
+  entry.dispose(viewer)
+  entry.dispose(viewer)
   assert_eq(first_disposed.val, 1)
   assert_eq(second_disposed.val, 0)
   viewer.dispose()
   viewer.dispose()
   assert_eq(first_disposed.val, 1)
   assert_eq(second_disposed.val, 0)
-  assert_true(viewer.get_contribution("test.duplicate") is None)
+  assert_false(viewer.contributions.contains("test.duplicate"))
 }
 
 ///|
-test "public facade disposal retires typed lookup without removing the row early" {
+test "direct entry disposal retires typed lookup without removing the row early" {
   let viewer = Viewer::Viewer()
-  guard viewer.get_contribution("editor.contrib.contentHover") is Some(hover) else {
-    fail("missing hover contribution facade")
+  guard viewer.contributions.get("editor.contrib.contentHover") is Some(hover) else {
+    fail("missing hover contribution entry")
   }
-  (hover.dispose)()
+  hover.dispose(viewer)
   assert_true(viewer.content_hover_controller() is None)
-  assert_true(viewer.get_contribution("editor.contrib.contentHover") is Some(_))
   assert_true(viewer.contributions.contains("editor.contrib.contentHover"))
   assert_true(
     viewer.contributions["editor.contrib.contentHover"].lifecycle ==
     ContributionDisposed,
   )
-  (hover.dispose)()
+  hover.dispose(viewer)
   viewer.dispose()
 }
 

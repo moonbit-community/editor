@@ -75,6 +75,19 @@ pub struct Languages {
 }
 
 ///|
+/// Opaque production-language capability used by Viewer contributions. The
+/// logging policy is prebound when the handle is derived, so consumers cannot
+/// recover either the mutable registry or its concrete LogService.
+pub struct LanguageHandle {
+  priv get_language_configuration_callback : (String) -> LanguageConfiguration
+  priv hover_at_callback : async (
+    @model.TextModel,
+    Int,
+    @language.CancellationToken,
+  ) -> @language.Hover? noraise
+}
+
+///|
 /// Creates an isolated language registry.
 pub fn Languages::new() -> Languages {
   {
@@ -82,6 +95,42 @@ pub fn Languages::new() -> Languages {
     document_symbol_provider: LanguageFeatureRegistry::new(),
     language_configurations: Map([]),
   }
+}
+
+///|
+/// Derives the minimal language capability used by folding and hover. The
+/// handle owns no registry or logging state; its callbacks retain the selected
+/// backings for as long as the host retains the handle.
+pub fn Languages::language_handle(
+  self : Languages,
+  log_service : @log.LogHandle,
+) -> LanguageHandle {
+  {
+    get_language_configuration_callback: language_id => {
+      self.get_language_configuration(language_id)
+    },
+    hover_at_callback: (model, offset, token) => {
+      self.hover_at_with_log_handle(model, offset, log_service, token~)
+    },
+  }
+}
+
+///|
+pub fn LanguageHandle::get_language_configuration(
+  self : LanguageHandle,
+  language_id : String,
+) -> LanguageConfiguration {
+  (self.get_language_configuration_callback)(language_id)
+}
+
+///|
+pub async fn LanguageHandle::hover_at(
+  self : LanguageHandle,
+  model : @model.TextModel,
+  offset : Int,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
+) -> @language.Hover? noraise {
+  (self.hover_at_callback)(model, offset, token)
 }
 
 ///|
@@ -137,6 +186,17 @@ pub async fn Languages::hover_at(
   log_service : @log.LogService,
   token? : @language.CancellationToken = @language.CancellationToken::none(),
 ) -> @language.Hover? noraise {
+  self.hover_at_with_log_handle(model, offset, log_service.log_handle(), token~)
+}
+
+///|
+async fn Languages::hover_at_with_log_handle(
+  self : Languages,
+  model : @model.TextModel,
+  offset : Int,
+  log_service : @log.LogHandle,
+  token? : @language.CancellationToken = @language.CancellationToken::none(),
+) -> @language.Hover? noraise {
   if token.is_cancellation_requested() {
     return None
   }
@@ -185,6 +245,7 @@ pub async fn Languages::document_symbols(
 ) -> Array[@language.DocumentSymbol] noraise {
   let symbols : Array[@language.DocumentSymbol] = []
   let token = @language.CancellationToken::none()
+  let log_handle = log_service.log_handle()
   for index in 0..<self.document_symbol_provider.entries.length() {
     let entry = self.document_symbol_provider.entries[index]
     if !entry.active.val || !entry.selector.matches(model) {
@@ -193,7 +254,7 @@ pub async fn Languages::document_symbols(
     let result = entry.provider.provide_document_symbols(model, token) catch {
       _ => {
         log_provider_failure(
-          log_service, "language.documentSymbols", model, index,
+          log_handle, "language.documentSymbols", model, index,
         )
         []
       }
@@ -205,7 +266,7 @@ pub async fn Languages::document_symbols(
 
 ///|
 fn log_provider_failure(
-  log_service : @log.LogService,
+  log_service : @log.LogHandle,
   category : String,
   model : @model.TextModel,
   index : Int,

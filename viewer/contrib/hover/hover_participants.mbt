@@ -136,21 +136,20 @@ pub fn HoverParticipantHandle::HoverParticipantHandle(
 /// builds participants from this record, so the hover package never depends on
 /// the viewer core's `ViewerServices`.
 pub(all) struct HoverParticipantServices {
-  languages : @languages.Languages
-  marker_decorations : @markers.MarkerDecorationsService
-  log_service : @log.LogService
+  languages : @languages.LanguageHandle
+  marker_decorations : @markers.MarkerDecorationsHandle
 }
 
 ///|
 /// Hover participant that exposes diagnostics/markers at the anchor range.
 pub struct MarkerHoverParticipant {
-  priv marker_decorations : @markers.MarkerDecorationsService
+  priv marker_decorations : @markers.MarkerDecorationsHandle
 }
 
 ///|
 /// Creates the marker hover participant over the marker decorations service.
 pub fn MarkerHoverParticipant::new(
-  marker_decorations : @markers.MarkerDecorationsService,
+  marker_decorations : @markers.MarkerDecorationsHandle,
 ) -> MarkerHoverParticipant {
   { marker_decorations, }
 }
@@ -226,17 +225,15 @@ pub fn MarkerHoverParticipant::hover_participant_handle(
 ///|
 /// Hover participant that queries registered markdown/plaintext hover providers.
 pub struct MarkdownHoverParticipant {
-  priv languages : @languages.Languages
-  priv log_service : @log.LogService
+  priv languages : @languages.LanguageHandle
 }
 
 ///|
 /// Creates the markdown hover participant over the language features registry.
 pub fn MarkdownHoverParticipant::new(
-  languages : @languages.Languages,
-  log_service : @log.LogService,
+  languages : @languages.LanguageHandle,
 ) -> MarkdownHoverParticipant {
-  { languages, log_service }
+  { languages, }
 }
 
 ///|
@@ -257,12 +254,7 @@ async fn MarkdownHoverParticipant::compute_async(
     return []
   }
   let offset = ctx.model.get_offset_at(anchor_range.get_start_position())
-  let hover = self.languages.hover_at(
-    ctx.model,
-    offset,
-    self.log_service,
-    token~,
-  )
+  let hover = self.languages.hover_at(ctx.model, offset, token~)
   if token.is_cancellation_requested() {
     return []
   }

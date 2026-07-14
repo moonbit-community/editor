@@ -124,9 +124,40 @@ fn arm_manual_hover(viewer : Viewer) -> Unit {
 }
 
 ///|
+/// Isolated concrete language/log backings narrowed into the root capability
+/// bundle. The bundle still owns its omitted marker and feedback defaults.
+struct AsyncModelFeatureTestServices {
+  services : ViewerServices
+  languages : @languages.Languages
+  log_service : @log.LogService
+}
+
+///|
+fn AsyncModelFeatureTestServices::new() -> AsyncModelFeatureTestServices {
+  let log_service = @log.LogService::new()
+  let languages = @languages.Languages::new()
+  let services = ViewerServices::new(
+    languages=languages.language_handle(log_service.log_handle()),
+    log_service=log_service.log_handle(),
+  )
+  { services, languages, log_service }
+}
+
+///|
+fn AsyncModelFeatureTestServices::dispose(
+  self : AsyncModelFeatureTestServices,
+) -> Unit {
+  // The concrete backings remain caller-owned and usable after Viewer
+  // teardown; only the omitted defaults inside the bundle need disposal.
+  self.languages.get_language_configuration("moonbit") |> ignore
+  self.log_service.trace("viewer.async-test", "dispose retained backings")
+  self.services.dispose()
+}
+
+///|
 test "live hover timers follow 150 300 900ms and cancel stale generations" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   let model = async_test_model("/hover-timers.mbt", "hover")
   let scheduler = ManualHoverScheduler::new()
   viewer.set_hover_host_for_test(
@@ -162,13 +193,13 @@ test "live hover timers follow 150 300 900ms and cancel stale generations" {
   assert_eq(scheduler.active_count(), 0)
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "content and model invalidation clear a pending mouse-react handle" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   let first = async_test_model("/hover-react-first.mbt", "hover")
   let replacement = async_test_model("/hover-react-second.mbt", "hover")
   let scheduler = ManualHoverScheduler::new()
@@ -198,13 +229,13 @@ test "content and model invalidation clear a pending mouse-react handle" {
   assert_eq(scheduler.active_count(), 0)
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "hover widget mouseleave hides when the editor DOM is missing" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   viewer.set_model(Some(async_test_model("/hover-no-dom.mbt", "hover")))
   let hc = viewer.content_hover_controller().unwrap()
   hc.hover = shown_hover_controller()
@@ -217,13 +248,13 @@ test "hover widget mouseleave hides when the editor DOM is missing" {
   assert_true(hc.hover.view is None)
   assert_false(viewer.content_hover_visible())
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "programmatic hover forwards immediate mode source focus and mouse state" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   viewer.set_model(Some(async_test_model("/programmatic-hover.mbt", "hover")))
   viewer.set_hover_host_for_test(
     (_callback, _delay_ms) => @base_common.Disposable::from(() => ()),
@@ -262,7 +293,7 @@ test "programmatic hover forwards immediate mode source focus and mouse state" {
   assert_false(hc.hover_is_mouse_down)
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
@@ -301,8 +332,8 @@ fn hover_scroll_change(
 
 ///|
 test "hover scroll handling covers neither top left both and ignored input" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   viewer.set_model(Some(async_test_model("/hover-scroll.mbt", "hover")))
   let hc = viewer.content_hover_controller().unwrap()
 
@@ -328,7 +359,7 @@ test "hover scroll handling covers neither top left both and ignored input" {
   hc.hover_ignore_mouse_events = false
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
@@ -351,8 +382,8 @@ fn shown_hover_controller() -> @hover.HoverController {
 
 ///|
 test "invisible hover dismissal cancels work idempotently" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   viewer.set_model(
     Some(async_test_model("/hover-invisible-dismiss.mbt", "hover")),
   )
@@ -379,13 +410,13 @@ test "invisible hover dismissal cancels work idempotently" {
   assert_true(hc.hover.operation.token > first_clear_token)
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "visible hover dismissal clears the shown view" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   viewer.set_model(
     Some(async_test_model("/hover-visible-dismiss.mbt", "hover")),
   )
@@ -398,13 +429,13 @@ test "visible hover dismissal clears the shown view" {
   assert_true(hc.hover.view is None)
 
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "content invalidation cancels hover request but preserves shown view" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   let model = async_test_model("/hover-content.mbt", "content")
   viewer.set_model(Some(model))
   let hc = viewer.content_hover_controller().unwrap()
@@ -422,13 +453,13 @@ test "content invalidation cancels hover request but preserves shown view" {
   assert_true(hc.hover_decoration_ids.is_empty())
   assert_true(hc.hover_decoration_range is None)
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|
 test "content invalidation removes loading visibility and permits same-anchor restart" {
-  let services = ViewerServices::new(languages=@languages.Languages::new())
-  let viewer = Viewer(services~)
+  let backings = AsyncModelFeatureTestServices::new()
+  let viewer = Viewer(services=backings.services)
   let model = async_test_model("/hover-loading-content.mbt", "content")
   viewer.set_model(Some(model))
   let hc = viewer.content_hover_controller().unwrap()
@@ -454,7 +485,7 @@ test "content invalidation removes loading visibility and permits same-anchor re
   assert_true(effect is HoverScheduleDelayed(_))
   assert_true(restarted.anchor == Some(anchor))
   viewer.dispose()
-  dispose_explicit_services(services)
+  backings.dispose()
 }
 
 ///|

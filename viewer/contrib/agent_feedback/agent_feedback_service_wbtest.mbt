@@ -17,10 +17,10 @@ fn feedback_at(
   resource : @base_common.Uri,
   line : Int,
   text? : String = "note",
-  kind? : AgentFeedbackKind = UserReview,
+  kind? : @agent_feedback_api.AgentFeedbackKind = UserReview,
   replies? : Array[String] = [],
-  state? : AgentFeedbackState = Accepted,
-) -> AgentFeedback {
+  state? : @agent_feedback_api.AgentFeedbackState = Accepted,
+) -> @agent_feedback_api.AgentFeedback {
   { id, text, resource, range: Range(line, 1, line, 1), kind, replies, state }
 }
 
@@ -225,4 +225,41 @@ test "prev with no anchor anchors on the first item then steps back" {
     service.get_next_navigable_item(resource, ["c1", "c2", "c3"], next=false)
     is Some("c3"),
   )
+}
+
+///|
+test "agent_feedback_handle adapts the concrete service and preserves defaults" {
+  let service = AgentFeedbackService::new()
+  let resource = uri("memory://session/handle.mbt")
+  let handle = service.agent_feedback_handle()
+  let mut change_count = 0
+  let subscription = handle.on_did_change_feedback(_ => change_count += 1)
+  service.set_feedback_enabled(resource, true)
+  assert_true(handle.is_feedback_enabled(resource))
+  let defaulted = handle.add_feedback(resource, Range(1, 1, 1, 3), "defaulted")
+  assert_eq(defaulted.kind, UserReview)
+  assert_eq(defaulted.state, Accepted)
+  let explicit = handle.add_feedback(
+    resource,
+    Range(3, 1, 3, 3),
+    "explicit",
+    kind=AgentReview,
+    state=Created,
+  )
+  assert_eq(explicit.kind, AgentReview)
+  assert_eq(explicit.state, Created)
+  assert_eq(handle.get_feedback(resource).length(), 2)
+  handle.accept_feedback(resource, explicit.id)
+  handle.update_feedback(resource, explicit.id, "updated")
+  handle.add_reply(resource, explicit.id, "reply")
+  handle.set_navigation_anchor(resource, Some(explicit.id))
+  assert_eq(
+    handle.get_navigation_bearing(resource, [defaulted.id, explicit.id]),
+    { active_idx: 1, total_count: 2 },
+  )
+  handle.mark_feedback_submitted(resource)
+  handle.remove_feedback(resource, defaulted.id)
+  assert_true(change_count >= 7)
+  subscription.dispose()
+  service.dispose()
 }

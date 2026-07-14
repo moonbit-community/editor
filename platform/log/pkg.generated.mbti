@@ -18,6 +18,12 @@ pub(all) struct LogEntry {
   details : Array[(String, String)]
 } derive(Eq, @debug.Debug)
 
+pub struct LogHandle {
+  // private fields
+}
+pub fn LogHandle::error(Self, String, String, details? : Array[(String, String)]) -> Unit
+pub fn LogHandle::warn(Self, String, String, details? : Array[(String, String)]) -> Unit
+
 pub(all) enum LogLevel {
   Off
   Trace
@@ -38,6 +44,7 @@ pub fn LogService::error(Self, String, String, details? : Array[(String, String)
 pub fn LogService::flush(Self) -> Unit
 pub fn LogService::info(Self, String, String, details? : Array[(String, String)]) -> Unit
 pub fn LogService::log(Self, LogEntry) -> Unit
+pub fn LogService::log_handle(Self) -> LogHandle
 pub fn LogService::new(level? : LogLevel, logger? : &Logger) -> Self
 pub fn LogService::trace(Self, String, String, details? : Array[(String, String)]) -> Unit
 pub fn LogService::warn(Self, String, String, details? : Array[(String, String)]) -> Unit

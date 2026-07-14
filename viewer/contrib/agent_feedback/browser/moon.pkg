@@ -1,5 +1,6 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
+  "moonbit-community/editor/viewer/common/agent_feedback_api",
   "moonbit-community/editor/viewer/contrib/agent_feedback",
   "moonbit-community/rabbita/dom" @rdom,
   "moonbit-community/cmark/cmark",

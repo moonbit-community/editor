@@ -18,7 +18,9 @@ fn computer_test_model() -> @model.TextModel {
 async test "content hover computer separates sync markers from async markdown" {
   let languages = @languages.Languages::new()
   let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(markers)
+  let marker_decorations = @markers.MarkerDecorationsService::new(
+    markers.marker_service_handle(),
+  )
   let model = computer_test_model()
   marker_decorations.on_model_added(model)
   markers.set_diagnostics("diagnostics:0", model.uri, [
@@ -34,9 +36,8 @@ async test "content hover computer separates sync markers from async markdown" {
   })
   |> ignore
   let services : HoverParticipantServices = {
-    languages,
-    marker_decorations,
-    log_service: @log.LogService::new(),
+    languages: languages.language_handle(@log.LogService::new().log_handle()),
+    marker_decorations: marker_decorations.marker_decorations_handle(),
   }
   let computer = ContentHoverComputer::new(services)
   let anchor : HoverAnchor = HoverRangeAnchor(
@@ -107,10 +108,12 @@ fn computer_services_with_languages(
   languages : @languages.Languages,
 ) -> HoverParticipantServices {
   let markers = @markers.MarkerService::new()
+  let marker_decorations = @markers.MarkerDecorationsService::new(
+    markers.marker_service_handle(),
+  )
   {
-    languages,
-    marker_decorations: @markers.MarkerDecorationsService::new(markers),
-    log_service: @log.LogService::new(),
+    languages: languages.language_handle(@log.LogService::new().log_handle()),
+    marker_decorations: marker_decorations.marker_decorations_handle(),
   }
 }
 
@@ -646,10 +649,7 @@ test "registry get_all aliases backing factories and build_all sorts ordinals" {
 test "participant loading-message contract is explicit" {
   let services = computer_services_with_languages(@languages.Languages::new())
   let anchor = async_test_anchor()
-  let markdown = MarkdownHoverParticipant::new(
-    services.languages,
-    services.log_service,
-  ).hover_participant_handle()
+  let markdown = MarkdownHoverParticipant::new(services.languages).hover_participant_handle()
   guard markdown.create_loading_message is Some(markdown_loading_message) else {
     fail("expected markdown loading-message callback")
   }

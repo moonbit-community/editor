@@ -17,6 +17,10 @@ pub struct Viewer {
   /// shared by other Viewers.
   priv owns_services : Bool
   priv mut disposed : Bool
+  /// Viewer-id registration in the lower JS-only testing registry. It is
+  /// generation-safe and owns all workbench/browser-test observations and
+  /// private controls for this Viewer.
+  priv mut testing_registration : @base_common.Disposable?
   /// Viewer-lifetime subscriptions, distinct from ModelData's swap-scoped
   /// listeners and View's browser-resource store.
   priv lifetime_disposables : Array[@base_common.Disposable]
@@ -46,9 +50,9 @@ pub struct Viewer {
   /// higher version can complete before its outer version, so a scalar high-
   /// water mark would release the wrong barrier.
   priv cursor_completed_content_versions : Array[Int]
-  priv did_build_view_model : @base_common.Emitter[ViewerViewModelBuiltEvent]
-  priv did_render_model : @base_common.Emitter[ViewerModelRenderedEvent]
-  priv did_resolve_hover : @base_common.Emitter[ViewerHoverResolvedEvent]
+  priv did_build_view_model : @base_common.Emitter[
+    @viewer_testing.ViewModelBuiltObservation,
+  ]
   priv did_scroll : @base_common.Emitter[@editor_api.ScrollEvent]
   /// Public `onDidChangeViewZones`. The source emitter participates in a
   /// widget-wide delivery queue; that cross-event queue remains the explicit
@@ -217,35 +221,9 @@ priv struct HorizontalRevealRangeRequest {
 }
 
 ///|
-pub(all) struct ViewerViewState {
-  scroll_top : Double
-  scroll_left : Double
-} derive(Debug)
-
-///|
-pub(all) struct ViewerViewModelBuiltEvent {
-  model : @model.TextModel
-  line_count : Int
-  token_count : Int
-  diagnostic_count : Int
-  tokenize_ms : Double
-  build_ms : Double
-} derive(Debug)
-
-///|
-pub(all) struct ViewerModelRenderedEvent {
-  model : @model.TextModel
-  line_count : Int
-  rendered_lines : Int
-  diagnostics : Array[@language.Diagnostic]
-  patch_ms : Double
-  fresh : Bool
-} derive(Debug)
-
-///|
-pub(all) struct ViewerHoverResolvedEvent {
-  ok : Bool
-  revision : String
+pub struct ViewerViewState {
+  priv scroll_top : Double
+  priv scroll_left : Double
 } derive(Debug)
 
 ///|
@@ -253,7 +231,7 @@ pub(all) struct ViewerHoverResolvedEvent {
 /// internally; an explicit bundle is borrowed and may be shared. Call
 /// `attach` before setting documents so the first render has a DOM view to
 /// measure and patch.
-pub fn Viewer::Viewer(
+fn Viewer::Viewer(
   services? : ViewerServices,
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
@@ -268,6 +246,7 @@ pub fn Viewer::Viewer(
     services,
     owns_services,
     disposed: false,
+    testing_registration: None,
     lifetime_disposables: [],
     options,
     did_change_model: @base_common.Emitter::new(),
@@ -279,8 +258,6 @@ pub fn Viewer::Viewer(
     cursor_content_barrier_depth: 0,
     cursor_completed_content_versions: [],
     did_build_view_model: @base_common.Emitter::new(),
-    did_render_model: @base_common.Emitter::new(),
-    did_resolve_hover: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
     did_change_view_zones: @base_common.Emitter::new(),
     did_dispose: @base_common.Emitter::new(),
@@ -332,6 +309,15 @@ pub fn Viewer::Viewer(
   // (`codeEditorWidget.ts:344` `this._contributions.initialize(...)`);
   // they live until `dispose` — `set_model` does not re-create them.
   editor_registry().instantiate_all(viewer)
+  viewer.testing_registration = Some(
+    @viewer_testing.register_viewer(
+      viewer.get_id(),
+      has_model=() => viewer.has_model(),
+      set_hidden_areas=(ranges, source, force_update) => {
+        viewer.set_hidden_areas(ranges, source?, force_update~)
+      },
+    ),
+  )
   viewer
 }
 
@@ -774,7 +760,7 @@ pub fn Viewer::get_model(self : Viewer) -> @model.TextModel? {
 ///|
 /// Whether a model is installed — `hasModel`, Monaco's type-guard companion to
 /// `getModel`.
-pub fn Viewer::has_model(self : Viewer) -> Bool {
+fn Viewer::has_model(self : Viewer) -> Bool {
   self.model_data is Some(_)
 }
 
@@ -830,11 +816,11 @@ pub fn Viewer::get_dom_node(self : Viewer) -> @rdom.Element? {
 }
 
 ///|
-/// The host container element — `getContainerDomNode`; `None` until attached
-/// (Monaco receives the container at construction, so it is always present
-/// there).
-pub fn Viewer::get_container_dom_node(self : Viewer) -> @rdom.Element? {
-  self.container
+/// The original host container element — `getContainerDomNode`. Public
+/// Viewers are created with `Viewer::create`, so the host is always present
+/// and remains queryable after Viewer disposal.
+pub fn Viewer::get_container_dom_node(self : Viewer) -> @rdom.Element {
+  self.container.unwrap()
 }
 
 ///|
@@ -916,8 +902,8 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
       detached.remove_all_decorations_with_owner_id(self.editor_id)
     None => ()
   }
-  // Viewer-owned attach DOM is removed before the dispose event; the caller's
-  // host remains mounted and is merely forgotten after observers return.
+  // Viewer-owned attach DOM is removed before the dispose event. The caller's
+  // original host remains mounted and retained for `get_container_dom_node`.
   match (self.container, self.placeholder_element) {
     (Some(host), Some(placeholder)) =>
       remove_element_if_contained(host, placeholder)
@@ -931,7 +917,6 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   }
   self.contributions = Map([])
   self.dispose_lifetime_disposables()
-  self.container = None
   self.placeholder_element = None
   self.placeholder_text = None
   self.mouse_handler = None
@@ -954,8 +939,6 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_change_cursor_position.dispose()
   self.did_change_cursor_selection.dispose()
   self.did_build_view_model.dispose()
-  self.did_render_model.dispose()
-  self.did_resolve_hover.dispose()
   self.did_scroll.dispose()
   self.did_change_view_zones.dispose()
   self.did_dispose.dispose()
@@ -963,10 +946,15 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_mouse_up.dispose()
   self.did_mouse_move.dispose()
   self.did_mouse_leave.dispose()
+  match self.testing_registration {
+    Some(registration) => {
+      self.testing_registration = None
+      registration.dispose()
+    }
+    None => ()
+  }
   if self.owns_services {
-    self.services.marker_decorations.dispose()
-    self.services.markers.dispose()
-    self.services.agent_feedback.dispose()
+    self.services.dispose()
   }
 }
 

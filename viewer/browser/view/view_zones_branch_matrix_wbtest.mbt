@@ -47,7 +47,7 @@ fn view_zones_branch_fixture_from_model(
   let memory = @log.MemoryLogger::new()
   view.install_view_zones_context(
     view_model,
-    @log.LogService::new(logger=memory),
+    @log.LogService::new(logger=memory).log_handle(),
     () => configuration.val,
     () => emitted_changes.val += 1,
   )

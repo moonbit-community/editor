@@ -24,21 +24,21 @@
 /// construction; the deferred modes exist so a registration can carry its
 /// source's declared mode (content hover is `BeforeFirstInteraction`,
 /// comments `AfterFirstRender`).
-pub(all) enum EditorContributionInstantiation {
+priv enum EditorContributionInstantiation {
   Eager
   AfterFirstRender
   BeforeFirstInteraction
   Eventually
   Lazy
-} derive(Eq, Debug)
+}
 
 ///|
-/// A live per-editor contribution instance — `IEditorContribution` reduced
-/// to its lifecycle member (no view-state save/restore in the viewer).
-pub(all) struct EditorContribution {
-  id : String
-  dispose : () -> Unit
-}
+/// Retain the complete upstream policy vocabulary even though this readonly
+/// viewer currently registers no contribution in these two modes.
+let _unused_contribution_modes : Array[EditorContributionInstantiation] = [
+  AfterFirstRender,
+  Lazy,
+]
 
 ///|
 /// The concrete live contribution state stored in the per-Viewer registry.
@@ -90,7 +90,6 @@ priv enum EditorContributionLifecycle {
 /// owns its cancellable work directly and quick diff owns its subscriptions in
 /// `QuickDiffContributionState`.
 priv struct EditorContributionEntry {
-  id : String
   instance : EditorContributionInstance
   listeners : Array[@base_common.Disposable]
   mut lifecycle : EditorContributionLifecycle
@@ -98,10 +97,9 @@ priv struct EditorContributionEntry {
 
 ///|
 fn EditorContributionEntry::EditorContributionEntry(
-  id : String,
   instance : EditorContributionInstance,
 ) -> EditorContributionEntry {
-  { id, instance, listeners: [], lifecycle: ContributionLive }
+  { instance, listeners: [], lifecycle: ContributionLive }
 }
 
 ///|
@@ -434,9 +432,12 @@ fn EditorContributionRegistry::instantiate_all(
     }
     // Every mode instantiates eagerly (no idle/interaction schedulers
     // exist); the declared mode is carried for source fidelity only.
-    ignore(description.instantiation)
+    match description.instantiation {
+      Eager | AfterFirstRender | BeforeFirstInteraction | Eventually | Lazy =>
+        ()
+    }
     let instance = (description.ctor)(viewer)
-    let entry = EditorContributionEntry(description.id, instance)
+    let entry = EditorContributionEntry(instance)
     // This insertion must precede initialization: feedback input/widgets and
     // folding synchronously resolve their typed contribution in their first
     // initialization step.

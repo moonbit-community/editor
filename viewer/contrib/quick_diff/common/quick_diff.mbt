@@ -66,6 +66,18 @@ pub fn QuickDiffService::new() -> QuickDiffService {
 }
 
 ///|
+/// Adapts this concrete baseline store to the dependency-bottom capability
+/// consumed by the viewer. The concrete service remains caller-owned.
+pub fn QuickDiffService::quick_diff_handle(
+  self : QuickDiffService,
+) -> @quick_diff_api.QuickDiffHandle {
+  @quick_diff_api.QuickDiffHandle::new(
+    get_original_content=resource => self.get_original_content(resource),
+    on_did_change_original=listener => self.on_did_change_original(listener),
+  )
+}
+
+///|
 /// Stores (or, with `None`, clears) the original content for `resource` and
 /// fires the change event.
 pub fn QuickDiffService::set_original_content(

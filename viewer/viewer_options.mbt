@@ -1,71 +1,71 @@
 ///|
 /// Runtime viewer options that affect view-model construction and layout.
-pub(all) struct ViewerOptions {
-  soft_wrap : Bool
-  tab_size : Int
-  wrapping_indent : @editor_api.WrappingIndent
-  render_whitespace : @editor_api.RenderWhitespace
-  render_control_characters : Bool
-  render_line_highlight : @editor_api.RenderLineHighlight
-  render_line_highlight_only_when_focus : Bool
+pub struct ViewerOptions {
+  priv soft_wrap : Bool
+  priv tab_size : Int
+  priv wrapping_indent : @editor_api.WrappingIndent
+  priv render_whitespace : @editor_api.RenderWhitespace
+  priv render_control_characters : Bool
+  priv render_line_highlight : @editor_api.RenderLineHighlight
+  priv render_line_highlight_only_when_focus : Bool
   /// `renderValidationDecorations`. Product default `On` — Monaco defaults to
   /// `Editable`, which hides validation squiggles in readonly editors, and the
   /// readonly viewer's diagnostics rendering is a shipped feature. Hosts can
   /// pass `Editable`/`Off` for Monaco's semantics.
-  render_validation_decorations : @editor_api.RenderValidationDecorations
+  priv render_validation_decorations : @editor_api.RenderValidationDecorations
   /// The color theme, Monaco's standalone `theme` option
   /// (`IStandaloneEditorConstructionOptions.theme`, also accepted by
   /// `updateOptions`). Mirrored onto the view root as `data-theme`.
-  theme : String
+  priv theme : String
   /// The message shown while the viewer has no rendered model — Monaco's
   /// `placeholder` editor option.
-  placeholder : String
+  priv placeholder : String
   /// Width in pixels of the line-decorations gutter lane between the line
   /// numbers and the content — Monaco's `lineDecorationsWidth` editor option
   /// (default `10`, `editorOptions.ts:3304-3307`). Features that draw gutter
   /// decorations (e.g. agent feedback) reserve extra lane width on top
   /// through `update_options`.
-  line_decorations_width : Int
+  priv line_decorations_width : Int
   /// Minimum digit slots reserved by the line-number band — Monaco's
   /// `lineNumbersMinChars` editor option (default `5`, minimum `1`,
   /// `editorOptions.ts:6379-6381`). The band widens past this when the model
   /// has more-digit line numbers.
-  line_numbers_min_chars : Int
+  priv line_numbers_min_chars : Int
   /// Monaco's `folding` editor option (default `true`): whether code folding
   /// is enabled.
-  folding : Bool
+  priv folding : Bool
   /// Monaco's `showFoldingControls` editor option (default `mouseover`):
   /// when the gutter chevrons are visible. `always`/`never`/`mouseover`.
-  show_folding_controls : @editor_api.ShowFoldingControls
+  priv show_folding_controls : @editor_api.ShowFoldingControls
   /// Monaco's `foldingHighlight` editor option (default `true`): whether
   /// folded ranges get the `folded-background` highlight.
-  folding_highlight : Bool
+  priv folding_highlight : Bool
   /// Monaco's `foldingMaximumRegions` editor option (default `5000`).
-  folding_maximum_regions : Int
+  priv folding_maximum_regions : Int
   /// Monaco's `unfoldOnClickAfterEndOfLine` editor option (default `false`).
-  unfold_on_click_after_end_of_line : Bool
+  priv unfold_on_click_after_end_of_line : Bool
   /// Monaco's `smoothScrolling` option (`false` by default). Physical mouse
   /// wheels animate for 125 ms when enabled; trackpads remain immediate.
-  smooth_scrolling : Bool
+  priv smooth_scrolling : Bool
   /// Monaco's `showUnused` editor option (default `true`,
   /// `editorOptions.ts:6645-6647`): adds the `showUnused` root class that
   /// gates the `squiggly-unnecessary` / `squiggly-inline-unnecessary`
   /// styling (`EditorClassName.compute`, `editorOptions.ts:1680-1682`).
-  show_unused : Bool
+  priv show_unused : Bool
   /// Monaco's `showDeprecated` editor option (default `true`,
   /// `editorOptions.ts:6649-6653`): adds the `showDeprecated` root class
   /// gating the `squiggly-inline-deprecated` strike-through.
-  show_deprecated : Bool
+  priv show_deprecated : Bool
   /// Monaco's `fontFamily`/`fontWeight`/`fontSize`/`lineHeight`/
   /// `letterSpacing` editor options, defaulting to `EDITOR_FONT_DEFAULTS`.
   /// `line_height` follows `BareFontInfo._create`'s rules: `0` derives the
   /// golden-ratio height from `font_size`, values below `8` multiply the
   /// font size (ems), anything else is pixels.
-  font_family : String
-  font_weight : String
-  font_size : Double
-  line_height : Double
-  letter_spacing : Double
+  priv font_family : String
+  priv font_weight : String
+  priv font_size : Double
+  priv line_height : Double
+  priv letter_spacing : Double
 } derive(Eq, Debug)
 
 ///|
@@ -160,6 +160,128 @@ pub fn ViewerOptions::default() -> ViewerOptions {
 }
 
 ///|
+/// Returns a copy with Monaco's no-model placeholder changed.
+pub fn ViewerOptions::with_placeholder(
+  self : ViewerOptions,
+  placeholder : String,
+) -> ViewerOptions {
+  { ..self, placeholder, }
+}
+
+///|
+/// Returns a copy with the standalone theme changed.
+pub fn ViewerOptions::with_theme(
+  self : ViewerOptions,
+  theme : String,
+) -> ViewerOptions {
+  { ..self, theme, }
+}
+
+///|
+/// Returns a copy with `renderWhitespace` changed.
+pub fn ViewerOptions::with_render_whitespace(
+  self : ViewerOptions,
+  render_whitespace : @editor_api.RenderWhitespace,
+) -> ViewerOptions {
+  { ..self, render_whitespace, }
+}
+
+///|
+/// Returns a copy with `renderControlCharacters` changed.
+pub fn ViewerOptions::with_render_control_characters(
+  self : ViewerOptions,
+  render_control_characters : Bool,
+) -> ViewerOptions {
+  { ..self, render_control_characters, }
+}
+
+///|
+/// Returns a copy with `renderLineHighlight` changed.
+pub fn ViewerOptions::with_render_line_highlight(
+  self : ViewerOptions,
+  render_line_highlight : @editor_api.RenderLineHighlight,
+) -> ViewerOptions {
+  { ..self, render_line_highlight, }
+}
+
+///|
+/// Returns a copy with the focused-only line-highlight gate changed.
+pub fn ViewerOptions::with_render_line_highlight_only_when_focus(
+  self : ViewerOptions,
+  render_line_highlight_only_when_focus : Bool,
+) -> ViewerOptions {
+  { ..self, render_line_highlight_only_when_focus, }
+}
+
+///|
+/// Returns a copy with `renderValidationDecorations` changed.
+pub fn ViewerOptions::with_render_validation_decorations(
+  self : ViewerOptions,
+  render_validation_decorations : @editor_api.RenderValidationDecorations,
+) -> ViewerOptions {
+  { ..self, render_validation_decorations, }
+}
+
+///|
+/// Returns a copy with the tab size changed, normalized to at least one.
+pub fn ViewerOptions::with_tab_size(
+  self : ViewerOptions,
+  tab_size : Int,
+) -> ViewerOptions {
+  { ..self, tab_size: tab_size.max(1) }
+}
+
+///|
+/// Returns a copy with soft wrapping enabled or disabled.
+pub fn ViewerOptions::with_soft_wrap(
+  self : ViewerOptions,
+  soft_wrap : Bool,
+) -> ViewerOptions {
+  { ..self, soft_wrap, }
+}
+
+///|
+/// Returns a copy with the minimum line-number digit count changed, normalized
+/// to at least one.
+pub fn ViewerOptions::with_line_numbers_min_chars(
+  self : ViewerOptions,
+  line_numbers_min_chars : Int,
+) -> ViewerOptions {
+  { ..self, line_numbers_min_chars: line_numbers_min_chars.max(1) }
+}
+
+///|
+/// Returns a copy with the line-decoration gutter width changed, normalized to
+/// a non-negative value.
+pub fn ViewerOptions::with_line_decorations_width(
+  self : ViewerOptions,
+  line_decorations_width : Int,
+) -> ViewerOptions {
+  { ..self, line_decorations_width: line_decorations_width.max(0) }
+}
+
+///|
+/// Returns a copy with the requested line height changed.
+pub fn ViewerOptions::with_line_height(
+  self : ViewerOptions,
+  line_height : Double,
+) -> ViewerOptions {
+  { ..self, line_height, }
+}
+
+///|
+/// Whether soft wrapping is enabled in this snapshot.
+pub fn ViewerOptions::soft_wrap(self : ViewerOptions) -> Bool {
+  self.soft_wrap
+}
+
+///|
+/// The requested line height in this snapshot.
+pub fn ViewerOptions::line_height(self : ViewerOptions) -> Double {
+  self.line_height
+}
+
+///|
 /// The `BareFontInfo` these options request — Monaco's
 /// `BareFontInfo.createFromValidatedSettings`. The viewer has no
 /// `fontLigatures` option, so `font-feature-settings` is constantly
@@ -183,7 +305,7 @@ fn ViewerOptions::bare_font_info(
 ///|
 /// Computes the soft-wrap column that fits the measured content width, or zero
 /// when wrapping is disabled or measurement is not ready.
-pub fn ViewerOptions::soft_wrap_column_for_content_width(
+fn ViewerOptions::soft_wrap_column_for_content_width(
   self : ViewerOptions,
   content_width : Double,
   char_width : Double,
@@ -199,7 +321,7 @@ pub fn ViewerOptions::soft_wrap_column_for_content_width(
 /// Converts browser-level options into backend-neutral view-model options.
 /// `font_info` is the viewer's measured font (Monaco's `EditorOption.fontInfo`),
 /// not an option field, so it rides in as an argument.
-pub fn ViewerOptions::view_model_options(
+fn ViewerOptions::view_model_options(
   self : ViewerOptions,
   soft_wrap_column : Int,
   font_info~ : @config.FontInfo,

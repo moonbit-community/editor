@@ -41,7 +41,7 @@ fn run_scroll_perf_test() -> Unit {
       font_size=13.0,
     ),
   )
-  @viewer.debug_on_did_render_model(viewer, event => {
+  @viewer_testing.on_did_render_model(viewer.get_id(), event => {
     if event.fresh {
       host.set_attribute("data-scroll-ready", "true")
       host.set_attribute("data-visible-lines", visible_lines.to_string())

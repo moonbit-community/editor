@@ -70,7 +70,11 @@ extern "js" fn restore_hidden_areas_test_browser() -> Unit =
 test "hidden areas collect recovery scroll before mapping delivery" {
   install_hidden_areas_test_browser()
   defer restore_hidden_areas_test_browser()
+  let log_service = @log.LogService::new()
+  let services = ViewerServices::new(log_service=log_service.log_handle())
+  defer services.dispose()
   let viewer = Viewer::Viewer(
+    services~,
     options=ViewerOptions(font_size=12, line_height=18),
   )
   defer viewer.dispose()
@@ -85,7 +89,7 @@ test "hidden areas collect recovery scroll before mapping delivery" {
   )
   view.install_view_zones_context(
     headless.view_model,
-    viewer.services.log_service,
+    log_service.log_handle(),
     read_configuration,
     () => {
       view.emit_view_zones_changed_then(() => {

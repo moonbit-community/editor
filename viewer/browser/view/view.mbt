@@ -155,7 +155,7 @@ pub fn View::View(
 pub fn View::install_view_zones_context(
   self : View,
   view_model : @view_model.ViewModel,
-  log_service : @log.LogService,
+  log_service : @log.LogHandle,
   read_configuration : () -> (Int, Double, Double),
   emit_view_zones_changed : () -> Unit,
 ) -> Unit {

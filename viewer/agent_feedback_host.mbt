@@ -274,7 +274,7 @@ fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit 
 /// `_lineHasExistingFeedback`, resolved against unresolved items only (a
 /// resolved item is invisible, so its line offers the add affordance again).
 fn agent_feedback_line_has_feedback(
-  items : Array[@agent_feedback.AgentFeedback],
+  items : Array[@agent_feedback_api.AgentFeedback],
   line : Int,
 ) -> Bool {
   items.search_by(item => {

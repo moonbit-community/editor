@@ -160,7 +160,7 @@ priv struct EmbedModel {
 priv enum EmbedMsg {
   Boot
   OpenFile(@base_common.Uri)
-  ViewerRendered(@viewer.ViewerModelRenderedEvent)
+  ViewerReady(@base_common.Uri)
   ViewerFailed
 }
 
@@ -194,8 +194,21 @@ fn embed_viewer() -> @viewer.Viewer {
         host,
         options=ViewerOptions(placeholder="Loading source..."),
       )
-      @viewer.debug_on_did_render_model(viewer, event => {
-        dispatch_embed_msg(ViewerRendered(event))
+      viewer.on_did_change_model(event => {
+        guard event.new_model_url is Some(attached_uri) else { return }
+        // `attach_model` queued the Viewer flush before publishing this
+        // semantic model event. Browser rAF callbacks are FIFO, so this host
+        // callback runs after that pending DOM patch. A second URI check drops
+        // stale callbacks from rapid model swaps.
+        embed_ready_animation_frame(() => {
+          match viewer.get_model() {
+            Some(current) =>
+              if current.uri.to_string() == attached_uri.to_string() {
+                dispatch_embed_msg(ViewerReady(attached_uri))
+              }
+            None => ()
+          }
+        })
       })
       |> ignore
       embed_viewer_cell.val = Some(viewer)
@@ -203,6 +216,20 @@ fn embed_viewer() -> @viewer.Viewer {
     }
   }
 }
+
+///|
+/// Production delegates directly to the native browser rAF queue. The
+/// optional global hook lets the embed smoke test hold only this host-ready
+/// callback while the Viewer's own render rAF continues normally.
+extern "js" fn embed_ready_animation_frame(callback : () -> Unit) -> Unit =
+  #| (callback) => {
+  #|   const testHook = globalThis.__embeddedReadyAnimationFrame;
+  #|   if (typeof testHook === 'function') {
+  #|     testHook(callback);
+  #|     return;
+  #|   }
+  #|   globalThis.requestAnimationFrame(callback);
+  #| }
 
 ///|
 let embed_tree_cell : Ref[@file_tree.FileTree?] = Ref(None)
@@ -238,15 +265,8 @@ fn update_embed(
         model,
       )
     }
-    OpenFile(uri) => (open_embed_document_cmd(uri), model)
-    ViewerRendered(event) => {
-      let cmd = if event.fresh {
-        embed_tree().set_active(event.model.uri)
-      } else {
-        @rabbita.none
-      }
-      (cmd, { status: "ready" })
-    }
+    OpenFile(uri) => (open_embed_document_cmd(uri), { status: "loading" })
+    ViewerReady(uri) => (embed_tree().set_active(uri), { status: "ready" })
     ViewerFailed => (@rabbita.none, { status: "error" })
   }
 }

@@ -50,9 +50,9 @@ priv enum WorkbenchMsg {
 ///|
 priv enum WorkbenchViewerEvent {
   DidChangeMarkers(Array[@base_common.Uri])
-  DidBuildViewModel(@viewer.ViewerViewModelBuiltEvent)
-  DidRenderModel(@viewer.ViewerModelRenderedEvent)
-  DidResolveHover(@viewer.ViewerHoverResolvedEvent)
+  DidBuildViewModel(@viewer_testing.ViewModelBuiltObservation)
+  DidRenderModel(@viewer_testing.ModelRenderedObservation)
+  DidResolveHover(@viewer_testing.HoverResolvedObservation)
   DidScroll(@editor_api.ScrollEvent)
   DidDispose
 }
@@ -90,24 +90,55 @@ fn dispatch_workbench_msg(msg : WorkbenchMsg) -> Unit {
 let viewer_cell : Ref[@viewer.Viewer?] = Ref(None)
 
 ///|
-let viewer_services_cell : Ref[@viewer.ViewerServices?] = Ref(None)
+priv struct WorkbenchServices {
+  viewer : @viewer.ViewerServices
+  languages : @languages.Languages
+  markers : @markers.MarkerService
+  agent_feedback : @agent_feedback.AgentFeedbackService
+  log_service : @log.LogService
+}
+
+///|
+let viewer_services_cell : Ref[WorkbenchServices?] = Ref(None)
 
 ///|
 let workbench_model_version : Ref[Int] = Ref(0)
 
 ///|
-fn workbench_services() -> @viewer.ViewerServices {
+fn workbench_services() -> WorkbenchServices {
   match viewer_services_cell.val {
     Some(services) => services
     None => {
-      let services = @viewer.ViewerServices::new(
-        log_service=workbench_log_service(),
+      let log_service = workbench_log_service()
+      let languages = @languages.default_languages()
+      let markers = @markers.MarkerService::new(
+        schedule=workbench_queue_microtask,
       )
+      let agent_feedback = @agent_feedback.AgentFeedbackService::new()
+      let viewer = @viewer.ViewerServices::new(
+        languages=languages.language_handle(log_service.log_handle()),
+        markers=MarkerStore(markers.marker_service_handle()),
+        agent_feedback=agent_feedback.agent_feedback_handle(),
+        log_service=log_service.log_handle(),
+      )
+      let services : WorkbenchServices = {
+        viewer,
+        languages,
+        markers,
+        agent_feedback,
+        log_service,
+      }
       viewer_services_cell.val = Some(services)
       services
     }
   }
 }
+
+///|
+/// Monaco's marker emitter schedules on the browser microtask queue. These
+/// workbench-owned backings live for the page lifetime.
+extern "js" fn workbench_queue_microtask(callback : () -> Unit) -> Unit =
+  #| (callback) => globalThis.queueMicrotask(callback)
 
 ///|
 /// Resolves the workbench viewer, creating it into the shell-rendered
@@ -124,7 +155,7 @@ fn workbench_viewer() -> @viewer.Viewer {
         .unwrap()
       let viewer = @viewer.Viewer::create(
         host,
-        services=workbench_services(),
+        services=workbench_services().viewer,
         options=ViewerOptions(
           theme=stored_theme(),
           placeholder=source_message(initial_workbench_model()),
@@ -145,15 +176,15 @@ fn install_viewer_event_subscriptions(viewer : @viewer.Viewer) -> Unit {
     dispatch_workbench_msg(ViewerEvent(DidChangeMarkers(uris)))
   })
   |> ignore
-  @viewer.debug_on_did_build_view_model(viewer, event => {
+  @viewer_testing.on_did_build_view_model(viewer.get_id(), event => {
     dispatch_workbench_msg(ViewerEvent(DidBuildViewModel(event)))
   })
   |> ignore
-  @viewer.debug_on_did_render_model(viewer, event => {
+  @viewer_testing.on_did_render_model(viewer.get_id(), event => {
     dispatch_workbench_msg(ViewerEvent(DidRenderModel(event)))
   })
   |> ignore
-  @viewer.debug_on_did_resolve_hover(viewer, event => {
+  @viewer_testing.on_did_resolve_hover(viewer.get_id(), event => {
     dispatch_workbench_msg(ViewerEvent(DidResolveHover(event)))
   })
   |> ignore
@@ -179,7 +210,7 @@ pub fn start_app() -> Unit {
 ///|
 /// Languages are compile-time packages composed here by import; the
 /// viewer library itself ships only the plain fallback.
-fn install_language_tokenizers(services : @viewer.ViewerServices) -> Unit {
+fn install_language_tokenizers(services : WorkbenchServices) -> Unit {
   services.languages.set_tokens_provider(
     "moonbit",
     @lang_moonbit.MoonbitTokenizer::new(),
@@ -277,7 +308,7 @@ fn update_workbench(
         cmd,
         viewer_cmd(() => {
           let viewer = workbench_viewer()
-          viewer.update_options({ ..viewer.get_options(), placeholder: message })
+          viewer.update_options(viewer.get_options().with_placeholder(message))
         }),
       ]),
       next,
@@ -327,7 +358,7 @@ fn workbench_update(
           persist_theme_cmd(theme),
           viewer_cmd(() => {
             let viewer = workbench_viewer()
-            viewer.update_options({ ..viewer.get_options(), theme, })
+            viewer.update_options(viewer.get_options().with_theme(theme))
           }),
         ]),
         { ..model, theme, },
@@ -470,11 +501,14 @@ fn viewer_event_update(
       (@rabbita.none, model)
     }
     DidBuildViewModel(event) => {
+      let diagnostic_count = workbench_services().markers
+        .diagnostics_for_resource(event.model.uri)
+        .length()
       set_current_model(text_model_harness_json(event.model))
       emit_render_event(
         event.line_count,
         event.token_count,
-        event.diagnostic_count,
+        diagnostic_count,
         event.model.revision,
         event.tokenize_ms,
         event.build_ms,
@@ -482,9 +516,12 @@ fn viewer_event_update(
       (@rabbita.none, model)
     }
     DidRenderModel(event) => {
+      let diagnostics = workbench_services().markers.diagnostics_for_resource(
+        event.model.uri,
+      )
       emit_dom_mounted(
         event.rendered_lines,
-        event.diagnostics.length(),
+        diagnostics.length(),
         "ready",
         patch_ms=Some(event.patch_ms),
       )
@@ -494,7 +531,7 @@ fn viewer_event_update(
         status_message: "",
         document: Some(model_to_view(event.model)),
         line_count: event.line_count,
-        diagnostics: event.diagnostics,
+        diagnostics,
         viewer_has_frame: true,
       }
       if event.fresh {

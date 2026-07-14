@@ -56,10 +56,10 @@ fn swap_model(name : String, marker : String) -> @model.TextModel {
 
 ///|
 fn seed_swap_diagnostic(
-  services : @viewer.ViewerServices,
+  markers : @markers.MarkerService,
   model : @model.TextModel,
 ) -> Unit {
-  services.markers.set_diagnostics("swap", model.uri, [
+  markers.set_diagnostics("swap", model.uri, [
     {
       range: Range(1, 1, 1, 6),
       severity: Error,
@@ -90,7 +90,10 @@ fn run_model_swap_test() -> Unit {
     placeholder_host,
     options=ViewerOptions(placeholder="dispose-placeholder"),
   )
-  let services = @viewer.ViewerServices::new()
+  let markers = @markers.MarkerService::new(schedule=model_swap_queue_microtask)
+  let services = @viewer.ViewerServices::new(
+    markers=MarkerStore(markers.marker_service_handle()),
+  )
   let viewer = @viewer.Viewer::create(
     host,
     services~,
@@ -99,8 +102,8 @@ fn run_model_swap_test() -> Unit {
   let model_a = swap_model("swap-a.txt", "alpha_document_marker")
   let model_b = swap_model("swap-b.txt", "beta_document_marker")
   let model_c = swap_model("swap-c.txt", "gamma_document_marker")
-  seed_swap_diagnostic(services, model_a)
-  seed_swap_diagnostic(services, model_b)
+  seed_swap_diagnostic(markers, model_a)
+  seed_swap_diagnostic(markers, model_b)
   let first_overlay_node = document.create_element("div")
   first_overlay_node.set_attribute("class", "swap-overlay-first")
   let second_overlay_node = document.create_element("div")
@@ -268,9 +271,11 @@ fn run_model_swap_test() -> Unit {
                       "Viewer disposal kept the overlay mounted or destroyed its node",
                     )
                     model_c.dispose()
-                    services.marker_decorations.dispose()
-                    services.markers.dispose()
-                    services.agent_feedback.dispose()
+                    // The bundle owns the decorations adapter and default
+                    // feedback store; the retained marker store is disposed
+                    // only after that adapter has released its subscription.
+                    services.dispose()
+                    markers.dispose()
                     ctx.finish()
                   },
                   600,
@@ -283,6 +288,12 @@ fn run_model_swap_test() -> Unit {
     })
   })
 }
+
+///|
+/// Preserve the browser scheduling used by the default Viewer marker store
+/// while keeping the concrete backing in this scenario's ownership scope.
+extern "js" fn model_swap_queue_microtask(callback : () -> Unit) -> Unit =
+  #| (callback) => globalThis.queueMicrotask(callback)
 
 ///|
 /// Polls until the editor surface contains `needle`, then runs `body`.

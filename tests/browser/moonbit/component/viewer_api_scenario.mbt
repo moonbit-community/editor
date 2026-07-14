@@ -38,13 +38,13 @@ impl @language.HoverProvider for ComponentHoverProvider with fn provide_hover(
 /// (Monaco's `setModelMarkers`), and the marker-change event drives the
 /// squiggle render.
 fn set_component_diagnostics(
-  services : @viewer.ViewerServices,
+  markers : @markers.MarkerService,
   model : @model.TextModel,
 ) -> Unit {
   let needle = "keeps"
   match model.snapshot.text.find(needle) {
     Some(start) =>
-      services.markers.set_diagnostics("lsp", model.uri, [
+      markers.set_diagnostics("lsp", model.uri, [
         {
           range: model.snapshot.range_of(
             OffsetRange(start, start + needle.length()),
@@ -61,6 +61,7 @@ fn set_component_diagnostics(
 ///|
 fn run_viewer_api_test() -> Unit {
   let ctx = @support.BrowserTestContext::new("viewer_api")
+  assert_container_contract(ctx)
   let rendered_count = Ref(0)
   let rendered_line_count = Ref(0)
   let view_line_count = Ref(0)
@@ -81,19 +82,24 @@ fn run_viewer_api_test() -> Unit {
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
-      let services = @viewer.ViewerServices::new(
-        languages=@languages.Languages::new(),
+      let log_service = @log.LogService::new()
+      let log_handle = log_service.log_handle()
+      let languages = @languages.Languages::new()
+      let markers = @markers.MarkerService::new(
+        schedule=component_queue_microtask,
       )
-      services.languages.set_tokens_provider(
+      let services = @viewer.ViewerServices::new(
+        languages=languages.language_handle(log_handle),
+        markers=MarkerStore(markers.marker_service_handle()),
+        log_service=log_handle,
+      )
+      languages.set_tokens_provider(
         "moonbit",
         @lang_moonbit.MoonbitTokenizer::new(),
       )
       |> ignore
       let provider = ComponentHoverProvider::new()
-      services.languages.register_hover_provider(
-        LanguageId("moonbit"),
-        provider,
-      )
+      languages.register_hover_provider(LanguageId("moonbit"), provider)
       |> ignore
       let viewer = @viewer.Viewer::create(
         host,
@@ -114,7 +120,7 @@ fn run_viewer_api_test() -> Unit {
         host.set_attribute("data-scroll-top", event.scroll_top.to_string())
       })
       |> ignore
-      @viewer.debug_on_did_render_model(viewer, event => {
+      @viewer_testing.on_did_render_model(viewer.get_id(), event => {
         if event.fresh {
           rendered_count.val = rendered_count.val + 1
           view_line_count.val = event.line_count
@@ -123,7 +129,7 @@ fn run_viewer_api_test() -> Unit {
       })
       |> ignore
       viewer.set_model(Some(model))
-      set_component_diagnostics(services, model)
+      set_component_diagnostics(markers, model)
       let zone = @rdom.document().create_element("div")
       zone.set_attribute("class", "component-zone host-zone-class")
       zone.set_attribute("style", "color: rgb(1, 2, 3);")
@@ -154,6 +160,37 @@ fn run_viewer_api_test() -> Unit {
     }
   }
 }
+
+///|
+/// Public construction always retains the exact caller host, while the
+/// model/view DOM query remains nullable before attachment and after disposal.
+fn assert_container_contract(ctx : @support.BrowserTestContext) -> Unit {
+  let host = @rdom.document().create_element("div")
+  let viewer = @viewer.Viewer::create(host)
+  ctx.assert_true(
+    viewer.get_container_dom_node().as_node().is_same_node(host.as_node()),
+    "get_container_dom_node did not return the construction host",
+  )
+  ctx.assert_true(
+    viewer.get_dom_node() is None,
+    "get_dom_node should be empty without a model view",
+  )
+  viewer.dispose()
+  ctx.assert_true(
+    viewer.get_container_dom_node().as_node().is_same_node(host.as_node()),
+    "dispose forgot the original construction host",
+  )
+  ctx.assert_true(
+    viewer.get_dom_node() is None,
+    "get_dom_node should remain empty after disposal",
+  )
+}
+
+///|
+/// Keep caller-owned marker delivery on the same browser microtask cadence as
+/// ViewerServices' built-in marker store.
+extern "js" fn component_queue_microtask(callback : () -> Unit) -> Unit =
+  #| (callback) => globalThis.queueMicrotask(callback)
 
 ///|
 fn mount_host() -> @rdom.Element? {

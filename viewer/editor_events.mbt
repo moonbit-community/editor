@@ -592,7 +592,6 @@ fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
   let services : @hover.HoverParticipantServices = {
     languages: self.services.languages,
     marker_decorations: self.services.marker_decorations,
-    log_service: self.services.log_service,
   }
   @hover.ContentHoverComputer::new(services)
 }
@@ -727,7 +726,7 @@ fn Viewer::maybe_notify_hover_resolved(
     Some(model) => model.revision
     None => ""
   }
-  self.did_resolve_hover.fire({ ok: hc.hover.view is Some(_), revision })
+  self.emit_hover_resolved({ ok: hc.hover.view is Some(_), revision })
 }
 
 ///|

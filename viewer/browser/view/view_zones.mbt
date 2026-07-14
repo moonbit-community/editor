@@ -110,7 +110,7 @@ priv struct ComputedViewZoneProps {
 /// The retained model/configuration subset of Monaco's `ViewContext`.
 priv struct ViewZonesContext {
   view_model : @view_model.ViewModel
-  log_service : @log.LogService
+  log_service : @log.LogHandle
   read_configuration : () -> (Int, Double, Double)
   emit_view_zones_changed : () -> Unit
 }
@@ -189,7 +189,7 @@ fn ViewZones::margin_dom_node(self : ViewZones) -> @rdom.Element {
 fn ViewZones::install_context(
   self : ViewZones,
   view_model : @view_model.ViewModel,
-  log_service : @log.LogService,
+  log_service : @log.LogHandle,
   read_configuration : () -> (Int, Double, Double),
   emit_view_zones_changed : () -> Unit,
 ) -> Unit {

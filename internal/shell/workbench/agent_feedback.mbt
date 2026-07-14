@@ -21,7 +21,7 @@ let restored_feedback_count : Ref[Int] = Ref(0)
 ///|
 /// Subscribes the workbench to the feedback service's change event and
 /// writes the mutated resource's item set back to localStorage.
-fn install_feedback_persistence(services : @viewer.ViewerServices) -> Unit {
+fn install_feedback_persistence(services : WorkbenchServices) -> Unit {
   services.agent_feedback.on_did_change_feedback(event => {
     persist_feedback_items(services, event.resource)
   })
@@ -39,7 +39,7 @@ fn sync_document_feedback(text_model : @model.TextModel) -> Unit {
 
 ///|
 fn persist_feedback_items(
-  services : @viewer.ViewerServices,
+  services : WorkbenchServices,
   resource : @base_common.Uri,
 ) -> Unit {
   let items : Array[Json] = []
@@ -53,7 +53,7 @@ fn persist_feedback_items(
 }
 
 ///|
-fn feedback_item_to_json(item : @agent_feedback.AgentFeedback) -> Json {
+fn feedback_item_to_json(item : @agent_feedback_api.AgentFeedback) -> Json {
   let fields : Map[String, Json] = Map([])
   fields["text"] = item.text.to_json()
   fields["range"] = Json::array([
@@ -84,7 +84,7 @@ fn feedback_item_to_json(item : @agent_feedback.AgentFeedback) -> Json {
 /// session); after that the in-memory items are the persisted set's
 /// superset.
 fn restore_feedback_items(
-  services : @viewer.ViewerServices,
+  services : WorkbenchServices,
   resource : @base_common.Uri,
 ) -> Unit {
   guard services.agent_feedback.get_feedback(resource).is_empty() else {
@@ -94,7 +94,7 @@ fn restore_feedback_items(
   guard raw != "" else { return }
   let parsed = @json.parse(raw) catch { _ => return }
   guard parsed is Array(entries) else { return }
-  let items : Array[@agent_feedback.AgentFeedback] = []
+  let items : Array[@agent_feedback_api.AgentFeedback] = []
   for entry in entries {
     if feedback_item_from_json(resource, entry) is Some(item) {
       items.push(item)
@@ -108,7 +108,7 @@ fn restore_feedback_items(
 fn feedback_item_from_json(
   resource : @base_common.Uri,
   value : Json,
-) -> @agent_feedback.AgentFeedback? {
+) -> @agent_feedback_api.AgentFeedback? {
   guard value
     is {
       "text": String(text),
@@ -119,13 +119,13 @@ fn feedback_item_from_json(
     } else {
     return None
   }
-  let kind : @agent_feedback.AgentFeedbackKind = if value
+  let kind : @agent_feedback_api.AgentFeedbackKind = if value
     is { "kind": String("codeReview"), .. } {
     AgentReview
   } else {
     UserReview
   }
-  let state : @agent_feedback.AgentFeedbackState = match value {
+  let state : @agent_feedback_api.AgentFeedbackState = match value {
     { "state": String("created"), .. } => Created
     { "state": String("submitted"), .. } => Submitted
     { "state": String("resolved"), .. } => Resolved

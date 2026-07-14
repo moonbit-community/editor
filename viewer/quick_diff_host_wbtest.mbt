@@ -22,14 +22,15 @@ fn quick_diff_gutter_decorations(viewer : Viewer) -> Array[String] {
 
 ///|
 test "quick diff: stored original decorates the gutter on model attach" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
     path="/test-model",
   )
-  services.quick_diff.set_original_content(
+  quick_diff.set_original_content(
     resource,
     Some(["a", "old", "b", "tail"].join("\n")),
   )
@@ -42,12 +43,14 @@ test "quick diff: stored original decorates the gutter on model attach" {
     "[4,1 -> 4,1] dirty-diff-glyph dirty-diff-added primary",
   )
   viewer.dispose()
+  backings.dispose()
 }
 
 ///|
 test "quick diff: original arriving after attach updates, clearing removes" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -59,51 +62,57 @@ test "quick diff: original arriving after attach updates, clearing removes" {
   // decorator requests the MAX_VALUE column and the model validates it down
   // to the end of line 1 ("a" → column 2), as Monaco's deltaDecorations
   // does.
-  services.quick_diff.set_original_content(resource, Some("a\nx\nb"))
+  quick_diff.set_original_content(resource, Some("a\nx\nb"))
   assert_eq(
     quick_diff_gutter_decorations(viewer).join("; "),
     "[1,2 -> 1,2] dirty-diff-glyph dirty-diff-deleted primary",
   )
   // Clearing the original clears the gutter.
-  services.quick_diff.set_original_content(resource, None)
+  quick_diff.set_original_content(resource, None)
   assert_eq(quick_diff_gutter_decorations(viewer).length(), 0)
   viewer.dispose()
+  backings.dispose()
 }
 
 ///|
 test "quick diff: an original for another resource does not decorate" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let other = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
     path="/other-model",
   )
   viewer.set_model(Some(test_model("a\nb")))
-  services.quick_diff.set_original_content(other, Some("a\nx\nb"))
+  quick_diff.set_original_content(other, Some("a\nx\nb"))
   assert_eq(quick_diff_gutter_decorations(viewer).length(), 0)
   viewer.dispose()
+  backings.dispose()
 }
 
 ///|
 test "quick diff: identical original decorates nothing" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
     path="/test-model",
   )
-  services.quick_diff.set_original_content(resource, Some("a\nb"))
+  quick_diff.set_original_content(resource, Some("a\nb"))
   viewer.set_model(Some(test_model("a\nb")))
   assert_eq(quick_diff_gutter_decorations(viewer).length(), 0)
   viewer.dispose()
+  backings.dispose()
 }
 
 ///|
 test "quick diff: one central state follows model swap, removal, and reattach" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let state = viewer.quick_diff_contribution().unwrap()
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
@@ -112,7 +121,7 @@ test "quick diff: one central state follows model swap, removal, and reattach" {
   )
   let first = test_model("a\nfirst\ntail")
   let second = test_model("a\nsecond\ntail")
-  services.quick_diff.set_original_content(resource, Some("a\nold\ntail"))
+  quick_diff.set_original_content(resource, Some("a\nold\ntail"))
   viewer.set_model(Some(first))
   assert_true(state.collection.length() > 0)
   assert_true(first.get_all_decorations().length() > 0)
@@ -129,12 +138,14 @@ test "quick diff: one central state follows model swap, removal, and reattach" {
   viewer.dispose()
   first.dispose()
   second.dispose()
+  backings.dispose()
 }
 
 ///|
 test "quick diff: disposal window is live and later service events are silent" {
-  let services = ViewerServices::new()
-  let viewer = Viewer::Viewer(services~)
+  let backings = RootTestServiceBackings::new()
+  let quick_diff = backings.quick_diff
+  let viewer = Viewer::Viewer(services=backings.services)
   let state = viewer.quick_diff_contribution().unwrap()
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
@@ -142,27 +153,24 @@ test "quick diff: disposal window is live and later service events are silent" {
     path="/test-model",
   )
   let model = test_model("a\nnew\ntail")
-  services.quick_diff.set_original_content(resource, Some("a\nold\ntail"))
+  quick_diff.set_original_content(resource, Some("a\nold\ntail"))
   viewer.set_model(Some(model))
   assert_true(state.collection.length() > 0)
   let original_change_deliveries = Ref(0)
   state.listeners.push(
-    services.quick_diff.on_did_change_original(_ => {
-      original_change_deliveries.val += 1
-    }),
+    quick_diff.on_did_change_original(_ => original_change_deliveries.val += 1),
   )
   let callback_seen = Ref(false)
   let contribution_live_in_callback = Ref(false)
   viewer.on_did_dispose(() => {
     callback_seen.val = true
-    contribution_live_in_callback.val = viewer.get_contribution(
-        "quickDiff.decorator",
-      )
-      is Some(_)
+    contribution_live_in_callback.val = viewer.contributions.contains(
+      "quickDiff.decorator",
+    )
     // Contribution listeners are intentionally live during `onDidDispose`;
     // with the model already detached this synchronous service emission is a
     // guarded no-op.
-    services.quick_diff.set_original_content(resource, Some("replacement"))
+    quick_diff.set_original_content(resource, Some("replacement"))
   })
   |> ignore
   viewer.dispose()
@@ -170,8 +178,9 @@ test "quick diff: disposal window is live and later service events are silent" {
   assert_true(contribution_live_in_callback.val)
   assert_eq(original_change_deliveries.val, 1)
   assert_eq(state.collection.length(), 0)
-  services.quick_diff.set_original_content(resource, Some("after dispose"))
+  quick_diff.set_original_content(resource, Some("after dispose"))
   assert_eq(original_change_deliveries.val, 1)
   assert_eq(state.collection.length(), 0)
   model.dispose()
+  backings.dispose()
 }

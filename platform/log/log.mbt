@@ -122,12 +122,58 @@ pub(all) struct LogService {
 }
 
 ///|
+/// Opaque logging capability passed across public service boundaries. It
+/// exposes only the warning and error operations consumed by Viewer runtime
+/// code and does not reveal the concrete sink or threshold policy.
+pub struct LogHandle {
+  priv warn_callback : (String, String, Array[(String, String)]) -> Unit
+  priv error_callback : (String, String, Array[(String, String)]) -> Unit
+}
+
+///|
 /// Creates a log service with an optional threshold and sink.
 pub fn LogService::new(
   level? : LogLevel = Info,
   logger? : &Logger = NullLogger::new(),
 ) -> LogService {
   { level, logger }
+}
+
+///|
+/// Derives the minimal Viewer logging capability from this concrete service.
+/// The handle borrows behavior through callbacks; it owns neither the service
+/// nor its logger.
+pub fn LogService::log_handle(self : LogService) -> LogHandle {
+  {
+    warn_callback: (category, message, details) => {
+      self.warn(category, message, details~)
+    },
+    error_callback: (category, message, details) => {
+      self.error(category, message, details~)
+    },
+  }
+}
+
+///|
+/// Emits a warning through the captured logging capability.
+pub fn LogHandle::warn(
+  self : LogHandle,
+  category : String,
+  message : String,
+  details? : Array[(String, String)] = [],
+) -> Unit {
+  (self.warn_callback)(category, message, details)
+}
+
+///|
+/// Emits an error through the captured logging capability.
+pub fn LogHandle::error(
+  self : LogHandle,
+  category : String,
+  message : String,
+  details? : Array[(String, String)] = [],
+) -> Unit {
+  (self.error_callback)(category, message, details)
 }
 
 ///|

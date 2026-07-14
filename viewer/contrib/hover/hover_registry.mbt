@@ -84,6 +84,6 @@ pub fn register_default_hover_participants(
     MarkerHoverParticipant::new(services.marker_decorations).hover_participant_handle()
   })
   registry.register(services => {
-    MarkdownHoverParticipant::new(services.languages, services.log_service).hover_participant_handle()
+    MarkdownHoverParticipant::new(services.languages).hover_participant_handle()
   })
 }

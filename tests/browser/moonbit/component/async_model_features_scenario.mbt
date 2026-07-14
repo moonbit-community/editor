@@ -274,7 +274,7 @@ fn async_feature_state_json(
     "pending": (harness.calls.length() - settled).to_json(),
     "resolveReports": reports.length().to_json(),
     "reports": Json::array(reports.map(report => report.to_json())),
-    "attached": viewer.has_model().to_json(),
+    "attached": @viewer_testing.has_model(viewer.get_id()).to_json(),
     "disposed": disposed.val.to_json(),
     "currentModelId": current_model_id.to_json(),
     "currentUri": current_uri.to_json(),
@@ -291,7 +291,12 @@ fn run_async_model_features_test() -> Unit {
   let provider = DeferredAsyncFeatureProvider::{ harness, }
   let languages = @languages.Languages::new()
   languages.register_hover_provider(LanguageId("moonbit"), provider) |> ignore
-  let services = @viewer.ViewerServices::new(languages~)
+  let log_service = @log.LogService::new()
+  let log_handle = log_service.log_handle()
+  let services = @viewer.ViewerServices::new(
+    languages=languages.language_handle(log_handle),
+    log_service=log_handle,
+  )
   let viewer = @viewer.Viewer::create(
     host,
     services~,
@@ -302,7 +307,7 @@ fn run_async_model_features_test() -> Unit {
     ),
   )
   let reports : Array[AsyncHoverReport] = []
-  @viewer.debug_on_did_resolve_hover(viewer, event => {
+  @viewer_testing.on_did_resolve_hover(viewer.get_id(), event => {
     reports.push({ ok: event.ok, revision: event.revision })
   })
   |> ignore
@@ -323,6 +328,7 @@ fn run_async_model_features_test() -> Unit {
     () => viewer.set_model(None),
     () => {
       viewer.dispose()
+      services.dispose()
       disposed.val = true
     },
   )

@@ -189,13 +189,10 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // visible-range publication; generic renders never repeat it.
   view_model.visible_lines_stabilized()
   let build_finished = now_ms()
-  self.did_build_view_model.fire({
+  self.emit_view_model_built({
     model,
     line_count: view_model.line_count(),
     token_count: model.tokenization.token_count(),
-    diagnostic_count: self.services.markers
-    .diagnostics_for_resource(model.uri)
-    .length(),
     tokenize_ms: 0.0,
     build_ms: build_finished - build_started,
   })
@@ -404,13 +401,10 @@ fn Viewer::handle_model_tokens_changed(
   _event : @model.ModelTokensChangedEvent,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
-  self.did_build_view_model.fire({
+  self.emit_view_model_built({
     model,
     line_count: view_model.line_count(),
     token_count: model.tokenization.token_count(),
-    diagnostic_count: self.services.markers
-    .diagnostics_for_resource(model.uri)
-    .length(),
     tokenize_ms: 0.0,
     build_ms: 0.0,
   })

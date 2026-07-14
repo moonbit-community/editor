@@ -3,6 +3,7 @@ package "moonbit-community/editor/viewer/contrib/agent_feedback"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/viewer/common/agent_feedback_api",
   "moonbitlang/core/debug",
 }
 
@@ -11,7 +12,7 @@ pub fn compare_session_editor_comments(SessionEditorComment, SessionEditorCommen
 
 pub fn get_accepted_agent_feedback_comment_count(Array[SessionEditorComment]) -> Int
 
-pub fn get_session_editor_comments(Array[AgentFeedback]) -> Array[SessionEditorComment]
+pub fn get_session_editor_comments(Array[@agent_feedback_api.AgentFeedback]) -> Array[SessionEditorComment]
 
 pub fn group_nearby_session_editor_comments(Array[SessionEditorComment], line_threshold? : Int) -> Array[Array[SessionEditorComment]]
 
@@ -20,99 +21,50 @@ pub fn to_session_editor_comment_id(String) -> String
 // Errors
 
 // Types and methods
-pub(all) struct AgentFeedback {
-  id : String
-  text : String
-  resource : @common.Uri
-  range : @common.Range
-  kind : AgentFeedbackKind
-  replies : Array[String]
-  state : AgentFeedbackState
-} derive(@debug.Debug)
-
-pub(all) struct AgentFeedbackAddedEvent {
-  feedback : AgentFeedback
-  has_existing_feedback_for_file : Bool
-} derive(@debug.Debug)
-
-pub(all) struct AgentFeedbackChangeEvent {
-  resource : @common.Uri
-  feedback_items : Array[AgentFeedback]
-} derive(@debug.Debug)
-
-pub(all) enum AgentFeedbackKind {
-  UserReview
-  AgentReview
-} derive(Eq, @debug.Debug)
-
-pub(all) struct AgentFeedbackNavigationBearing {
-  active_idx : Int
-  total_count : Int
-} derive(Eq, @debug.Debug)
-
-pub(all) struct AgentFeedbackReplyAddedEvent {
-  feedback : AgentFeedback
-  reply_count : Int
-} derive(@debug.Debug)
-
 pub struct AgentFeedbackService {
-  did_change_feedback : @common.Emitter[AgentFeedbackChangeEvent]
+  did_change_feedback : @common.Emitter[@agent_feedback_api.AgentFeedbackChangeEvent]
   did_change_navigation : @common.Emitter[@common.Uri]
-  did_add_feedback : @common.Emitter[AgentFeedbackAddedEvent]
-  did_add_reply : @common.Emitter[AgentFeedbackReplyAddedEvent]
-  did_submit_feedback : @common.Emitter[AgentFeedbackSubmittedEvent]
-  items_by_resource : Map[String, Array[AgentFeedback]]
+  did_add_feedback : @common.Emitter[@agent_feedback_api.AgentFeedbackAddedEvent]
+  did_add_reply : @common.Emitter[@agent_feedback_api.AgentFeedbackReplyAddedEvent]
+  did_submit_feedback : @common.Emitter[@agent_feedback_api.AgentFeedbackSubmittedEvent]
+  items_by_resource : Map[String, Array[@agent_feedback_api.AgentFeedback]]
   navigation_anchor_by_resource : Map[String, String]
   enabled_resources : Map[String, Bool]
   mut next_feedback_handle : Int
 }
 pub fn AgentFeedbackService::accept_feedback(Self, @common.Uri, String) -> Unit
-pub fn AgentFeedbackService::add_feedback(Self, @common.Uri, @common.Range, String, kind? : AgentFeedbackKind, state? : AgentFeedbackState) -> AgentFeedback
+pub fn AgentFeedbackService::add_feedback(Self, @common.Uri, @common.Range, String, kind? : @agent_feedback_api.AgentFeedbackKind, state? : @agent_feedback_api.AgentFeedbackState) -> @agent_feedback_api.AgentFeedback
 pub fn AgentFeedbackService::add_reply(Self, @common.Uri, String, String) -> Unit
+pub fn AgentFeedbackService::agent_feedback_handle(Self) -> @agent_feedback_api.AgentFeedbackHandle
 pub fn AgentFeedbackService::clear_feedback(Self, @common.Uri) -> Unit
 pub fn AgentFeedbackService::dispose(Self) -> Unit
-pub fn AgentFeedbackService::get_feedback(Self, @common.Uri) -> Array[AgentFeedback]
-pub fn AgentFeedbackService::get_navigation_bearing(Self, @common.Uri, Array[String]) -> AgentFeedbackNavigationBearing
+pub fn AgentFeedbackService::get_feedback(Self, @common.Uri) -> Array[@agent_feedback_api.AgentFeedback]
+pub fn AgentFeedbackService::get_navigation_bearing(Self, @common.Uri, Array[String]) -> @agent_feedback_api.AgentFeedbackNavigationBearing
 pub fn AgentFeedbackService::get_next_navigable_item(Self, @common.Uri, Array[String], next~ : Bool) -> String?
 pub fn AgentFeedbackService::is_feedback_enabled(Self, @common.Uri) -> Bool
 pub fn AgentFeedbackService::mark_feedback_submitted(Self, @common.Uri) -> Unit
 pub fn AgentFeedbackService::new() -> Self
-pub fn AgentFeedbackService::on_did_add_feedback(Self, (AgentFeedbackAddedEvent) -> Unit) -> @common.Disposable
-pub fn AgentFeedbackService::on_did_add_reply(Self, (AgentFeedbackReplyAddedEvent) -> Unit) -> @common.Disposable
-pub fn AgentFeedbackService::on_did_change_feedback(Self, (AgentFeedbackChangeEvent) -> Unit) -> @common.Disposable
+pub fn AgentFeedbackService::on_did_add_feedback(Self, (@agent_feedback_api.AgentFeedbackAddedEvent) -> Unit) -> @common.Disposable
+pub fn AgentFeedbackService::on_did_add_reply(Self, (@agent_feedback_api.AgentFeedbackReplyAddedEvent) -> Unit) -> @common.Disposable
+pub fn AgentFeedbackService::on_did_change_feedback(Self, (@agent_feedback_api.AgentFeedbackChangeEvent) -> Unit) -> @common.Disposable
 pub fn AgentFeedbackService::on_did_change_navigation(Self, (@common.Uri) -> Unit) -> @common.Disposable
-pub fn AgentFeedbackService::on_did_submit_feedback(Self, (AgentFeedbackSubmittedEvent) -> Unit) -> @common.Disposable
+pub fn AgentFeedbackService::on_did_submit_feedback(Self, (@agent_feedback_api.AgentFeedbackSubmittedEvent) -> Unit) -> @common.Disposable
 pub fn AgentFeedbackService::remove_feedback(Self, @common.Uri, String) -> Unit
 pub fn AgentFeedbackService::set_feedback_enabled(Self, @common.Uri, Bool) -> Unit
-pub fn AgentFeedbackService::set_feedback_items(Self, @common.Uri, Array[AgentFeedback]) -> Unit
+pub fn AgentFeedbackService::set_feedback_items(Self, @common.Uri, Array[@agent_feedback_api.AgentFeedback]) -> Unit
 pub fn AgentFeedbackService::set_feedback_resolved(Self, @common.Uri, String, Bool) -> Unit
 pub fn AgentFeedbackService::set_navigation_anchor(Self, @common.Uri, String?) -> Unit
 pub fn AgentFeedbackService::update_feedback(Self, @common.Uri, String, String) -> Unit
 
-pub(all) enum AgentFeedbackState {
-  Created
-  Accepted
-  Submitted
-  Resolved
-} derive(Eq, @debug.Debug)
-
-pub(all) struct AgentFeedbackSubmittedEvent {
-  resource : @common.Uri
-  items : Array[AgentFeedback]
-  user_count : Int
-  agent_review_count : Int
-  reply_count : Int
-} derive(@debug.Debug)
-
 pub(all) struct SessionEditorComment {
   id : String
   source_id : String
-  kind : AgentFeedbackKind
+  kind : @agent_feedback_api.AgentFeedbackKind
   resource : @common.Uri
   range : @common.Range
   text : String
   replies : Array[String]
-  state : AgentFeedbackState
+  state : @agent_feedback_api.AgentFeedbackState
 } derive(@debug.Debug)
 
 // Type aliases

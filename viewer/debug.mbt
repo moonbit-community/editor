@@ -1,35 +1,44 @@
-// The debug/instrumentation seam. These package-level subscriptions are NOT
-// part of the public Monaco-shaped `Viewer::` API (which is a strict readonly
-// subset of `IEditor`/`ICodeEditor`): Monaco has no render-completion or
-// hover-resolution events, and its own tests reach into internals for them.
-// Dev-tool hosts (the workbench status bar) and browser-test scenarios use
-// these for telemetry and render synchronization.
+// Root-private instrumentation remains only for white-box assertions. Browser
+// tests and the workbench subscribe through the Viewer-id-keyed
+// `viewer/browser/testing` registry, so none of these hooks or payloads leak
+// through the public Viewer facade.
 
 ///|
 /// Fires after a model's content is prepared for rendering (view-model build
 /// at attach, token re-warm on tokenizer changes) — tokenize/build timings
 /// and counts for telemetry and test synchronization.
-pub fn debug_on_did_build_view_model(
+fn debug_on_did_build_view_model(
   viewer : Viewer,
-  listener : (ViewerViewModelBuiltEvent) -> Unit,
+  listener : (@viewer_testing.ViewModelBuiltObservation) -> Unit,
 ) -> @base_common.Disposable {
   viewer.did_build_view_model.event(listener)
 }
 
 ///|
-/// Fires after the built content is patched into the DOM.
-pub fn debug_on_did_render_model(
-  viewer : Viewer,
-  listener : (ViewerModelRenderedEvent) -> Unit,
-) -> @base_common.Disposable {
-  viewer.did_render_model.event(listener)
+/// White-box-only seam retained in the ordinary library build.
+let _debug_build_test_seam_anchor : Unit = ignore(debug_on_did_build_view_model)
+
+///|
+fn Viewer::emit_view_model_built(
+  self : Viewer,
+  observation : @viewer_testing.ViewModelBuiltObservation,
+) -> Unit {
+  self.did_build_view_model.fire(observation)
+  @viewer_testing.publish_view_model_built(self.get_id(), observation)
 }
 
 ///|
-/// Fires when a hover resolution operation completes.
-pub fn debug_on_did_resolve_hover(
-  viewer : Viewer,
-  listener : (ViewerHoverResolvedEvent) -> Unit,
-) -> @base_common.Disposable {
-  viewer.did_resolve_hover.event(listener)
+fn Viewer::emit_model_rendered(
+  self : Viewer,
+  observation : @viewer_testing.ModelRenderedObservation,
+) -> Unit {
+  @viewer_testing.publish_model_rendered(self.get_id(), observation)
+}
+
+///|
+fn Viewer::emit_hover_resolved(
+  self : Viewer,
+  observation : @viewer_testing.HoverResolvedObservation,
+) -> Unit {
+  @viewer_testing.publish_hover_resolved(self.get_id(), observation)
 }

@@ -108,13 +108,10 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   match (self.pending_rendered, self.rendered_window) {
     (Some(pending), Some(window)) => {
       self.pending_rendered = None
-      self.did_render_model.fire({
+      self.emit_model_rendered({
         model: pending.model,
         line_count: view_model.line_count(),
         rendered_lines: window.end - window.start,
-        diagnostics: self.services.markers.diagnostics_for_resource(
-          pending.model.uri,
-        ),
         patch_ms,
         fresh: pending.fresh,
       })

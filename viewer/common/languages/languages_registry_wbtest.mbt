@@ -37,6 +37,34 @@ async test "provider failures are logged and isolated" {
 }
 
 ///|
+async test "language handle prebinds logging and forwards the exact capability" {
+  let memory = @log.MemoryLogger::new()
+  let languages = Languages::new()
+  languages.set_language_configuration("moonbit", {
+    folding_rules: Some({ off_side: true, markers: None }),
+  })
+  languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
+
+  })
+  |> ignore
+  languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
+
+  })
+  |> ignore
+  let handle = languages.language_handle(
+    @log.LogService::new(logger=memory).log_handle(),
+  )
+  assert_true(
+    handle.get_language_configuration("moonbit").folding_rules
+    is Some({ off_side: true, markers: None }),
+  )
+  assert_hover_text(handle.hover_at(test_model(), 3), "provider hover")
+  let entries = memory.entries()
+  assert_eq(entries.length(), 1)
+  assert_true(entries[0].category == "language.hover")
+}
+
+///|
 test "token providers dispose only the active registration" {
   let languages = Languages::new()
   let first = languages.set_tokens_provider(

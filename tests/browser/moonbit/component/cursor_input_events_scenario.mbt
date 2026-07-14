@@ -103,13 +103,17 @@ fn run_cursor_input_events_test() -> Unit {
     "cursor-input-rev-1",
     cursor_input_source(),
   )
-  let services = @viewer.ViewerServices::new(
-    languages=@languages.Languages::new(),
-  )
-  services.languages.register_hover_provider(LanguageId("plaintext"), CursorInputHoverProvider::{
+  let languages = @languages.Languages::new()
+  languages.register_hover_provider(LanguageId("plaintext"), CursorInputHoverProvider::{
 
   })
   |> ignore
+  let log_service = @log.LogService::new()
+  let log_handle = log_service.log_handle()
+  let services = @viewer.ViewerServices::new(
+    languages=languages.language_handle(log_handle),
+    log_service=log_handle,
+  )
   let viewer = @viewer.Viewer::create(
     host,
     services~,

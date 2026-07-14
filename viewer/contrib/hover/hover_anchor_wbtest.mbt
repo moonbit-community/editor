@@ -182,7 +182,9 @@ fn anchor_test_model() -> @model.TextModel {
 ///|
 test "marker participant filters by anchor-line columns with the showIfCollapsed relaxation" {
   let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(markers)
+  let marker_decorations = @markers.MarkerDecorationsService::new(
+    markers.marker_service_handle(),
+  )
   let model = anchor_test_model()
   marker_decorations.on_model_added(model)
   markers.set_diagnostics("diagnostics:0", model.uri, [
@@ -193,7 +195,9 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
       tags: None,
     },
   ])
-  let participant = MarkerHoverParticipant::new(marker_decorations).hover_participant_handle()
+  let participant = MarkerHoverParticipant::new(
+    marker_decorations.marker_decorations_handle(),
+  ).hover_participant_handle()
   let compute = (anchor : HoverAnchor) => {
     (participant.compute_sync)({
       model,
@@ -271,10 +275,14 @@ test "marker participant isolates distinct live models sharing one URI" {
       tags: None,
     },
   ])
-  let marker_decorations = @markers.MarkerDecorationsService::new(markers)
+  let marker_decorations = @markers.MarkerDecorationsService::new(
+    markers.marker_service_handle(),
+  )
   let lease_a = marker_decorations.acquire_model(model_a)
   let lease_b = marker_decorations.acquire_model(model_b)
-  let participant = MarkerHoverParticipant::new(marker_decorations).hover_participant_handle()
+  let participant = MarkerHoverParticipant::new(
+    marker_decorations.marker_decorations_handle(),
+  ).hover_participant_handle()
 
   let compute = (model : @model.TextModel, column : Int) => {
     (participant.compute_sync)({

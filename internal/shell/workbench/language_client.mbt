@@ -8,9 +8,7 @@ priv struct RemoteLanguageClient {
 }
 
 ///|
-fn register_remote_language_providers(
-  services : @viewer.ViewerServices,
-) -> Unit {
+fn register_remote_language_providers(services : WorkbenchServices) -> Unit {
   let client = RemoteLanguageClient::{ log_service: services.log_service }
   let selector = @language.LanguageSelector::LanguageFilter(
     LanguageFilter(scheme="readonly-remote"),

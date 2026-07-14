@@ -4,7 +4,6 @@ package "moonbit-community/editor/viewer/contrib/hover"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/language",
-  "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
@@ -231,9 +230,8 @@ pub fn HoverParticipantRegistry::new() -> Self
 pub fn HoverParticipantRegistry::register(Self, (HoverParticipantServices) -> HoverParticipantHandle) -> Unit
 
 pub(all) struct HoverParticipantServices {
-  languages : @languages.Languages
-  marker_decorations : @markers.MarkerDecorationsService
-  log_service : @log.LogService
+  languages : @languages.LanguageHandle
+  marker_decorations : @markers.MarkerDecorationsHandle
 }
 
 pub(all) struct HoverPositionPart {
@@ -296,13 +294,13 @@ pub struct MarkdownHoverParticipant {
   // private fields
 }
 pub fn MarkdownHoverParticipant::hover_participant_handle(Self) -> HoverParticipantHandle
-pub fn MarkdownHoverParticipant::new(@languages.Languages, @log.LogService) -> Self
+pub fn MarkdownHoverParticipant::new(@languages.LanguageHandle) -> Self
 
 pub struct MarkerHoverParticipant {
   // private fields
 }
 pub fn MarkerHoverParticipant::hover_participant_handle(Self) -> HoverParticipantHandle
-pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsService) -> Self
+pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsHandle) -> Self
 
 pub(all) struct MouseCloserState {
   mut initial_pos_x : Double?

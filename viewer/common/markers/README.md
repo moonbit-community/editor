@@ -10,6 +10,13 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   `change_one`/`change_all`, `set_diagnostics`, filtered `read`, removal, resource
   filters, per-severity statistics, and merged change events. Its
   `MicrotaskEmitter` flushes inline unless the caller supplies a scheduler.
+- `MarkerService::marker_service_handle` borrows exactly the change, read, and
+  remove capabilities needed to construct a decoration adapter. The caller
+  retains and disposes the concrete store.
+- `MarkerDecorationsService::marker_decorations_handle` borrows exactly the
+  model lease, decoration-change subscription, and model-specific live-marker
+  query used by Viewer. `MarkerDecorationsSource` is the closed Viewer-services
+  input for either a store handle or an already-adapted decorations handle.
 - `MarkerDecorationsService::acquire_model` returns an independently idempotent
   lease keyed by `TextModel.identity()`. The first lease owns one content watch,
   one model-dispose watch, and one `MarkerDecorations`; reacquisition only
@@ -29,7 +36,7 @@ Backend-neutral diagnostic storage and marker-to-decoration projection.
   is gone. Ordinary lease release and service disposal preserve `MarkerService`.
 - `MarkerDecorationsService::dispose` blocks marker and outward-event ingress
   first, then releases every model watch and decoration owner, and clears its
-  indexes last. The injected `MarkerService` is borrowed. The paired
+  indexes last. The injected marker-store handle is borrowed. The paired
   `on_model_added`/`on_model_removed` methods remain compatibility shims; new
   owners retain the disposable returned by `acquire_model`.
 - Each live owner converts up to the first 500 markers for its resource into

@@ -47,7 +47,7 @@ pub(all) struct ViewRenderInput {
 priv struct RenderingContext {
   view_context : ViewContext
   input : ViewRenderInput
-  view_lines : @view_lines.ViewLines
+  view_lines : ViewLines
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
@@ -99,7 +99,7 @@ fn RenderingContext::viewport_from_input(
 fn RenderingContext::from_viewport(
   view_context : ViewContext,
   input : ViewRenderInput,
-  view_lines : @view_lines.ViewLines,
+  view_lines : ViewLines,
   viewport : @view_layout.ViewportData,
 ) -> RenderingContext {
   let current_viewport = input.layout.get_current_viewport()

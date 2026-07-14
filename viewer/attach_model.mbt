@@ -251,7 +251,7 @@ fn Viewer::create_view(
   // `onConfigurationChanged` handler, and its one retained-line factory
   // dynamically captures the equality-gated `ViewLineOptions` identity.
   view.view_lines.install_live_configuration_reader(() => {
-    @view_lines.ViewLinesConfiguration::new(
+    @view.ViewLinesConfiguration::new(
       line_height=self.font_info.line_height,
       typical_halfwidth_character_width=self.font_info.typical_halfwidth_character_width,
       is_viewport_wrapping=self.options.soft_wrap && self.soft_wrap_column > 0,

@@ -636,7 +636,7 @@ pub fn ViewLines::render_text(
   self.last_layout = Some(layout)
   ignore(layout.set_is_viewport_wrapping(self.is_viewport_wrapping))
   let target = viewport_window(viewport)
-  let renderer = @view_layer.ViewLayerRenderer::new(
+  let renderer = ViewLayerRenderer::new(
     self.dom_node.element(),
     self.line_factory,
     line => line.get_dom_node(),

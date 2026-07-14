@@ -15,7 +15,7 @@ pub(all) struct View {
   overflow_guard : @rdom.Element
   lines_content : @scrollbar.CachedDomNode
   squiggly_style : @rdom.Element
-  view_lines : @view_lines.ViewLines
+  view_lines : ViewLines
   view_zones : @view_zones.ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
@@ -67,7 +67,7 @@ pub fn View::new(
     read_initial_configuration=view_zones_configuration_reader,
   )
   margin_view_overlays.attach_view_zones_margin(view_zones.margin_dom_node())
-  let view_lines = @view_lines.ViewLines::new(document, lines_content)
+  let view_lines = ViewLines::new(document, lines_content)
   let content_widgets = ContentWidgets::new(document, root)
   let view_cursors = ViewCursors::new(document)
   let overlay_widgets = OverlayWidgets::new(document)

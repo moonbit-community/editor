@@ -4,7 +4,7 @@
 /// order; each variant holds the same stateful value used by the ordinary
 /// render-part index where that capability applies.
 priv enum ViewEventHandlerHandle {
-  ViewLinesHandler(@view_lines.ViewLines)
+  ViewLinesHandler(ViewLines)
   ViewZonesHandler(@view_zones.ViewZones)
   ContentViewOverlaysHandler(ContentViewOverlays)
   MarginViewOverlaysHandler(MarginViewOverlays)
@@ -150,7 +150,7 @@ fn default_view_parts(
 
 ///|
 fn default_view_event_handlers(
-  view_lines : @view_lines.ViewLines,
+  view_lines : ViewLines,
   view_zones : @view_zones.ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,

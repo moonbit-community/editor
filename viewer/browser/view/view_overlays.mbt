@@ -270,7 +270,7 @@ fn ViewOverlays::render_lines(
   self : ViewOverlays,
   viewport : @view_layout.ViewportData,
 ) -> Unit {
-  let renderer = @view_layer.ViewLayerRenderer::new(
+  let renderer = ViewLayerRenderer::new(
     self.dom_node.element(),
     () => ViewOverlayLine::new(self.dynamic_overlays),
     line => line.get_dom_node(),
@@ -295,7 +295,7 @@ fn ViewOverlays::render_lines(
     viewport.relative_vertical_offset,
   )
   self.lines = result.lines
-  self.window = @view_lines.viewport_window(viewport)
+  self.window = viewport_window(viewport)
 }
 
 ///|

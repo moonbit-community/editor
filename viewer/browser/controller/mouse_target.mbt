@@ -1441,7 +1441,7 @@ fn actual_do_hit_test_with_caret_range_from_point(
       Some(el) => controller_element_class_name(el)
       None => ""
     }
-    if parent3_class_name == @view_lines.VIEW_LINE_CLASS_NAME {
+    if parent3_class_name == @view.VIEW_LINE_CLASS_NAME {
       return hit_test_result_from_dom_info(
         ctx,
         parent1.unwrap(),
@@ -1464,7 +1464,7 @@ fn actual_do_hit_test_with_caret_range_from_point(
       Some(el) => controller_element_class_name(el)
       None => ""
     }
-    if parent2_class_name == @view_lines.VIEW_LINE_CLASS_NAME {
+    if parent2_class_name == @view.VIEW_LINE_CLASS_NAME {
       return hit_test_result_from_dom_info(
         ctx,
         start_element,
@@ -1508,7 +1508,7 @@ fn do_hit_test_with_caret_position_from_point(
       Some(el) => controller_element_class_name(el)
       None => ""
     }
-    if parent3_class_name == @view_lines.VIEW_LINE_CLASS_NAME {
+    if parent3_class_name == @view.VIEW_LINE_CLASS_NAME {
       return hit_test_result_from_dom_info(
         ctx,
         parent1.unwrap(),
@@ -1536,7 +1536,7 @@ fn do_hit_test_with_caret_position_from_point(
       Some(el) => controller_element_class_name(el)
       None => ""
     }
-    if parent1_class_name == @view_lines.VIEW_LINE_CLASS_NAME {
+    if parent1_class_name == @view.VIEW_LINE_CLASS_NAME {
       // it returned the `<span>` of the line and the offset is the `<span>`
       // with the inline decoration
       let child_count = offset_node.get_child_count()
@@ -1548,7 +1548,7 @@ fn do_hit_test_with_caret_position_from_point(
           None => ()
         }
       }
-    } else if parent2_class_name == @view_lines.VIEW_LINE_CLASS_NAME {
+    } else if parent2_class_name == @view.VIEW_LINE_CLASS_NAME {
       // it returned the `<span>` with the inline decoration
       return hit_test_result_from_dom_info(ctx, offset_element, 0)
     }

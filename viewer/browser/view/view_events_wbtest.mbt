@@ -498,8 +498,8 @@ fn view_event_test_line_input(
 fn view_event_test_retained_line(
   parent : @rdom.Element,
   input : @view_layout.RenderLineInput,
-) -> (@view_lines.ViewLine, @rdom.Element) raise {
-  let line = @view_lines.ViewLine::new()
+) -> (ViewLine, @rdom.Element) raise {
+  let line = ViewLine::new()
   assert_true(line.render_line(1, input, 0, 20, StringBuilder()))
   let node = @rdom.document().create_element("div")
   parent.append_child(node.as_node())
@@ -512,7 +512,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   install_view_lifecycle_test_browser()
   let view = View::new()
   let lines = view.view_lines
-  let live_configuration = Ref(@view_lines.ViewLinesConfiguration::new())
+  let live_configuration = Ref(ViewLinesConfiguration::new())
   lines.install_live_configuration_reader(() => live_configuration.val)
   let parent = lines.get_dom_node()
   let input_a = view_event_test_line_input("alpha", None)
@@ -612,9 +612,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   )
   let input_a3 = view_event_test_line_input("alpha option", None)
   assert_false(line_a.render_line(10, input_a3, 0, 20, StringBuilder()))
-  live_configuration.val = @view_lines.ViewLinesConfiguration::new(
-    render_whitespace=All,
-  )
+  live_configuration.val = ViewLinesConfiguration::new(render_whitespace=All)
   assert_true(
     view_lines_on_view_event(
       lines,
@@ -629,7 +627,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Cache-only changes are reread in source order but do not masquerade as a
   // `ViewLineOptions.equals` change.
-  live_configuration.val = @view_lines.ViewLinesConfiguration::new(
+  live_configuration.val = ViewLinesConfiguration::new(
     typical_halfwidth_character_width=8.0,
     is_viewport_wrapping=true,
     can_use_layer_hinting=false,
@@ -661,7 +659,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Line height belongs to the retained option identity and therefore latches
   // every row even when the event payload is otherwise minimal.
-  live_configuration.val = @view_lines.ViewLinesConfiguration::new(
+  live_configuration.val = ViewLinesConfiguration::new(
     line_height=21,
     typical_halfwidth_character_width=8.0,
     is_viewport_wrapping=true,
@@ -767,7 +765,7 @@ test "ViewLines option equality catches same-space font render axes" {
   install_view_lifecycle_test_browser()
   let view = View::new()
   let lines = view.view_lines
-  let live_configuration = Ref(@view_lines.ViewLinesConfiguration::new())
+  let live_configuration = Ref(ViewLinesConfiguration::new())
   lines.install_live_configuration_reader(() => live_configuration.val)
   let original_input = view_event_test_line_input("font axes", None)
   let (line, _) = view_event_test_retained_line(
@@ -776,7 +774,7 @@ test "ViewLines option equality catches same-space font render axes" {
   )
   lines.window = { start: 1, end: 2 }
   lines.lines = [line]
-  live_configuration.val = @view_lines.ViewLinesConfiguration::new(
+  live_configuration.val = ViewLinesConfiguration::new(
     space_width=7.2,
     middot_width=8.0,
     wsmiddot_width=9.0,
@@ -1456,11 +1454,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   let view = View::new()
   let lines = view.view_lines
   lines.window = { start: 10, end: 13 }
-  lines.lines = [
-    @view_lines.ViewLine::new(),
-    @view_lines.ViewLine::new(),
-    @view_lines.ViewLine::new(),
-  ]
+  lines.lines = [ViewLine::new(), ViewLine::new(), ViewLine::new()]
   assert_false(
     view_lines_on_view_event(
       lines,
@@ -1654,7 +1648,7 @@ test "current-line predicate ignores same-line column moves but tracks emptiness
 fn view_event_test_overlay_render_context(
   view_model : @view_model.ViewModel,
   layout : @view_layout.ViewLayout,
-  view_lines : @view_lines.ViewLines,
+  view_lines : ViewLines,
   cursor_column : Int,
 ) -> (RenderingContext, RestrictedRenderingContext) {
   let selection = @core.Selection::new(

@@ -46,10 +46,7 @@ fn view_zones_render(
 // `ViewLines` is an event handler but not an ordinary render part.
 
 ///|
-fn view_lines_on_view_event(
-  part : @view_lines.ViewLines,
-  event : ViewEvent,
-) -> Bool {
+fn view_lines_on_view_event(part : ViewLines, event : ViewEvent) -> Bool {
   let self = part
   match event {
     ViewFlushed => {

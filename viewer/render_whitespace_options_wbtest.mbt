@@ -17,8 +17,8 @@ fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
 }
 
 ///|
-fn retained_line_options_of(viewer : Viewer) -> @view_lines.ViewLineOptions {
-  @view_lines.ViewLineOptions::new(
+fn retained_line_options_of(viewer : Viewer) -> @view.ViewLineOptions {
+  @view.ViewLineOptions::new(
     line_height=viewer.font_info.line_height,
     space_width=viewer.font_info.space_width,
     middot_width=viewer.font_info.middot_width,
@@ -54,7 +54,7 @@ test "viewport line input carries each content-only whitespace mode from options
     with_test_viewer(
       "  abc  ",
       viewer => {
-        let input = @view_lines.render_line_input_for_viewport(
+        let input = @view.render_line_input_for_viewport(
           viewport_of(viewer),
           0,
           retained_line_options_of(viewer),
@@ -73,7 +73,7 @@ test "viewport line input carries render_control_characters on a non-ascii line"
   with_test_viewer(
     "café\u{202E}",
     viewer => {
-      let input = @view_lines.render_line_input_for_viewport(
+      let input = @view.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
         retained_line_options_of(viewer),
@@ -92,7 +92,7 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
   with_test_viewer(
     "  abc  ",
     viewer => {
-      let input = @view_lines.render_line_input_for_viewport(
+      let input = @view.render_line_input_for_viewport(
         viewport_of(viewer),
         0,
         retained_line_options_of(viewer),
@@ -111,7 +111,7 @@ test "viewport line input leaves Selection mode inert without a threaded selecti
 test "retained options carry same-space font axes into render input" {
   with_test_viewer(" a ", viewer => {
     let base = retained_line_options_of(viewer)
-    let options = @view_lines.ViewLineOptions::new(
+    let options = @view.ViewLineOptions::new(
       line_height=base.line_height,
       space_width=base.space_width,
       middot_width=base.space_width + 1.0,
@@ -124,7 +124,7 @@ test "retained options carry same-space font axes into render input" {
       font_ligatures=true,
       vertical_scrollbar_size=19.0,
     )
-    let input = @view_lines.render_line_input_for_viewport(
+    let input = @view.render_line_input_for_viewport(
       viewport_of(viewer),
       0,
       options,

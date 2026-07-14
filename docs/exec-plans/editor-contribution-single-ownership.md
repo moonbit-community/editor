@@ -1,9 +1,19 @@
 # Editor Contribution Single Ownership
 
-Status: proposed; no implementation has started
+Status: inventory ready — STOP FOR REVIEW; no implementation has started
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
+
+Gate A is recorded as a four-document, documentation-only artifact set:
+
+- `editor-contribution-single-ownership-gate-a.md`;
+- `editor-contribution-single-ownership-gate-a-upstream.md`;
+- `editor-contribution-single-ownership-gate-a-local.md`;
+- `editor-contribution-single-ownership-gate-a-lifetime.md`.
+
+Product implementation remains blocked until the entrypoint and all three
+companions are explicitly approved.
 
 ## Goal
 
@@ -64,10 +74,13 @@ Read and inventory these complete source units/clusters:
 - `ContentHoverController.get` and its construction/disposal lifecycle;
 - `FoldingController.get` and its construction/disposal lifecycle.
 
-Agent feedback is a local feature. It receives local ledger rows mapped to the
-same contribution contract, with `N-A (local feature)` for a missing upstream
-class. Quick diff receives both its Monaco source mapping and local lifecycle
-rows.
+Gate A corrected this proposal's agent-feedback premise: both local classes
+exist upstream at the pinned oracle and register as `Eventually`. Their exact
+ownership/lifecycle clusters receive upstream rows; unrelated feedback
+behavior remains outside this storage refactor. Quick diff receives both its
+Monaco source mapping and local lifecycle rows, with the explicit distinction
+that local `quickDiff.decorator` reduces the workbench decorator/controller and
+is not upstream `QuickDiffEditorController`.
 
 Explicitly out of scope:
 
@@ -104,6 +117,12 @@ priv enum EditorContributionInstance {
   AgentFeedbackWidget(@agent_feedback_browser.AgentFeedbackEditorWidgetContribution)
   QuickDiff(QuickDiffContributionState)
 }
+
+priv struct EditorContributionEntry {
+  id : String
+  instance : EditorContributionInstance
+  listeners : Array[@base_common.Disposable]
+}
 ```
 
 `QuickDiffContributionState` is a private root-package struct containing the
@@ -114,13 +133,26 @@ language limitation prevents this exact representation, the alternative must
 still store the concrete instance only once in the central registry; a second
 map or id-keyed singleton is rejected.
 
+The actual `Viewer.contributions` map uses private
+`EditorContributionEntry`. The current public `EditorContribution` remains a
+temporary presence/lifecycle facade adapted from a found entry, so this plan
+does not pre-empt the later public-API decision or expose the private enum.
+Executable exact-type probes proved the private entry/map and the optional
+opaque-public-carrier representation compile without a package cycle.
+
+Construction is obligatorily two-phase per row: reject duplicate id before
+side effects; construct bare state; insert it into the Viewer's actual map;
+then install listeners and run initial sync/model work. Input, widget, and
+folding initializers synchronously use their typed accessor, so assigning a
+locally built map only after `instantiate_all` returns is a correctness bug.
+
 **Review gate: stop here. Do not change contribution storage until the
 inventory, representation spike, and lifetime trace have been reviewed.**
 
 ## Target Architecture
 
 - `Viewer.contributions` is the only instance map.
-- Each `EditorContribution` contains its id and one typed
+- Each private `EditorContributionEntry` contains its id and one typed
   `EditorContributionInstance`.
 - Disposal dispatches through the typed instance and its owned disposable
   store; it does not find state by id.
@@ -136,11 +168,12 @@ constructors, not per-editor state.
 
 ## Milestone B: Add Typed Central Storage
 
-1. Introduce the private contribution-instance enum and make
-   `EditorContribution` own it.
+1. Introduce the private contribution-instance enum and private central entry;
+   keep the current `EditorContribution` only as the temporary public facade.
 2. Add private typed accessors on `Viewer`, one per contribution variant.
-3. Move lifecycle dispatch (`dispose`, and any existing model hooks) onto the
-   instance/entry.
+3. Make registry construction reject duplicates before construction, insert
+   each bare entry before typed initialization, and move lifecycle dispatch
+   (`dispose`, and any existing model hooks) onto the instance/entry.
 4. Preserve the existing `Viewer::get_contribution(id)` presence behavior
    temporarily so this plan does not decide the public facade.
 5. Add registry tests for duplicate ids, known/unknown lookup, construction

@@ -3,10 +3,7 @@
 // packages would reverse the dependency graph.
 
 ///|
-fn view_zones_on_view_event(
-  part : @view_zones.ViewZones,
-  event : ViewEvent,
-) -> Bool {
+fn view_zones_on_view_event(part : ViewZones, event : ViewEvent) -> Bool {
   let self = part
   match event {
     ViewConfigurationChanged(e) =>
@@ -23,7 +20,7 @@ fn view_zones_on_view_event(
 
 ///|
 fn view_zones_prepare_render(
-  _part : @view_zones.ViewZones,
+  _part : ViewZones,
   _context : RenderingContext,
 ) -> Unit {
   // Monaco `ViewZones.prepareRender`: nothing to read.
@@ -31,7 +28,7 @@ fn view_zones_prepare_render(
 
 ///|
 fn view_zones_render(
-  part : @view_zones.ViewZones,
+  part : ViewZones,
   context : RestrictedRenderingContext,
 ) -> Unit {
   let self = part

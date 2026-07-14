@@ -16,7 +16,7 @@ pub(all) struct View {
   lines_content : @scrollbar.CachedDomNode
   squiggly_style : @rdom.Element
   view_lines : ViewLines
-  view_zones : @view_zones.ViewZones
+  view_zones : ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
   content_widgets : ContentWidgets
@@ -62,7 +62,7 @@ pub fn View::new(
   let margin_view_overlays = MarginViewOverlays::new(document)
   let editor_scrollbar = EditorScrollbar::new(lines_content)
   let content_view_overlays = ContentViewOverlays::new(document)
-  let view_zones = @view_zones.ViewZones::new(
+  let view_zones = ViewZones::new(
     document,
     read_initial_configuration=view_zones_configuration_reader,
   )
@@ -170,7 +170,7 @@ pub fn View::install_view_zones_context(
 /// that transaction; the root editor adds the unconditional render schedule.
 pub fn View::change_view_zones(
   self : View,
-  update : (@view_zones.ViewZoneChangeAccessor) -> Unit raise,
+  update : (ViewZoneChangeAccessor) -> Unit raise,
 ) -> Unit {
   self.view_zones.change_view_zones(update) |> ignore
 }

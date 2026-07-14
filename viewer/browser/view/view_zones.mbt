@@ -88,7 +88,7 @@ fn FastViewZoneDomNode::set_position(
     return
   }
   self.position = value
-  set_style_property(self.element, "position", value)
+  set_view_zone_style_property(self.element, "position", value)
 }
 
 ///|
@@ -100,7 +100,7 @@ fn FastViewZoneDomNode::set_top(
     return
   }
   self.top = value
-  set_style_property(self.element, "top", value)
+  set_view_zone_style_property(self.element, "top", value)
 }
 
 ///|
@@ -112,7 +112,7 @@ fn FastViewZoneDomNode::set_height(
     return
   }
   self.height = value
-  set_style_property(self.element, "height", value)
+  set_view_zone_style_property(self.element, "height", value)
 }
 
 ///|
@@ -124,7 +124,7 @@ fn FastViewZoneDomNode::set_display(
     return
   }
   self.display = value
-  set_style_property(self.element, "display", value)
+  set_view_zone_style_property(self.element, "display", value)
 }
 
 ///|
@@ -136,7 +136,7 @@ fn FastViewZoneDomNode::set_width(
     return
   }
   self.width = value
-  set_style_property(self.element, "width", value)
+  set_view_zone_style_property(self.element, "width", value)
 }
 
 ///|
@@ -586,14 +586,14 @@ fn ViewZones::add_zone(
   registered.dom_node.set_position("absolute")
   // Source intentionally bypasses FastDomNode's width cache for this one
   // add-time caller-node write.
-  set_style_property(registered.dom_node.element, "width", "100%")
+  set_view_zone_style_property(registered.dom_node.element, "width", "100%")
   registered.dom_node.set_display("none")
   registered.dom_node.element.set_attribute("monaco-view-zone", whitespace_id)
   self.dom_node.append_child(registered.dom_node.element.as_node())
   match registered.margin_dom_node {
     Some(margin_dom_node) => {
       margin_dom_node.set_position("absolute")
-      set_style_property(margin_dom_node.element, "width", "100%")
+      set_view_zone_style_property(margin_dom_node.element, "width", "100%")
       margin_dom_node.set_display("none")
       margin_dom_node.element.set_attribute("monaco-view-zone", whitespace_id)
       self.margin_dom_node.append_child(margin_dom_node.element.as_node())
@@ -796,7 +796,7 @@ pub fn ViewZones::render(
 
   if has_visible_zone {
     self.dom_node_cache.set_width(
-      css_pixels_double(double_max(scroll_width, self.content_width)),
+      css_pixels_double(view_zone_double_max(scroll_width, self.content_width)),
     )
     self.margin_dom_node_cache.set_width(css_pixels_double(self.content_left))
   }
@@ -814,7 +814,7 @@ pub fn ViewZones::render(
 let offscreen_absolute_top : Double = -1000000.0
 
 ///|
-fn double_max(left : Double, right : Double) -> Double {
+fn view_zone_double_max(left : Double, right : Double) -> Double {
   if left > right {
     left
   } else {
@@ -833,7 +833,7 @@ fn css_pixels_double(value : Double) -> String {
 }
 
 ///|
-extern "js" fn set_style_property(
+extern "js" fn set_view_zone_style_property(
   element : @rdom.Element,
   name : String,
   value : String,

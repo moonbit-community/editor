@@ -1,9 +1,0 @@
-import {
-  "moonbit-community/editor/platform/log",
-  "moonbit-community/editor/viewer/common/model",
-  "moonbit-community/editor/viewer/common/view_layout",
-  "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/rabbita/dom" @rdom,
-}
-
-supported_targets = "js"

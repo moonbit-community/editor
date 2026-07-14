@@ -5,11 +5,11 @@
 
 ///|
 /// Public MoonBit-owned name for Monaco's mutable `IViewZone` delegate.
-pub type ViewZone = @view_zones.ViewZone
+pub type ViewZone = @view.ViewZone
 
 ///|
 /// Public MoonBit-owned name for `IViewZoneChangeAccessor`.
-pub type ViewZoneChangeAccessor = @view_zones.ViewZoneChangeAccessor
+pub type ViewZoneChangeAccessor = @view.ViewZoneChangeAccessor
 
 ///|
 /// Constructs the complete mutable ViewZone delegate through the public root
@@ -30,7 +30,7 @@ pub fn view_zone(
   on_dom_node_top? : (Double) -> Unit raise,
   on_computed_height? : (Double) -> Unit raise,
 ) -> ViewZone {
-  @view_zones.ViewZone::new(
+  @view.ViewZone::new(
     after_line_number,
     dom_node,
     after_column?,

@@ -5,7 +5,6 @@ import {
   "moonbit-community/editor/base/common",
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser",
-  "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",
   "moonbit-community/editor/viewer/common/model",
@@ -313,7 +312,7 @@ pub(all) struct View {
   lines_content : @scrollbar.CachedDomNode
   squiggly_style : @dom.Element
   view_lines : ViewLines
-  view_zones : @view_zones.ViewZones
+  view_zones : ViewZones
   content_view_overlays : ContentViewOverlays
   margin_view_overlays : MarginViewOverlays
   content_widgets : ContentWidgets
@@ -325,7 +324,7 @@ pub(all) struct View {
 pub fn View::add_disposable(Self, @common.Disposable) -> Unit
 pub fn View::apply_squiggly_theme(Self) -> Unit
 pub fn View::begin_view_event_batch(Self) -> ViewEventCollector
-pub fn View::change_view_zones(Self, (@view_zones.ViewZoneChangeAccessor) -> Unit raise) -> Unit
+pub fn View::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit raise) -> Unit
 pub fn View::dispose(Self) -> Unit
 pub fn View::emit_view_event(Self, ViewEvent) -> Unit
 pub fn View::emit_view_events(Self, Array[ViewEvent]) -> Unit
@@ -599,6 +598,53 @@ pub(all) struct ViewTokensChangedEvent {
   ranges : Array[ViewTokenChangeRange]
 }
 pub fn ViewTokensChangedEvent::new(Array[ViewTokenChangeRange]) -> Self
+
+pub(all) struct ViewZone {
+  mut after_line_number : Int
+  mut after_column : Int?
+  mut after_column_affinity : @model.PositionAffinity?
+  mut show_in_hidden_areas : Bool?
+  mut ordinal : Int?
+  mut suppress_mouse_down : Bool?
+  mut height_in_lines : Double?
+  mut height_in_px : Double?
+  mut min_width_in_px : Double?
+  mut dom_node : @dom.Element
+  mut margin_dom_node : @dom.Element?
+  mut on_dom_node_top : ((Double) -> Unit raise)?
+  mut on_computed_height : ((Double) -> Unit raise)?
+}
+pub fn ViewZone::new(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
+
+pub struct ViewZoneChangeAccessor {
+  // private fields
+}
+pub fn ViewZoneChangeAccessor::add_zone(Self, ViewZone) -> String
+pub fn ViewZoneChangeAccessor::layout_zone(Self, String) -> Unit
+pub fn ViewZoneChangeAccessor::remove_zone(Self, String) -> Unit
+
+pub(all) struct ViewZones {
+  dom_node : @dom.Element
+  margin_dom_node : @dom.Element
+  // private fields
+}
+pub fn ViewZones::change_view_zones(Self, (ViewZoneChangeAccessor) -> Unit raise) -> Bool
+pub fn ViewZones::did_render(Self) -> Unit
+pub fn ViewZones::dispose(Self) -> Unit
+pub fn ViewZones::dom_node(Self) -> @dom.Element
+pub fn ViewZones::force_should_render(Self) -> Unit
+pub fn ViewZones::install_context(Self, @view_model.ViewModel, @log.LogService, () -> (Int, Double, Double), () -> Unit) -> Unit
+pub fn ViewZones::margin_dom_node(Self) -> @dom.Element
+pub fn ViewZones::new(@dom.Document, read_initial_configuration? : () -> (Int, Double, Double)) -> Self
+pub fn ViewZones::on_configuration_changed(Self, Bool) -> Bool
+pub fn ViewZones::on_line_mapping_changed(Self) -> Bool
+pub fn ViewZones::on_lines_deleted(Self) -> Bool
+pub fn ViewZones::on_lines_inserted(Self) -> Bool
+pub fn ViewZones::on_scroll_changed(Self, Bool, Bool) -> Bool
+pub fn ViewZones::on_zones_changed(Self) -> Bool
+pub fn ViewZones::render(Self, Array[@view_layout.ViewWhitespaceViewportData], Int, Double, Double) -> Unit
+pub fn ViewZones::should_render(Self) -> Bool
+pub fn ViewZones::should_suppress_mouse_down_on_view_zone(Self, String) -> Bool
 
 pub(all) struct VisibleRanges {
   outside_rendered_line : Bool

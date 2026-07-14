@@ -5,7 +5,7 @@
 /// render-part index where that capability applies.
 priv enum ViewEventHandlerHandle {
   ViewLinesHandler(ViewLines)
-  ViewZonesHandler(@view_zones.ViewZones)
+  ViewZonesHandler(ViewZones)
   ContentViewOverlaysHandler(ContentViewOverlays)
   MarginViewOverlaysHandler(MarginViewOverlays)
   ContentWidgetsHandler(ContentWidgets)
@@ -18,7 +18,7 @@ priv enum ViewEventHandlerHandle {
 /// Closed ordinary render-part capability index. `ViewLines` is deliberately
 /// absent because its source lifecycle is the dedicated `renderText` path.
 priv enum ViewPartHandle {
-  ViewZonesPart(@view_zones.ViewZones)
+  ViewZonesPart(ViewZones)
   ContentViewOverlaysPart(ContentViewOverlays)
   MarginViewOverlaysPart(MarginViewOverlays)
   ContentWidgetsPart(ContentWidgets)
@@ -127,7 +127,7 @@ fn ViewPartHandle::on_before_render(
 
 ///|
 fn default_view_parts(
-  view_zones : @view_zones.ViewZones,
+  view_zones : ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
   content_widgets : ContentWidgets,
@@ -151,7 +151,7 @@ fn default_view_parts(
 ///|
 fn default_view_event_handlers(
   view_lines : ViewLines,
-  view_zones : @view_zones.ViewZones,
+  view_zones : ViewZones,
   content_view_overlays : ContentViewOverlays,
   margin_view_overlays : MarginViewOverlays,
   content_widgets : ContentWidgets,

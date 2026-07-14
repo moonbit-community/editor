@@ -2,7 +2,6 @@ import {
   "moonbit-community/editor/base/common" @base_common,
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/viewer/browser" @editor_browser,
-  "moonbit-community/editor/viewer/browser/view_parts/view_zones",
   "moonbit-community/editor/viewer/common" @viewer_common,
   "moonbit-community/editor/viewer/common/core",
   "moonbit-community/editor/viewer/common/cursor",

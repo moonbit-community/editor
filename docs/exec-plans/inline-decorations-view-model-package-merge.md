@@ -1,7 +1,6 @@
 # Inline Decorations and View Model Package Merge
 
-Status: implementation in progress — Gate A approved; Milestones B–E complete
-2026-07-14; closeout record pending
+Status: implemented and frozen — 2026-07-14
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -208,16 +207,63 @@ Required validation:
 
 ## Exit Criteria
 
-- [ ] inventory rows equal scoped source members; final totals are recorded
-- [ ] `viewer/common/inline_decorations` no longer exists as a package/import
-- [ ] inline-decoration production code lives with `view_model`
-- [ ] no public trait/generic exists solely to support a test double or old
+- [x] inventory rows equal scoped source members; final totals are recorded
+- [x] `viewer/common/inline_decorations` no longer exists as a package/import
+- [x] inline-decoration production code lives with `view_model`
+- [x] no public trait/generic exists solely to support a test double or old
       package boundary
-- [ ] current-pin source drift is reconciled explicitly
-- [ ] existing and newly ported behavior has branch-derived tests
-- [ ] all deviations are terminal and justified
-- [ ] closing complete-source reread finds no unaccounted member
-- [ ] required validation is green
+- [x] current-pin source drift is reconciled explicitly
+- [x] existing and newly ported behavior has branch-derived tests
+- [x] all deviations are terminal and justified
+- [x] closing complete-source reread finds no unaccounted member
+- [x] required validation is green
+
+## Closeout Record
+
+The approved Gate A denominator reconciles without omissions:
+
+- 103 primary source rows: 55 `TESTED`, 26 `PORTED`, 19 `DEFERRED`, and
+  3 `N-A`;
+- 183 called-support rows: 41 `TESTED`, 87 `PORTED`, 36 `DEFERRED`, and
+  19 `N-A`;
+- all 23 exact upstream test cases retained and `TESTED`.
+
+The closing reread covered all 269 lines of `inlineDecorations.ts`, all 79
+lines of `viewModelDecoration.ts`, and all 491 lines of
+`inlineDecorations.test.ts` at the pinned oracle. It found no unaccounted
+member, branch, constant, callback, test, or owned DOM/CSS item. An exact-name
+comparison also matched all 23 upstream test labels.
+
+Implementation history:
+
+- `7d67fb8` — approved Gate A inventory;
+- `13a2862` — behavior-neutral package and suite relocation;
+- `fd071b2` — concrete ownership, duplicate-computer consolidation, and
+  removal of cross-package traits/generics;
+- `dde215d` — minimal generated API, documentation merge, and obsolete
+  package removal.
+
+The five reviewed product-reach gaps remain terminal `DEFERRED` outcomes:
+comment/string token visibility fields, whole-line converter switches,
+`beforeContentClassName`, `affectsFont`, and injected-text letter spacing.
+Private white-box adapters retain algorithm evidence for the final three but
+do not claim production reach. The existing validation/font-filter timing,
+minimap query, reset/dispose reduction, projection flush clamp,
+`getLineMaxColumn` liveness contract, and hidden-query sentinel dispositions
+remain exactly as recorded in the frozen Gate A ledger.
+
+Final validation on 2026-07-14 was green:
+
+- `moon check --target all`;
+- exact inline suite: 23/23 on JavaScript and 23/23 on native;
+- complete `view_model` package: 192/192 on JavaScript and native;
+- view-layout, browser-decoration, folding, and root-viewer integration suites;
+- `just check`, `just test` (1,387/1,387 JavaScript and 989/989 native),
+  `just build`, and `just test-browser` (82/82).
+
+The only diagnostics were the three pre-existing unused browser rendering
+context fields. The browser suite's known missing-fixture compiler diagnostic
+remained non-fatal; its owning case and the complete suite passed.
 
 ## Cross-Plan Coordination
 

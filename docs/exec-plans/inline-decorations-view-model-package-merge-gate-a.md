@@ -1,6 +1,6 @@
 # Inline Decorations and View Model Package Merge — Gate A
 
-Status: approved historical inventory — implementation started 2026-07-14
+Status: approved historical inventory — implementation completed 2026-07-14
 
 Date: 2026-07-13
 
@@ -11,8 +11,8 @@ Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
 At this Gate A snapshot, no product code, package manifest, generated
 interface, test, or README had changed. The user explicitly approved this
 inventory on 2026-07-14. Its present-tense package/reference descriptions
-remain the frozen pre-implementation baseline; current progress is recorded in
-the parent plan.
+remain the frozen pre-implementation baseline; the completed implementation
+and validation record is in the parent plan.
 
 ## Scope and Counting Rule
 

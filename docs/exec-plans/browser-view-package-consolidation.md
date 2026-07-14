@@ -1,6 +1,6 @@
 # Browser View Package Consolidation
 
-Status: proposed; no implementation has started
+Status: inventory ready — STOP FOR REVIEW; no implementation has started
 Date: 2026-07-13
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -48,15 +48,17 @@ file under:
 ## Phase 0: Pinned Source Scope
 
 Before moving code, inventory every upstream file named by the scoped local
-headers. The minimum source set is:
+headers. The complete source set is:
 
+- complete `vscode/src/vs/editor/browser/view.ts`;
 - `vscode/src/vs/editor/browser/view/{dynamicViewOverlay,renderingContext,viewLayer,viewOverlays,viewPart,viewUserInputEvents}.ts`
-- all represented source units under
-  `vscode/src/vs/editor/browser/viewParts/`, including content widgets,
-  current-line highlight, decorations, editor scrollbar, line numbers, lines
-  decorations, margin, overlay widgets, selections, view cursors, view lines,
-  and view zones
-- every upstream CSS file owned by those source units
+- all 34 TypeScript and all 18 CSS files under
+  `vscode/src/vs/editor/browser/viewParts/`, including unsupported source
+  units with no local counterpart.
+
+The closed set is 59 files: 41 TypeScript / 13,623 lines and 18 CSS / 505
+lines. The Gate A entrypoint records the ordered path/line/SHA manifest and its
+aggregate hash.
 
 Source files with no local counterpart, such as an unsupported glyph-margin
 or ruler unit, still receive an explicit `DEFERRED (reason)` or `N-A (reason)`
@@ -96,7 +98,17 @@ Every upstream member gets a parity-ledger row ending in `PORTED`, `TESTED`,
 `PASS`, `DEFERRED (reason)`, or `N-A (reason)`. Record the member count.
 
 **Review gate: stop here. Do not move code until the inventory and ledger have
-been reviewed.**
+been explicitly approved.**
+
+Gate A is recorded as a four-document artifact set:
+
+- `browser-view-package-consolidation-gate-a.md`;
+- `browser-view-package-consolidation-gate-a-upstream.md`;
+- `browser-view-package-consolidation-gate-a-local.md`;
+- `browser-view-package-consolidation-gate-a-tests.md`.
+
+The artifact set is documentation-only. Product implementation remains
+blocked until the entrypoint and all three companions are explicitly approved.
 
 ## Target Layout
 
@@ -122,8 +134,11 @@ files or re-exports.
 
 1. Build the union import list in `viewer/browser/view/moon.pkg`; keep
    `supported_targets = "js"`.
-2. Move `view_layer_renderer.mbt` first and update its callers.
-3. Move leaf parts that do not depend on another leaf part.
+2. Treat `view_layer_renderer.mbt`, all four `view_lines` production units,
+   and their five test files as the single atomic Milestone-C group; moving
+   the renderer first would introduce a temporary parent/child package cycle.
+3. Move only the independent leaf parts that participate in neither mandatory
+   atomic group.
 4. After each move, update package-qualified names to unqualified/private
    names where ownership is now local.
 5. Move the associated white-box tests in the same milestone as their source.
@@ -184,9 +199,10 @@ disappear. Observable viewer APIs must not change in this plan.
 
 ## Milestone E: CSS and Documentation
 
-1. Move CSS next to the owning flattened source unit or keep its source-shaped
-   filename in a dedicated view CSS directory, depending on the build
-   inventory decision.
+1. Keep all twelve leaf CSS files at their current paths as asset-only
+   directories; keep the two root view CSS files and `codicon.ttf` at their
+   current paths too. The build list and emitted provenance comments therefore
+   remain byte-for-byte unchanged.
 2. Preserve the exact CSS concatenation/cascade order and generated output.
 3. Fold the leaf READMEs into `viewer/browser/view/README.md`, retaining
    ownership, invariants, source mappings, and test commands; remove historical
@@ -196,7 +212,9 @@ disappear. Observable viewer APIs must not change in this plan.
 
 ## Behavior and Configuration Matrix
 
-The existing tests must cover at least these axes before exit:
+Before exit, each axis below must end either `TESTED` or explicitly
+seam-deferred in the Gate A tests companion. The structural move preserves the
+companion's already reviewed gaps rather than silently upgrading them:
 
 - no model / attached model / model swap / dispose;
 - empty viewport / normal viewport / scrolled viewport;

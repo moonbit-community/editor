@@ -14,3 +14,8 @@ not a port of its global service container. The package has no product, viewer,
 browser, native, transport, or shell dependency; hosts choose the sink. See
 `pkg.generated.mbti` for the complete API and run
 `moon test --target js platform/log` for focused coverage.
+
+`LogService::log_handle()` returns the opaque Viewer capability with exactly
+`warn` and `error`. It captures the concrete service without transferring
+ownership, so hosts retain the logger, level control, lower-severity methods,
+flush operation, and lifecycle outside `ViewerServices`.

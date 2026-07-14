@@ -56,8 +56,15 @@ widgets, language-feature presentation, and editor events.
   stores, queues, backends, attached-view aggregation, and scheduling machinery
   are package-private.
 - `services` and `tokens`: language-id encoding and compact line tokens.
+- `editor_api`: the single owner of public cursor/model/scroll event values and
+  editor-option enums shared by root, cursor, layout, view-model, and browser
+  consumers.
+- `agent_feedback_api` and `quick_diff_api`: host-facing DTO/callback handles;
+  concrete feature implementations remain contributions below their callers.
 - `languages` and `markers`: runtime provider registration and
-  diagnostics-to-decoration flow.
+  diagnostics-to-decoration flow. Their opaque `LanguageHandle`,
+  `MarkerServiceHandle`, and `MarkerDecorationsHandle` expose only the reviewed
+  Viewer capability floor while hosts retain the concrete registries/stores.
 - `core`, `cursor`, `config`: coordinates, selection/cursor state, and editor
   configuration values.
 - `view_model`: injected text, wrapping/folding projection, model/view
@@ -73,9 +80,17 @@ Common code never imports browser or contribution packages.
 
 The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
 
-- `viewer` is the public facade, the Monaco `CodeEditorWidget` and
-  `editor.api.ts` role. Public browser construction is `Viewer::create`.
-- `viewer/browser` owns editor mouse events, target kinds, and DOM coordinates.
+- `viewer` is the opaque public facade, the Monaco `CodeEditorWidget` and
+  `editor.api.ts` role. Public browser construction is only `Viewer::create`;
+  `ViewerOptions`, `ViewerServices`, and `ViewerViewState` expose no public
+  layout. Root generated interfaces may reference browser contracts and common
+  capability handles, never private view or contribution implementations.
+- `viewer/browser` owns canonical editor mouse events, target kinds, DOM
+  coordinates, the mutable live ViewZone descriptor/opaque accessor contract, and
+  the opaque unmanaged overlay-widget handle.
+- `viewer/browser/testing` is a JS-only Viewer-id-keyed workbench/browser-test
+  registry. Root publishes callback-backed build/render/hover facts downward;
+  the package never imports root Viewer and is not an external API.
 - `viewer/browser/config` measures fonts and browser geometry.
 - `viewer/browser/controller` owns hit testing, mouse selection, drag
   scrolling, and scrollbar input.
@@ -103,9 +118,12 @@ depends on them.
 
 - `viewer/contrib/hover` is the DOM-free state/computation layer;
   `hover/browser` owns its widget and browser controller.
-- `viewer/contrib/agent_feedback` owns feedback data/service projection;
-  `agent_feedback/browser` owns input and bubble widgets.
+- `viewer/contrib/agent_feedback` owns concrete feedback storage/service
+  projection; host DTOs and the callback handle live in
+  `viewer/common/agent_feedback_api`, while `agent_feedback/browser` owns input
+  and bubble widgets.
 - `viewer/contrib/quick_diff/common` owns baseline state and diff contracts;
+  its public host handle lives in `viewer/common/quick_diff_api`, and
   `quick_diff/browser` produces gutter decorations.
 - `viewer/contrib/folding/browser` currently owns the complete js-only folding
   implementation, including ranges, hidden areas, decorations, and controller.
@@ -142,7 +160,7 @@ The direct embedding proof is:
 ```text
 internal/shell/examples/embedded_viewer
   -> viewer
-  -> viewer/common/{model,languages}
+  -> viewer/common/{model,languages,editor_api,capability APIs}
 ```
 
 The full reference app is:
@@ -185,9 +203,14 @@ enforce these rules:
   framework packages. The reference shell owns the app framework.
 - Browser helper packages do not import the parent `viewer` facade.
 - `viewer/common/**` does not import `viewer/contrib/**`.
+- The root generated interface cannot expose private view/testing packages,
+  contribution implementations, concrete services, duplicate option/cursor
+  enums, public option/service/state layouts, or headless/debug/test helpers.
 - Workbench-tier packages (`internal/shell/**`, except examples, and `tests/**`)
   may import viewer internals. External-host stand-ins may import only root
-  `viewer` and `viewer/common/**`.
+  `viewer` and `viewer/common/**`; the embedded example is the positive
+  compile/runtime proof, and an excluded manifest fixture self-tests rejection
+  of testing/contribution imports.
 - Concrete `syntax/lang_*` packages are selected by hosts, examples, or tests,
   not by the reusable viewer core.
 

@@ -36,7 +36,14 @@ async fn main {
   check_no_outside_shell_imports(errors)
   check_viewer_rabbita_bindings(errors)
   check_tier_targets(errors)
+  check_common_contribution_boundary(errors)
+  check_browser_root_boundary(errors)
+  check_root_viewer_public_interface(errors)
+  check_canonical_editor_type_owners(errors)
+  check_capability_handle_opacity(errors)
+  check_browser_testing_boundary(errors)
   check_external_viewer_imports(errors)
+  check_external_viewer_policy_fixture(errors)
   if errors.length() > 0 {
     println(errors.join("\n"))
     fail("Architecture checks failed")
@@ -159,6 +166,48 @@ async fn check_tier_targets(errors : Array[String]) -> Unit {
 }
 
 ///|
+/// Common editor packages are dependency-bottom value/mechanism owners. A
+/// common -> contribution edge may compile without a cycle, so enforce the
+/// documented direction explicitly.
+async fn check_common_contribution_boundary(errors : Array[String]) -> Unit {
+  let contrib_prefix = "moonbit-community/editor/viewer/contrib"
+  for manifest in package_manifests() {
+    if !manifest.has_prefix("viewer/common/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if import_matches(imported, contrib_prefix) {
+        errors.push(
+          manifest +
+          " is in viewer/common/** and must not import contribution package " +
+          imported,
+        )
+      }
+    }
+  }
+}
+
+///|
+/// Browser helper packages sit below the root facade. They may consume common
+/// and sibling browser contracts but never the parent viewer package.
+async fn check_browser_root_boundary(errors : Array[String]) -> Unit {
+  let root_viewer = "moonbit-community/editor/viewer"
+  for manifest in package_manifests() {
+    if !manifest.has_prefix("viewer/browser/") {
+      continue
+    }
+    for imported in package_imports(@fs.read_file(manifest).text()) {
+      if imported == root_viewer {
+        errors.push(
+          manifest +
+          " is a browser helper below the facade and must not import root viewer",
+        )
+      }
+    }
+  }
+}
+
+///|
 /// A package is in the browser tier when it lives under `viewer/browser/` or in
 /// the `browser/` subtree of a `viewer/contrib/<feature>/` directory.
 fn is_browser_tier(manifest : String) -> Bool {
@@ -189,24 +238,390 @@ fn is_browser_tier(manifest : String) -> Bool {
 ///     `internal/shell/examples/embedded_viewer` is the named proof that this
 ///     surface suffices for embedding.
 async fn check_external_viewer_imports(errors : Array[String]) -> Unit {
-  let viewer_prefix = "moonbit-community/editor/viewer"
-  let common_prefix = "moonbit-community/editor/viewer/common"
   for manifest in package_manifests() {
     if manifest.has_prefix("viewer/") || is_workbench_tier(manifest) {
       continue
     }
-    for imported in package_imports(@fs.read_file(manifest).text()) {
-      if !import_matches(imported, viewer_prefix) {
-        continue
+    append_external_viewer_import_errors(
+      errors,
+      manifest,
+      @fs.read_file(manifest).text(),
+    )
+  }
+}
+
+///|
+/// Applies the external-host viewer import rule to one manifest. Keeping this
+/// classification-free helper lets the checked-in negative fixture exercise
+/// the exact production policy without becoming a discoverable Moon package.
+fn append_external_viewer_import_errors(
+  errors : Array[String],
+  manifest : String,
+  content : String,
+) -> Unit {
+  let viewer_prefix = "moonbit-community/editor/viewer"
+  let common_prefix = "moonbit-community/editor/viewer/common"
+  for imported in package_imports(content) {
+    if !import_matches(imported, viewer_prefix) {
+      continue
+    }
+    if imported == viewer_prefix || import_matches(imported, common_prefix) {
+      continue
+    }
+    errors.push(
+      manifest +
+      " is an external-host consumer (not the workbench-tier shell/tests) and may import only the root viewer package or viewer/common/**, not " +
+      imported,
+    )
+  }
+}
+
+///|
+/// The root generated interface is the external facade. These checks make the
+/// reviewed Gate A ownership decisions standing architecture constraints
+/// instead of relying on a one-time diff review.
+async fn check_root_viewer_public_interface(errors : Array[String]) -> Unit {
+  let path = "viewer/pkg.generated.mbti"
+  if !@fs.exists(path) {
+    errors.push(path + " is required as the reviewed root public interface")
+    return
+  }
+  let content = @fs.read_file(path).text()
+  let forbidden_imports = [
+    "moonbit-community/editor/viewer/browser/view",
+    "moonbit-community/editor/viewer/browser/view_parts",
+    "moonbit-community/editor/viewer/browser/testing",
+    "moonbit-community/editor/viewer/contrib",
+  ]
+  for imported in forbidden_imports {
+    if content.contains("\"" + imported) {
+      errors.push(path + " must not expose implementation package " + imported)
+    }
+  }
+  let forbidden_surface = [
+    ("the public headless constructor", "pub fn Viewer::Viewer("),
+    ("contribution lookup", "pub fn Viewer::get_contribution("),
+    ("the internal has-model helper", "pub fn Viewer::has_model("),
+    ("the hidden-area test control", "pub fn Viewer::set_hidden_areas("),
+    ("the status-bar test helper", "pub fn Viewer::get_statusbar_column("),
+    (
+      "the overscanned-range test helper",
+      "pub fn Viewer::get_visible_ranges_plus_viewport_above_below(",
+    ),
+    ("root debug subscriptions", "debug_on_did_"),
+    ("root debug payloads", "ViewerViewModelBuiltEvent"),
+    ("root debug payloads", "ViewerModelRenderedEvent"),
+    ("root debug payloads", "ViewerHoverResolvedEvent"),
+    ("public contribution internals", "EditorContribution"),
+  ]
+  for item in forbidden_surface {
+    let (label, needle) = item
+    if content.contains(needle) {
+      errors.push(path + " must not expose " + label + ": " + needle)
+    }
+  }
+  let canonical_editor_types = [
+    "CursorChangeReason",
+    "CursorPositionChangedEvent",
+    "CursorSelectionChangedEvent",
+    "ModelChangedEvent",
+    "WrappingIndent",
+    "RenderWhitespace",
+    "RenderLineHighlight",
+    "RenderValidationDecorations",
+    "ScrollEvent",
+    "ScrolledVisiblePosition",
+    "ShowFoldingControls",
+  ]
+  for type_name in canonical_editor_types {
+    if content.contains(" enum " + type_name + " {") ||
+      content.contains(" struct " + type_name + " {") ||
+      content.contains("type " + type_name + "\n") {
+      errors.push(
+        path +
+        " must consume canonical viewer/common/editor_api type instead of redeclaring " +
+        type_name,
+      )
+    }
+  }
+  for type_name in ["Viewer", "ViewerOptions", "ViewerServices", "ViewerViewState"] {
+    if content.contains("pub(all) struct " + type_name) {
+      errors.push(path + " must keep " + type_name + " opaque")
+    }
+  }
+  let forbidden_concrete_services = [
+    "@languages.Languages",
+    "@markers.MarkerService",
+    "@markers.MarkerDecorationsService",
+    "AgentFeedbackService",
+    "QuickDiffService",
+    "@log.LogService",
+  ]
+  for service in forbidden_concrete_services {
+    if content.contains(service) {
+      errors.push(path + " must expose capability handles, not concrete " + service)
+    }
+  }
+  let required_signatures = [
+    "pub fn Viewer::get_bottom_for_line_number(Self, Int) -> Double",
+    "pub fn Viewer::get_container_dom_node(Self) -> @dom.Element",
+    "pub fn Viewer::get_dom_node(Self) -> @dom.Element?",
+    "pub fn ViewerServices::dispose(Self) -> Unit",
+    "pub fn ViewerOptions::soft_wrap(Self) -> Bool",
+    "pub fn ViewerOptions::line_height(Self) -> Double",
+  ]
+  for signature in required_signatures {
+    if !content.contains(signature) {
+      errors.push(path + " is missing reviewed public signature " + signature)
+    }
+  }
+  let required_builders = [
+    "with_line_decorations_width",
+    "with_line_height",
+    "with_line_numbers_min_chars",
+    "with_placeholder",
+    "with_render_control_characters",
+    "with_render_line_highlight",
+    "with_render_line_highlight_only_when_focus",
+    "with_render_validation_decorations",
+    "with_render_whitespace",
+    "with_soft_wrap",
+    "with_tab_size",
+    "with_theme",
+  ]
+  let mut builder_count = 0
+  for line in content.split("\n") {
+    if line.has_prefix("pub fn ViewerOptions::with_") {
+      builder_count = builder_count + 1
+    }
+  }
+  if builder_count != required_builders.length() {
+    errors.push(
+      path +
+      " must expose exactly the 12 reviewed ViewerOptions builders, found " +
+      builder_count.to_string(),
+    )
+  }
+  for builder in required_builders {
+    if !content.contains("pub fn ViewerOptions::" + builder + "(") {
+      errors.push(path + " is missing reviewed ViewerOptions builder " + builder)
+    }
+  }
+}
+
+///|
+/// Cursor/model/scroll events and public option enums have exactly one
+/// declaration owner. Consumers reference editor_api directly; opaque copies
+/// and aliases are rejected even if the root interface itself stays clean.
+async fn check_canonical_editor_type_owners(errors : Array[String]) -> Unit {
+  let expected_owner = "viewer/common/editor_api/pkg.generated.mbti"
+  let canonical_types = [
+    ("CursorChangeReason", "enum"),
+    ("CursorPositionChangedEvent", "struct"),
+    ("CursorSelectionChangedEvent", "struct"),
+    ("ModelChangedEvent", "struct"),
+    ("WrappingIndent", "enum"),
+    ("RenderWhitespace", "enum"),
+    ("RenderLineHighlight", "enum"),
+    ("RenderValidationDecorations", "enum"),
+    ("ScrollEvent", "struct"),
+    ("ScrolledVisiblePosition", "struct"),
+    ("ShowFoldingControls", "enum"),
+  ]
+  let interfaces = generated_interfaces()
+  for canonical_type in canonical_types {
+    let (type_name, declaration_kind) = canonical_type
+    let owners : Array[String] = []
+    for interface in interfaces {
+      if has_public_type_declaration(
+        @fs.read_file(interface).text(),
+        type_name,
+      ) {
+        owners.push(interface)
       }
-      if imported == viewer_prefix || import_matches(imported, common_prefix) {
-        continue
-      }
+    }
+    if owners != [expected_owner] {
+      errors.push(
+        type_name +
+        " must have exactly one public owner at " +
+        expected_owner +
+        ", found " +
+        owners.join(", "),
+      )
+      continue
+    }
+    let expected_declaration =
+      "pub(all) " + declaration_kind + " " + type_name + " {"
+    if !@fs.read_file(expected_owner).text().contains(expected_declaration) {
+      errors.push(
+        expected_owner +
+        " must declare " +
+        type_name +
+        " as " +
+        expected_declaration,
+      )
+    }
+  }
+}
+
+///|
+/// Generated interfaces use one of these public declaration forms for a
+/// named type. Include opaque declarations and source aliases so a copied
+/// canonical name cannot evade the exact-owner check.
+fn has_public_type_declaration(content : String, type_name : String) -> Bool {
+  let declarations = [
+    "pub(all) enum " + type_name + " {",
+    "pub enum " + type_name + " {",
+    "pub(all) struct " + type_name + " {",
+    "pub struct " + type_name + " {",
+    "pub(all) struct " + type_name + "(",
+    "pub struct " + type_name + "(",
+    "pub type " + type_name + " =",
+    "pub(all) type " + type_name + " =",
+    "pub typealias " + type_name + " =",
+    "pub(all) typealias " + type_name + " =",
+  ]
+  for declaration in declarations {
+    if content.contains(declaration) {
+      return true
+    }
+  }
+  // MoonBit renders aliases as `pub using @pkg {type Name}`. The using block
+  // may be grouped and split across lines, so inspect only its bounded body
+  // and accept every delimiter that can terminate one type entry.
+  let mut in_public_using = false
+  let alias_marker = "type " + type_name
+  let renamed_alias_marker = " as " + type_name
+  for raw_line in content.split("\n") {
+    let line = raw_line.trim().to_owned()
+    if line == "pub type " + type_name ||
+      line == "pub(all) type " + type_name {
+      return true
+    }
+    if line.has_prefix("pub using ") {
+      in_public_using = true
+    }
+    if in_public_using &&
+      (line.has_suffix(alias_marker) ||
+      line.contains(alias_marker + ",") ||
+      line.contains(alias_marker + "}") ||
+      line.contains(alias_marker + " ") ||
+      line.has_suffix(renamed_alias_marker) ||
+      line.contains(renamed_alias_marker + ",") ||
+      line.contains(renamed_alias_marker + "}") ||
+      line.contains(renamed_alias_marker + " ")) {
+      return true
+    }
+    if in_public_using && line.contains("}") {
+      in_public_using = false
+    }
+  }
+  false
+}
+
+///|
+/// Capability records are callback handles, not public data layouts. Their
+/// owner packages must keep the representation opaque to every consumer.
+async fn check_capability_handle_opacity(errors : Array[String]) -> Unit {
+  let handles = [
+    ("platform/log/pkg.generated.mbti", "LogHandle"),
+    ("viewer/common/languages/pkg.generated.mbti", "LanguageHandle"),
+    ("viewer/common/markers/pkg.generated.mbti", "MarkerServiceHandle"),
+    ("viewer/common/markers/pkg.generated.mbti", "MarkerDecorationsHandle"),
+    (
+      "viewer/common/agent_feedback_api/pkg.generated.mbti",
+      "AgentFeedbackHandle",
+    ),
+    (
+      "viewer/common/quick_diff_api/pkg.generated.mbti",
+      "QuickDiffHandle",
+    ),
+  ]
+  for handle in handles {
+    let (path, type_name) = handle
+    if !@fs.exists(path) {
+      errors.push(path + " is required for capability handle " + type_name)
+      continue
+    }
+    let content = @fs.read_file(path).text()
+    if !content.contains("pub struct " + type_name + " {") ||
+      content.contains("pub(all) struct " + type_name + " {") {
+      errors.push(path + " must keep " + type_name + " opaque")
+    }
+  }
+}
+
+///|
+/// The JS-only testing registry is a lower callback seam. It may know model and
+/// common value contracts, but it must not recover root, private-view, contrib,
+/// or diagnostic-service dependencies.
+async fn check_browser_testing_boundary(errors : Array[String]) -> Unit {
+  let manifest = "viewer/browser/testing/moon.pkg"
+  let interface = "viewer/browser/testing/pkg.generated.mbti"
+  if !@fs.exists(manifest) || !@fs.exists(interface) {
+    errors.push("viewer/browser/testing must keep its manifest and interface")
+    return
+  }
+  let allowed_imports = [
+    "moonbit-community/editor/base/common",
+    "moonbit-community/editor/platform/log",
+    "moonbit-community/editor/viewer/common/core",
+    "moonbit-community/editor/viewer/common/editor_api",
+    "moonbit-community/editor/viewer/common/model",
+  ]
+  for imported in package_imports(@fs.read_file(manifest).text()) {
+    if !allowed_imports.contains(imported) {
       errors.push(
         manifest +
-        " is an external-host consumer (not the workbench-tier shell/tests) and may import only the root viewer package or viewer/common/**, not " +
+        " is a lower testing seam and may import only the reviewed base/common, platform/log, and common core/editor_api/model contracts, not " +
         imported,
       )
+    }
+  }
+  let public_interface = @fs.read_file(interface).text()
+  if public_interface.contains("Diagnostic") ||
+    public_interface.contains("diagnostic") {
+    errors.push(interface + " must expose telemetry facts, not diagnostics")
+  }
+}
+
+///|
+/// A deliberately non-discoverable manifest proves the external-host rule
+/// rejects both the testing seam and contribution implementations. If policy
+/// classification or parsing drifts, this self-test fails `just check`.
+async fn check_external_viewer_policy_fixture(errors : Array[String]) -> Unit {
+  let fixture = "scripts/fixtures/architecture/external_viewer_forbidden.moon.pkg.fixture"
+  if !@fs.exists(fixture) {
+    errors.push(fixture + " is required as the external-host negative fixture")
+    return
+  }
+  let fixture_errors : Array[String] = []
+  append_external_viewer_import_errors(
+    fixture_errors,
+    fixture,
+    @fs.read_file(fixture).text(),
+  )
+  let expected = [
+    "moonbit-community/editor/viewer/browser/testing",
+    "moonbit-community/editor/viewer/contrib/hover",
+  ]
+  if fixture_errors.length() != expected.length() {
+    errors.push(
+      fixture +
+      " must produce exactly two external-viewer import violations, found " +
+      fixture_errors.length().to_string(),
+    )
+    return
+  }
+  for imported in expected {
+    let mut found = false
+    for error in fixture_errors {
+      if error.contains(imported) {
+        found = true
+      }
+    }
+    if !found {
+      errors.push(fixture + " no longer proves rejection of " + imported)
     }
   }
 }
@@ -264,6 +679,33 @@ async fn collect_manifests(dir : String, manifests : Array[String]) -> Unit {
     match @fs.kind(path) {
       Directory => if !skipped.contains(name) { collect_manifests(path, manifests) }
       Regular => if name == "moon.pkg" { manifests.push(path) }
+      _ => ()
+    }
+  }
+}
+
+///|
+/// Every checked-in generated package interface, excluding build/reference
+/// trees just like manifest discovery.
+async fn generated_interfaces() -> Array[String] {
+  let interfaces : Array[String] = []
+  collect_generated_interfaces(".", interfaces)
+  interfaces
+}
+
+///|
+async fn collect_generated_interfaces(
+  dir : String,
+  interfaces : Array[String],
+) -> Unit {
+  let skipped = ["_build", "node_modules", "codemirror", "vscode", "test-results"]
+  for name in @fs.readdir(dir, include_hidden=false, sort=true) {
+    let path = if dir == "." { name } else { dir + "/" + name }
+    match @fs.kind(path) {
+      Directory => if !skipped.contains(name) {
+        collect_generated_interfaces(path, interfaces)
+      }
+      Regular => if name == "pkg.generated.mbti" { interfaces.push(path) }
       _ => ()
     }
   }

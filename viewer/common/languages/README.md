@@ -27,3 +27,9 @@ remain host/protocol contracts in `language`.
 `default_languages()` returns that same instance. The package has no viewer-root,
 contribution, DOM, or host dependency. See `pkg.generated.mbti` for the complete
 surface and run `moon test --target js viewer/common/languages`.
+
+`Languages::language_handle(log_handle)` returns the opaque capability consumed
+by `ViewerServices`. It exposes only configuration lookup and contained hover
+resolution; registrations, tokenizer mutation, document-symbol queries, and the
+concrete registry lifecycle stay on the caller-retained `Languages` value. The
+handle borrows its backing and never disposes it.

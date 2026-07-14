@@ -1,6 +1,6 @@
 # Viewer Public Editor API Boundary
 
-Status: implementation in progress — Gate A approved 2026-07-14
+Status: completed — implemented and validated 2026-07-14
 Date: 2026-07-14
 Oracle commit: `vscode` submodule at
 `b18492a288de038fbc7643aae6de8247029d11bd`
@@ -88,8 +88,8 @@ Zero local usage is evidence, not automatic removal: embedders are outside the
 repository. Conversely, test-only usage is not sufficient reason to keep a
 root public API.
 
-**Review gate: stop here. No public API change lands until the disposition
-table and dependency graph have been reviewed.**
+**Historical review gate:** the disposition table and dependency graph were
+approved on 2026-07-14 before the public API implementation began.
 
 The completed Gate A artifact set is:
 
@@ -378,25 +378,100 @@ Required validation:
 
 ## Exit Criteria
 
-- [ ] every original root public item has a reviewed disposition row
-- [ ] source-cluster ledger rows equal scoped source members
-- [ ] root generated interface contains no view implementation or contribution
+- [x] every original root public item has a reviewed disposition row
+- [x] source-cluster ledger rows equal scoped source members
+- [x] root generated interface contains no view implementation or contribution
       implementation types
-- [ ] every public option/event/service type has one canonical owner
-- [ ] duplicate `CursorChangeReason` and mapping functions are gone
-- [ ] public ViewZone contract is separate from private runtime/render state
-- [ ] the unmanaged overlay handle is browser-owned and externally constructible
+- [x] every public option/event/service type has one canonical owner
+- [x] duplicate `CursorChangeReason` and mapping functions are gone
+- [x] public ViewZone contract is separate from private runtime/render state
+- [x] the unmanaged overlay handle is browser-owned and externally constructible
       through the root factory; deferred widget members remain unimplemented
-- [ ] `ViewerOptions` and `ViewerServices` are opaque
-- [ ] `get_container_dom_node` is non-null and `get_dom_node` remains nullable
-- [ ] headless/test/contribution internals are absent from the external facade
-- [ ] embedded example uses only supported public packages
-- [ ] architecture checks enforce the new boundary
-- [ ] all intentional breaking changes are documented in the plan's closing
+- [x] `ViewerOptions` and `ViewerServices` are opaque
+- [x] `get_container_dom_node` is non-null and `get_dom_node` remains nullable
+- [x] headless/test/contribution internals are absent from the external facade
+- [x] embedded example uses only supported public packages
+- [x] architecture checks enforce the new boundary
+- [x] all intentional breaking changes are documented in the plan's closing
       API diff
-- [ ] all deviations are recorded and seam-based
-- [ ] closing complete-source reread finds no unaccounted member
-- [ ] required validation is green
+- [x] all deviations are recorded and seam-based
+- [x] closing complete-source reread finds no unaccounted member
+- [x] required validation is green
+
+## Implementation Closeout
+
+The final root interface is 155 lines / 9,849 bytes with SHA-256
+`6f1aba10c05f08fd1e3f61f829c69226d75e97b2608f6de30db1c5f7b6c46bac`.
+It contains two values, five opaque types, 104 methods, no public fields or
+variants, and no aliases. Nineteen generated interfaces changed from baseline:
+the corrected 15-file existing-interface denominator plus the four packages
+that Gate A recorded as absent. All nine executable/UI sentinels remain
+byte-identical to `e5beb1c`.
+
+### Closing root API diff
+
+| Gate A rows | Final result |
+|---|---|
+| all 45 `MOVE` rows | cursor/model/scroll and option enums have one owner in `viewer/common/editor_api`; mouse, ViewZone, accessor, and overlay contracts have one owner in `viewer/browser`; root consumes them directly |
+| `API-V001..V003`, debug payload rows | removed from root; workbench/browser callers use `viewer/browser/testing`, the embed uses URI-filtered model change plus native rAF, and root white-box keeps only a private build seam |
+| `API-V004`, `API-T012.M03`, zone aliases | `view_zone` and `change_view_zones` target the browser-owned mutable live descriptor/opaque accessor contracts; runtime registration state remains private in `viewer/browser/view` |
+| `API-T012.M02`, `API-T012.M56` | add/remove now consume an opaque browser `OverlayWidget`; new root `overlay_widget(id,node)` supplies external construction without a browser import |
+| `API-T012.M01/M09/M10/M13/M32/M38/M40/M77` | headless constructor and internal helpers/lookup were removed or made private; bottom geometry is line-only; container DOM is non-null and retained after disposal |
+| `API-T015` and fields/methods | `ViewerOptions` is opaque; internal derivations are private; the exact public addition is 12 immutable `with_*` builders plus only `soft_wrap()` and `line_height()` getters |
+| `API-T016` and fields/constructor | `ViewerServices` is opaque over language, closed marker-source, feedback, quick-diff, and log handles; new `dispose()` is idempotent and releases only bundle-created defaults |
+| `API-T018` and fields | `ViewerViewState` is an opaque save/restore token |
+| remaining `KEEP`/`OPAQUE`/`REMOVE` rows | implemented mechanically with no compatibility aliases; accepted readonly facade methods remain public and every removed test-only caller moved to white-box or testing seams |
+
+The only new root public items are the overlay factory, the reviewed opaque
+options builders/getters, and `ViewerServices::dispose`; each is the
+constructibility/lifecycle operation explicitly required by the corresponding
+`REPLACE`/`OPAQUE` rows above.
+
+### Deviations and retained deferrals
+
+Implementation introduced no new upstream deviation. Gate A's seam-based
+reductions remain unchanged: positioned/overflow/layout/min-width overlay
+features, content-widget operations, editable/diff/minimap/accessibility and
+other absent subsystems stay `DEFERRED`; typed MoonBit capability handles and
+the internal Viewer-id testing registry are local dependency/lifecycle seams,
+not claims of upstream public API parity.
+
+### Closing complete-source reread
+
+- The 210-row root ledger has no duplicate IDs and reconciles to 85 `KEEP`, 45
+  `MOVE`, 36 `OPAQUE`, seven `REPLACE`, and 37 `REMOVE` results. Every result is
+  represented by the final source/interface boundary.
+- The 1,322-row pinned upstream ledger has no gaps: U01 through U08 contain
+  107/109/21/200/473/42/10/360 rows, with 101 `PORTED`, 507 `TESTED`, 340
+  seam-based `DEFERRED`, and 374 explicit `N-A` results.
+- The corrected frozen denominators reproduce as 15 existing interfaces / 3,079
+  lines, 32 dependency-edge manifests / 341 lines / 192 imports, and nine
+  executable/UI sentinels / 231 lines. All nine sentinels remain byte-identical
+  to `e5beb1c`; the 15 existing interfaces plus four new owner packages account
+  for every generated-interface change.
+- The final root interface reproduces the 155-line / 9,849-byte hash recorded
+  above. The architecture guard also enforces the opacity of `Viewer` and its
+  three public tokens, the exact owner/declaration shape of all 11 moved
+  editor-api types, the lower-only testing dependency allowlist, capability
+  opacity, and the root/common-only external-host rule.
+
+### Final validation
+
+- `moon info --target all` completed; backend-specific native-only interface
+  notices were reviewed, and all affected checked-in interfaces were diffed.
+- `just check` passed: 181 warnings, zero errors; `moon fmt` was clean and all
+  architecture checks passed.
+- `just test` passed: 1,438 JS tests and 1,019 native tests, with zero failures;
+  the wasm/wasm-gc targets have no test entries.
+- `just build` passed and regenerated the editor, embed, and browser-test
+  bundles; the native server host also built successfully.
+- `just test-browser` passed all 83 tests in a complete green run. Later stress
+  reruns reproduced only timing-sensitive async-hover request-start and
+  scroll-frame threshold flakes; the hover case passed in isolation and the
+  performance case passed on its configured retry.
+- The final-source embedded-viewer and workbench startup matrix passed all four
+  focused Playwright cases, including stale model-swap rAF rejection.
+- `git diff --check` passed.
 
 ## Cross-Plan Coordination
 

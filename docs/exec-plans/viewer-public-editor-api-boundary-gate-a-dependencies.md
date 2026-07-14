@@ -1,6 +1,6 @@
 # Viewer Public Editor API Boundary — Gate A Dependency and Interface Snapshots
 
-Status: inventory ready — STOP FOR REVIEW; no public API implementation has started
+Status: approved historical inventory — implementation started 2026-07-14
 
 Date: 2026-07-14
 
@@ -19,30 +19,34 @@ embedded blocks are exact excerpts for the ownership-moving signatures.
 
 ## Closed Denominators
 
-- Eight checked-in interfaces must change for the fixed option/cursor,
+- Nine checked-in interfaces must change for the fixed option/cursor,
   view-zone, and overlay-widget ownership moves: root `viewer`;
   `common/{cursor,view_layout,view_model}`;
   root `common`; folding browser; public browser contracts; and private browser
-  view.
+  view. `viewer/browser/controller` is also a direct public-interface consumer
+  because the raw browser event becomes `EditorDomMouseEvent`.
 - Capability extraction changes five existing concrete owner/adapter
   interfaces in `common/{languages,markers}`, `contrib/{agent_feedback,
   quick_diff/common}`, and `platform/log`. The DOM-free hover package is also a
   direct changed consumer because its public participant service records and
   constructors currently expose `Languages`, `MarkerDecorationsService`, and
   `LogService`.
-- The complete changed-interface snapshot is **14 files / 2,869 lines**. The
+- The complete changed-interface snapshot is **15 files / 3,079 lines**. The
   SHA-256 of the ordered `shasum -a 256` output is
-  `be2194c4fe6006e939100b37b7a09e81942cc3d42e867b8d12e781312321dab4`.
-- Eight byte-identical consumer sentinels add **8 files / 218 lines** but are
+  `67998fe1cb033f5ccc24f0868af5470b0ea920254bd93fba07c8317aa897d11a`.
+- Nine byte-identical consumer sentinels add **9 files / 231 lines** but are
   not part of that aggregate: the agent-feedback browser projection, embedded
-  example, workbench, and five browser-scenario interfaces. Their
+  example, workbench, and six browser-scenario interfaces. Their
   implementation imports/call sites move without changing their exported
   interface. The ordered sentinel hash is
-  `206020d81b7252744f963a095408654eb1648358846c6e75c81fd559007fca09`.
-- The closed manifest graph and caller-migration set is **31 present
-  `moon.pkg` files / 325 lines / 184 literal import rows**, including test-mode
+  `72674e2ef87c660b3136bb3f5a8fdeda07eec6ae105d788971834a2243e380a6`.
+- The closed manifest graph and caller-migration set is **32 present
+  `moon.pkg` files / 341 lines / 192 literal import rows**, including test-mode
   rows. Its ordered manifest hash is
-  `aaed208c0cea2de008912f026e8f2f78dd3ac86685acb356d4ef9e57694db988`.
+  `b2ed3da539bbdb0caece11314b8f353831cb8e588bcce7311fd14491066199e2`.
+  `viewer/browser/controller` is in the changed-interface snapshot because it
+  consumes the renamed public mouse type, but its manifest has no changing
+  dependency edge and is intentionally outside this manifest denominator.
 - Four target packages are absent at the baseline: JS-only
   `viewer/browser/testing` and multi-target
   `viewer/common/{editor_api,agent_feedback_api,quick_diff_api}`. For each,
@@ -51,8 +55,8 @@ embedded blocks are exact excerpts for the ownership-moving signatures.
 
 ## Byte-Exact Generated-Interface Snapshot
 
-The fixed ownership decisions force rows 1-6 and 8-9. The adjusted capability
-seam forces the five owner/adapter rows 10-14 and changes the public hover
+The fixed ownership decisions force rows 1-6 and 8-10. The adjusted capability
+seam forces the five owner/adapter rows 11-15 and changes the public hover
 consumer at row 7.
 
 | Ordered row | Checked-in interface | Lines | SHA-256 | Expected ownership delta |
@@ -65,12 +69,13 @@ consumer at row 7.
 | 6 | `viewer/contrib/folding/browser/pkg.generated.mbti` | 208 | `2c6b8993578f04d31a2877a39ad863599f66a25177cde915d928b53dfe2eb43f` | consume canonical folding-control enum |
 | 7 | `viewer/contrib/hover/pkg.generated.mbti` | 326 | `25f946d03e3aa40d4d0679000d0e22b7fc2fadd7a009e5caac35b48985fcff26` | replace concrete language/marker/log participant inputs with capability handles |
 | 8 | `viewer/browser/pkg.generated.mbti` | 158 | `e0fe21017c33a82509afcd48aed28d0bb023158cb484ea785de754ed7373319c` | gain public DOM-facing zone descriptor/accessor and unmanaged overlay-widget contracts |
-| 9 | `viewer/browser/view/pkg.generated.mbti` | 356 | `0100e5068fabb111e52f85b833b57e4547e91b628bca4def03003e6945b81e75` | lose public zone descriptor/accessor ownership; consume browser/editor-api/log capability contracts |
-| 10 | `viewer/common/languages/pkg.generated.mbti` | 57 | `0c520ba65545dfe75e233fe1e0891492d0197ed39d6300c25c9af081db4636e1` | own `LanguageHandle` beside the concrete registry |
-| 11 | `viewer/common/markers/pkg.generated.mbti` | 165 | `ef59732a20e5e6c0ce64110677493584479f05b765c72f727e418a905b911c81` | own `MarkerServiceHandle`, `MarkerDecorationsHandle`, and their closed source union beside concrete marker services |
-| 12 | `viewer/contrib/agent_feedback/pkg.generated.mbti` | 121 | `2ec18e58c798101a7711776f72d248b439a0552139cf3e600f3e98535235275c` | consume common host DTOs/`AgentFeedbackHandle` and retain the concrete service plus UI projection |
-| 13 | `viewer/contrib/quick_diff/common/pkg.generated.mbti` | 33 | `614979b1fe0f9ce7cf6daba38133f153b888771d31e34be0c053d269ff17f100` | adapt the concrete baseline store to common `QuickDiffHandle` |
-| 14 | `platform/log/pkg.generated.mbti` | 71 | `834b2ea0f7a29ed8fb2be26ad0f094ffa76d8fa311ec0a4e20c133681b7af15f` | own `LogHandle` beside `LogService` |
+| 9 | `viewer/browser/controller/pkg.generated.mbti` | 210 | `3fa9f6f7f9e32cd33d18ae36ae310144a41ac01a1695bc9c2fd0ced3263dd18d` | consume renamed raw `EditorDomMouseEvent` while the public hit-tested wrapper takes the canonical name |
+| 10 | `viewer/browser/view/pkg.generated.mbti` | 356 | `0100e5068fabb111e52f85b833b57e4547e91b628bca4def03003e6945b81e75` | lose public zone descriptor/accessor ownership; consume browser/editor-api/log capability contracts |
+| 11 | `viewer/common/languages/pkg.generated.mbti` | 57 | `0c520ba65545dfe75e233fe1e0891492d0197ed39d6300c25c9af081db4636e1` | own `LanguageHandle` beside the concrete registry |
+| 12 | `viewer/common/markers/pkg.generated.mbti` | 165 | `ef59732a20e5e6c0ce64110677493584479f05b765c72f727e418a905b911c81` | own `MarkerServiceHandle`, `MarkerDecorationsHandle`, and their closed source union beside concrete marker services |
+| 13 | `viewer/contrib/agent_feedback/pkg.generated.mbti` | 121 | `2ec18e58c798101a7711776f72d248b439a0552139cf3e600f3e98535235275c` | consume common host DTOs/`AgentFeedbackHandle` and retain the concrete service plus UI projection |
+| 14 | `viewer/contrib/quick_diff/common/pkg.generated.mbti` | 33 | `614979b1fe0f9ce7cf6daba38133f153b888771d31e34be0c053d269ff17f100` | adapt the concrete baseline store to common `QuickDiffHandle` |
+| 15 | `platform/log/pkg.generated.mbti` | 71 | `834b2ea0f7a29ed8fb2be26ad0f094ffa76d8fa311ec0a4e20c133681b7af15f` | own `LogHandle` beside `LogService` |
 
 Consumer sentinels:
 
@@ -82,8 +87,9 @@ Consumer sentinels:
 | 4 | `tests/browser/moonbit/agent_feedback/pkg.generated.mbti` | 13 | `a553bba742fa68316e23be51092266808047d0cfb2f0f291d72fdc2361e5ed37` | byte-identical executable interface |
 | 5 | `tests/browser/moonbit/component/pkg.generated.mbti` | 14 | `1551125b2eb5aa841a05873e2312afed53cfb0d37990bc5da3fe19f2d352b676` | byte-identical executable interface and private fixture error |
 | 6 | `tests/browser/moonbit/model_swap/pkg.generated.mbti` | 13 | `cc317d28c8b2549b88b821e92efbf49539b86bc0bd2c41d21f55327b829672f4` | byte-identical executable interface |
-| 7 | `tests/browser/moonbit/quick_diff/pkg.generated.mbti` | 13 | `f7c29983588e3cb8e52143bf4de3de470fb4e70c4fbeefd1c2281f53265a2f44` | byte-identical executable interface |
-| 8 | `tests/browser/moonbit/set_value/pkg.generated.mbti` | 13 | `76486fbea33c153f5e9a3095eafb3567b4420c4ae813742d63719f6411a508f5` | byte-identical executable interface |
+| 7 | `tests/browser/moonbit/perf/pkg.generated.mbti` | 13 | `cfc708655ca3717765a04441b83f559eac8b79321307757c77061511dc1ebfdc` | byte-identical executable interface |
+| 8 | `tests/browser/moonbit/quick_diff/pkg.generated.mbti` | 13 | `f7c29983588e3cb8e52143bf4de3de470fb4e70c4fbeefd1c2281f53265a2f44` | byte-identical executable interface |
+| 9 | `tests/browser/moonbit/set_value/pkg.generated.mbti` | 13 | `76486fbea33c153f5e9a3095eafb3567b4420c4ae813742d63719f6411a508f5` | byte-identical executable interface |
 
 The complete files can be reproduced without trusting the working tree:
 
@@ -98,6 +104,7 @@ files=(
   viewer/contrib/folding/browser/pkg.generated.mbti
   viewer/contrib/hover/pkg.generated.mbti
   viewer/browser/pkg.generated.mbti
+  viewer/browser/controller/pkg.generated.mbti
   viewer/browser/view/pkg.generated.mbti
   viewer/common/languages/pkg.generated.mbti
   viewer/common/markers/pkg.generated.mbti
@@ -106,11 +113,11 @@ files=(
   platform/log/pkg.generated.mbti
 )
 for p in "${files[@]}"; do
-  git show "$BASE:$p" | wc -l
-  git show "$BASE:$p" | shasum -a 256
+  git show "${BASE}:$p" | wc -l
+  git show "${BASE}:$p" | shasum -a 256
 done
 for p in "${files[@]}"; do
-  h=$(git show "$BASE:$p" | shasum -a 256 | awk '{print $1}')
+  h=$(git show "${BASE}:$p" | shasum -a 256 | awk '{print $1}')
   printf '%s  %s\n' "$h" "$p"
 done | shasum -a 256
 sentinels=(
@@ -120,11 +127,12 @@ sentinels=(
   tests/browser/moonbit/agent_feedback/pkg.generated.mbti
   tests/browser/moonbit/component/pkg.generated.mbti
   tests/browser/moonbit/model_swap/pkg.generated.mbti
+  tests/browser/moonbit/perf/pkg.generated.mbti
   tests/browser/moonbit/quick_diff/pkg.generated.mbti
   tests/browser/moonbit/set_value/pkg.generated.mbti
 )
 for p in "${sentinels[@]}"; do
-  h=$(git show "$BASE:$p" | shasum -a 256 | awk '{print $1}')
+  h=$(git show "${BASE}:$p" | shasum -a 256 | awk '{print $1}')
   printf '%s  %s\n' "$h" "$p"
 done | shasum -a 256
 absent=(
@@ -134,14 +142,14 @@ absent=(
   viewer/common/quick_diff_api
 )
 for d in "${absent[@]}"; do
-  ! git cat-file -e "$BASE:$d/moon.pkg" 2>/dev/null
-  ! git cat-file -e "$BASE:$d/pkg.generated.mbti" 2>/dev/null
+  ! git cat-file -e "${BASE}:$d/moon.pkg" 2>/dev/null
+  ! git cat-file -e "${BASE}:$d/pkg.generated.mbti" 2>/dev/null
 done
 ```
 
 The two hash commands print the changed-interface and sentinel hashes above. A
 reviewer who wants
-materialized snapshots can redirect each `git show "$BASE:$p"` into a scratch
+materialized snapshots can redirect each `git show "${BASE}:$p"` into a scratch
 directory; no extra checked-in snapshot file is necessary because the baseline
 commit and per-file hashes identify every byte.
 
@@ -914,11 +922,12 @@ field.
 | `tests/browser/moonbit/agent_feedback/moon.pkg` | 14 | `949a0148aa1db73fa48611a63526d005db8967ace3ee6ed9b7426e01683f8160` | JS concrete-feedback caller |
 | `tests/browser/moonbit/component/moon.pkg` | 19 | `41b8c88f25c22c2a9d6060530ad2e664537f4ae5c415a8aa1290545eed3ff494` | JS language/marker/log caller |
 | `tests/browser/moonbit/model_swap/moon.pkg` | 14 | `ebbca251df0fd3ae1d20d2fc5da179d69159fa14717ee428295a47be1b189739` | JS service-lifetime caller |
+| `tests/browser/moonbit/perf/moon.pkg` | 16 | `40dedc6b598337ad49c8ec403babb27110971b813b3b446246460477c5d22c58` | JS render-observability caller |
 | `tests/browser/moonbit/quick_diff/moon.pkg` | 13 | `56764290c1d41e7658235b5e2219264baf67444a7c7c99778ca04914d2dc6db0` | JS concrete quick-diff caller |
 | `tests/browser/moonbit/set_value/moon.pkg` | 13 | `56764290c1d41e7658235b5e2219264baf67444a7c7c99778ca04914d2dc6db0` | JS concrete quick-diff caller |
 
 Current production-import adjacency (`A -> B` means `A` imports `B`; test and
-white-box-only imports are omitted here but remain covered by the 184-row
+white-box-only imports are omitted here but remain covered by the 192-row
 manifest denominator):
 
 ```text
@@ -948,6 +957,7 @@ workbench -> base/common, language, platform/log, shell/remote_protocol, viewer,
 test agent_feedback -> base/common, viewer, contrib/agent_feedback, common/model, test/support, rabbita/dom
 test component -> base/common, language, platform/log, viewer, browser/view, common/languages, common/model, common/core, syntax/lang_moonbit, syntax, test/support, rabbita/dom, rabbita/js
 test model_swap -> base/common, language, viewer, common/model, test/support, rabbita/dom
+test perf -> base/common, viewer, browser/view, common/model, test/support, rabbita/dom, rabbita/js
 test quick_diff -> base/common, viewer, common/model, test/support, rabbita/dom
 test set_value -> base/common, viewer, common/model, test/support, rabbita/dom
 ```
@@ -975,17 +985,18 @@ files=(
   tests/browser/moonbit/agent_feedback/moon.pkg
   tests/browser/moonbit/component/moon.pkg
   tests/browser/moonbit/model_swap/moon.pkg
+  tests/browser/moonbit/perf/moon.pkg
   tests/browser/moonbit/quick_diff/moon.pkg
   tests/browser/moonbit/set_value/moon.pkg
 )
 for f in "${files[@]}"; do
-  git show "$BASE:$f"
+  git show "${BASE}:$f"
 done | wc -l
 for f in "${files[@]}"; do
-  git show "$BASE:$f" | sed -n '/^import {/,/^}/p' | rg '^  "'
+  git show "${BASE}:$f" | sed -n '/^import {/,/^}/p' | rg '^  "'
 done | wc -l
 for f in "${files[@]}"; do
-  h=$(git show "$BASE:$f" | shasum -a 256 | awk '{print $1}')
+  h=$(git show "${BASE}:$f" | shasum -a 256 | awk '{print $1}')
   printf '%s  %s\n' "$h" "$f"
 done | shasum -a 256
 ```
@@ -1216,7 +1227,7 @@ backings.
 
 The four target packages below are absent at the immutable baseline. For each
 row, both `moon.pkg` and `pkg.generated.mbti` are absent; absence was checked
-with `git cat-file -e "$BASE:$path"` in the closed-denominator reproduction
+with `git cat-file -e "${BASE}:$path"` in the closed-denominator reproduction
 above.
 
 | New package | Target class | Closed role |
@@ -1408,24 +1419,24 @@ not regain root debug methods.
 | `set_value` | retain `QuickDiffService`, derive the common quick-diff handle, and set the original on the concrete value | dispose the Viewer and bundle defaults; the current backing owns no separate disposable resource |
 
 No caller-supplied backing is reclassified as bundle-owned merely because its
-handle is passed to `ViewerServices`. All eight executable/UI
+handle is passed to `ViewerServices`. All nine executable/UI
 `pkg.generated.mbti` sentinels remain byte-identical even when these JS-only
 manifests and call sites change.
 
 ## Dependency Gate Reconciliation
 
-- [x] 14/14 changed checked-in interfaces total 2,869 lines and have full
+- [x] 15/15 changed checked-in interfaces total 3,079 lines and have full
       SHA-256s plus ordered aggregate
-      `be2194c4fe6006e939100b37b7a09e81942cc3d42e867b8d12e781312321dab4`.
-- [x] all eight byte-identical executable/UI sentinels total 218 lines and have
+      `67998fe1cb033f5ccc24f0868af5470b0ea920254bd93fba07c8317aa897d11a`.
+- [x] all nine byte-identical executable/UI sentinels total 231 lines and have
       ordered aggregate
-      `206020d81b7252744f963a095408654eb1648358846c6e75c81fd559007fca09`.
+      `72674e2ef87c660b3136bb3f5a8fdeda07eec6ae105d788971834a2243e380a6`.
 - [x] both `moon.pkg` and `pkg.generated.mbti` absence is recorded for all four
       new packages: `editor_api`, `agent_feedback_api`, `quick_diff_api`, and
       JS-only `browser/testing`.
-- [x] 31/31 scoped manifests total 325 lines and 184 literal import rows, with
+- [x] 32/32 scoped manifests total 341 lines and 192 literal import rows, with
       ordered aggregate
-      `aaed208c0cea2de008912f026e8f2f78dd3ac86685acb356d4ef9e57694db988`.
+      `b2ed3da539bbdb0caece11314b8f353831cb8e588bcce7311fd14491066199e2`.
 - [x] every current option/cursor/view-zone owner-to-public-consumer edge is
       recorded.
 - [x] the browser contract/runtime split avoids the direct
@@ -1451,9 +1462,8 @@ manifests and call sites change.
 - [x] external embed, internal workbench, and browser-scenario dependency paths
       are explicit, including caller-owned BR backing disposal, and preserve
       the external-import guard.
-- [ ] public/generated-interface implementation — **STOP FOR REVIEW**.
+- [x] public/generated-interface implementation — approved and completed by
+      the parent plan.
 
-Review gate: do not create any of the four absent packages, move a type, edit a
-manifest/generated interface, or change the embed, workbench, or browser
-scenario callers until this dependency companion and the complete Public API
-Gate A artifact set are explicitly approved together.
+Historical review gate: the user approved this dependency companion together
+with the complete Public API Gate A artifact set on 2026-07-14.

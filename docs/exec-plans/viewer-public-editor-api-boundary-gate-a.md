@@ -42,12 +42,18 @@ this entrypoint does not replace their per-row evidence.
 | upstream parity ledger | 1,322 rows across 8 scoped units |
 | pinned upstream physical files | 8 files / 20,722 lines |
 | upstream manifest SHA-256 | `3c7c8cb5295abf8a9bf324f1a31aaac491800f8be80068d9bde371a1ded1c958` |
-| changed checked-in interface snapshot | 14 files / 2,869 lines |
-| changed-interface aggregate SHA-256 | `be2194c4fe6006e939100b37b7a09e81942cc3d42e867b8d12e781312321dab4` |
-| scoped current manifests | 31 files / 325 lines / 184 literal imports |
-| manifest aggregate SHA-256 | `aaed208c0cea2de008912f026e8f2f78dd3ac86685acb356d4ef9e57694db988` |
-| byte-identical consumer/interface sentinels | 8 files / 218 lines |
-| sentinel aggregate SHA-256 | `206020d81b7252744f963a095408654eb1648358846c6e75c81fd559007fca09` |
+| changed checked-in interface snapshot | 15 files / 3,079 lines |
+| changed-interface aggregate SHA-256 | `67998fe1cb033f5ccc24f0868af5470b0ea920254bd93fba07c8317aa897d11a` |
+| scoped current manifests | 32 files / 341 lines / 192 literal imports |
+| manifest aggregate SHA-256 | `b2ed3da539bbdb0caece11314b8f353831cb8e588bcce7311fd14491066199e2` |
+| byte-identical consumer/interface sentinels | 9 files / 231 lines |
+| sentinel aggregate SHA-256 | `72674e2ef87c660b3136bb3f5a8fdeda07eec6ae105d788971834a2243e380a6` |
+
+Closeout re-ran the immutable-baseline recipes and corrected two inventory
+omissions in the initial review text: `viewer/browser/controller` belongs to
+the changed-interface snapshot, and the perf browser package belongs to both
+the manifest and byte-identical sentinel sets. The corrected counts and hashes
+above change no reviewed ownership or migration decision.
 
 The four target packages
 `viewer/common/{editor_api,agent_feedback_api,quick_diff_api}` and
@@ -302,7 +308,7 @@ The target graph is acyclic:
 - external hosts keep the existing root/common-only import rule.
 
 The dependency companion gives the complete adjacency, a valid topological
-ranking, immutable hash recipes, and the eight byte-identical sentinels.
+ranking, immutable hash recipes, and the nine byte-identical sentinels.
 
 ## Upstream Ledger Reconciliation
 
@@ -340,8 +346,8 @@ Approval of this Gate A accepts:
 3. the corrected value/capability owners, the handle-based marker-decoration
    constructor, the all-callback common feature constructors, and the
    external-import route;
-4. the 14-interface before snapshot, four absent target packages, 31-manifest
-   dependency proof, and eight sentinels; and
+4. the corrected 15-interface before snapshot, four absent target packages, 32-manifest
+   dependency proof, and nine sentinels; and
 5. sequential execution of parent Milestones B through F with coherent,
    validated commits and no parallel public-API milestones.
 

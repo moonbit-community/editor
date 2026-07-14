@@ -10,8 +10,10 @@ ownership and lifecycle rules that are not obvious from signatures.
 
 - Browser embedders call `Viewer::create(host, services~, options~)`. The host
   element must stay mounted and must not receive host-rendered children.
-  `Viewer::Viewer(...)` creates an unattached/headless instance; `attach` is a
-  private implementation seam, not a public two-step mounting API.
+  This is the only public construction path. The package keeps a private
+  headless constructor for white-box tests; there is no public two-step mounting
+  API. `get_container_dom_node` returns the original non-null host before and
+  after disposal, while `get_dom_node` is nullable when no model/view exists.
 - Omitting `services` makes the Viewer create and own an internal bundle.
   Passing `services` explicitly always borrows that bundle, including a bundle
   returned by `ViewerServices::new`; this is the form for sharing languages,
@@ -35,10 +37,8 @@ ownership and lifecycle rules that are not obvious from signatures.
   map stays installed for ordered callbacks. Entries tear down input, widgets,
   folding, hover, then quick diff directly from their stored payloads; each
   retires typed lookup exactly once, and only then is the map cleared. The
-  temporary public `get_contribution` presence/lifecycle facade does not own a
-  second instance; its final status belongs to
-  `docs/exec-plans/viewer-public-editor-api-boundary.md`. `dispose` is
-  idempotent: it cancels pending render work, removes
+  registry, contribution variants, instantiation modes, and lookup helpers are
+  package-private. `dispose` is idempotent: it cancels pending render work, removes
   Viewer/View listeners and owned DOM, and never disposes the caller's model,
   host, or explicitly supplied services. For an internally created bundle it
   disposes marker decorations, markers, then agent feedback after Viewer
@@ -72,13 +72,16 @@ does not provide compatibility aliases.
 
 `update_options` accepts and replaces one complete typed `ViewerOptions`
 snapshot. It is intentionally not Monaco's JavaScript partial-object merge:
-callers changing one field should pass a record update such as
-`{ ..viewer.get_options(), render_whitespace: All }`. An equal complete
-snapshot is a strict no-op. A changed snapshot computes option-specific facts
-once and delivers the resulting mapping, decoration, and configuration view
-events as one ordered batch before scheduling the frame. The readonly product
-keeps its approved `render_validation_decorations=On` default; `Editable`
-still filters validation decorations because readonly is a fixed product fact.
+the representation is opaque, and callers changing one field derive a new
+snapshot with a reviewed builder such as
+`viewer.get_options().with_render_whitespace(All)`. The public read floor is
+limited to `soft_wrap()` and `line_height()`; internal packages derive the rest.
+An equal complete snapshot is a strict no-op. A changed snapshot computes
+option-specific facts once and delivers the resulting mapping, decoration, and
+configuration view events as one ordered batch before scheduling the frame.
+The readonly product keeps its approved
+`render_validation_decorations=On` default; `Editable` still filters validation
+decorations because readonly is a fixed product fact.
 
 The viewer is single-cursor: secondary cursor/selection arrays are empty and
 `set_selections` uses the first selection. The primary Left/Right/Up/Down,
@@ -90,8 +93,9 @@ runtime-partial argument shapes return before mutation when required
 position/selection data is absent; the readonly model has no undo stack, so
 Monaco's cursor-command `pushStackElement` calls have no local state to update.
 Alternate platform bindings, editable commands, multi-cursor, and column
-selection are outside the readonly surface. The `debug_on_did_*` subscriptions
-are harness observability, not ordinary editor events.
+selection are outside the readonly surface. Build/render/hover telemetry is not
+part of the public Viewer API; the internal workbench and browser scenarios use
+the Viewer-id-keyed `viewer/browser/testing` seam.
 
 Cursor payload versions are `TextModel.get_version_id()`, never the caller's
 host metadata version. `set_position`/`set_selection` accept an optional
@@ -113,11 +117,17 @@ target already at the viewport edge gains no extra vertical or horizontal
 padding. Smooth requests of at most one line downgrade to immediate, and the
 `smooth_scrolling=false` default also commits them immediately.
 
-`ViewerServices` explicitly supplies the language registry, marker and marker-
-decoration services, agent-feedback store, quick-diff store, and logger. Hosts
-register tokenizers, hover, and document-symbol providers through
-`viewer/common/languages`; diagnostics are pushed to `services.markers`.
-There is no current viewer UI for definition or references.
+`ViewerServices` is an opaque capability aggregate. Its constructor accepts a
+`LanguageHandle`, one closed marker source (`MarkerStore` or `Decorations`), an
+`AgentFeedbackHandle`, a `QuickDiffHandle`, and a `LogHandle`; concrete service
+fields cannot be recovered through the facade. Hosts retain concrete language,
+marker, feedback, quick-diff, and logging backings when they need to register
+providers, publish diagnostics, mutate feature state, or inspect telemetry.
+Omitted capabilities create bundle-owned defaults. `ViewerServices::dispose`
+is idempotent and releases only those defaults, in marker-decoration,
+marker-store, then feedback order; supplied handles and captured backings remain
+caller-owned. A Viewer disposes only a bundle it created implicitly. There is
+no current viewer UI for definition or references.
 
 ## Runtime pipeline
 

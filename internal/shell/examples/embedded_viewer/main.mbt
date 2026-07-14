@@ -314,6 +314,10 @@ fn view_embed(
 
 ///|
 fn main {
+  // Compile the external-facade contract in `public_api_contract.mbt` without
+  // executing it in the example. The discarded function value keeps every
+  // supported root/common signature checked by the real embedding package.
+  let _ = compile_external_viewer_api_contract
   // Highlighting needs no server: the language package is composed in
   // by import and registered through the viewer languages facade.
   @languages.languages.set_tokens_provider(

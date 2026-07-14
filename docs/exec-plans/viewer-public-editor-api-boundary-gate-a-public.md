@@ -1,6 +1,6 @@
 # Viewer Public Editor API Boundary — Gate A Public Surface Ledger
 
-Status: inventory complete — STOP FOR REVIEW; no public API implementation is authorized
+Status: approved historical inventory — implementation started 2026-07-14
 
 Date: 2026-07-14
 
@@ -13,8 +13,8 @@ Local baseline: repository HEAD e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3
 This companion closes only the current root public-surface and caller-evidence
 parts of Gate A. It changes no product source, package manifest, or generated
 interface. The upstream ledger and dependency/interface snapshots are separate
-Gate A companions. Implementation remains stopped until all three companions
-are reviewed together.
+Gate A companions. At inventory time implementation remained stopped until all
+three companions were reviewed together; the user approved them on 2026-07-14.
 
 ## Frozen denominator
 
@@ -665,10 +665,9 @@ Reviewers can mechanically recheck the ledger with:
 Expected results are 210 rows, no duplicate IDs, only the six terminal labels
 with the totals above, no placeholder markers, and a clean diff check.
 
-## STOP FOR REVIEW
+## Historical review gate
 
-Gate A is complete for the current root public surface, but it grants no
-implementation authority by itself. Review this ledger together with the
-upstream parity companion and dependency/interface snapshot companion. Do not
-change public or generated interfaces until the combined Gate A review is
-approved.
+Gate A completed the baseline root public surface but granted no implementation
+authority by itself. The user reviewed this ledger together with the upstream
+and dependency/interface companions and approved the combined Gate A on
+2026-07-14 before implementation began.

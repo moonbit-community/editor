@@ -74,3 +74,34 @@ ledger, 226-row local inventory, representation proof, exact lifetime trace,
 and seam-based lifecycle deviation live in the main
 `docs/exec-plans/editor-contribution-single-ownership.md` plan and its sibling
 `editor-contribution-single-ownership-gate-a*.md` artifacts.
+
+## Public editor API ownership
+
+The scoped public clusters from upstream `common/config/editorOptions.ts`,
+`common/editorCommon.ts`, the complete cursor-event source unit,
+`browser/editorBrowser.ts`, `browser/widget/codeEditor/codeEditorWidget.ts`,
+`editor.api.ts`, `editor.main.ts`, and the generated Monaco declarations map to
+these local owners:
+
+- DOM-free cursor/model/scroll events and editor-option enums map to the single
+  multi-target `viewer/common/editor_api` package.
+- Public mouse, ViewZone/accessor, and unmanaged overlay-widget contracts map
+  to `viewer/browser`; mutable/rendered zone and widget state remains private in
+  `viewer/browser/view`.
+- The opaque `Viewer`, `ViewerOptions`, `ViewerServices`, and `ViewerViewState`
+  facade maps to root `viewer`. Root factories let external hosts construct the
+  browser-owned zone/widget values without importing browser internals.
+- Language, marker, feedback, quick-diff, and logging service seams map to
+  opaque handles beside their public vocabularies. Concrete feature services
+  remain caller-retained common/contribution implementations and never appear
+  in the root generated interface.
+- Root debug subscriptions have no public upstream/API role. Internal
+  workbench/browser observability maps to the local Viewer-id-keyed
+  `viewer/browser/testing` seam, while the embedded host uses the semantic
+  model-change event plus a URI-guarded native animation frame.
+
+The boundary migration uses oracle commit
+`b18492a288de038fbc7643aae6de8247029d11bd`. Its closed 210-row local public
+disposition ledger, 1,322-row upstream cluster ledger, dependency proof, and
+generated-interface snapshots live in
+`docs/exec-plans/viewer-public-editor-api-boundary-gate-a*.md`.

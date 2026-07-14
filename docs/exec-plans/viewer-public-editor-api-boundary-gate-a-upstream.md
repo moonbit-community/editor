@@ -1,6 +1,6 @@
 # Viewer Public Editor API Boundary Gate A — Upstream Ledger
 
-Status: inventory ready — STOP FOR REVIEW
+Status: approved historical inventory — implementation started 2026-07-14
 Date: 2026-07-14
 Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
 Parent plan: `docs/exec-plans/viewer-public-editor-api-boundary.md`
@@ -1638,6 +1638,7 @@ alone do not establish parity:
       terminal status, and three reconciled partitions (unit, kind, status).
 - [x] `git diff --check` is clean for this companion.
 
-**STOP FOR REVIEW. No public API, type owner, option/service facade, widget or
-view-zone contract, contribution visibility, or generated interface may change
-from this ledger until Gate A is explicitly approved.**
+**Historical review gate:** no public API, type owner, option/service facade,
+widget or view-zone contract, contribution visibility, or generated interface
+changed from this ledger until the user explicitly approved Gate A on
+2026-07-14.

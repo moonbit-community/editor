@@ -252,10 +252,12 @@ GPU renderer.
 
 ## View zones
 
-`viewer/browser.ViewZone` is the retained mutable public delegate. Its opaque
-callback-backed `ViewZoneChangeAccessor` assigns a generated whitespace id,
-removes a registration, or rereads mutable mapping and height through
-`layout_zone`. This package keeps only registered/runtime state. `ViewZones`
+`viewer/browser.ViewZone` is the mutable public descriptor retained by identity.
+Its live fields are reread during layout. Its
+opaque callback-backed `ViewZoneChangeAccessor` adds a descriptor and returns a
+generated whitespace id, removes a registration, or requests a mapping/height
+reread through `layout_zone`. This package converts once at that boundary and
+keeps all registered/runtime state. `ViewZones`
 computes hidden-area and height facts, mounts caller-owned content and margin
 nodes without replacing their class/style/content, reports host callback
 failures safely, and renders id-bearing viewport whitespace with Monaco's

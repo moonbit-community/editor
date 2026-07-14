@@ -5,10 +5,11 @@ reusable `viewer`, file tree, remote transport, and browser-test observability.
 
 ## Runtime composition
 
-- `start_app` creates explicit `ViewerServices`, installs the workbench logger,
-  MoonBit/JSON/JavaScript tokenizers (TypeScript reuses JavaScript), remote
-  hover/document-symbol providers and agent-feedback persistence;
-  then it calls `mount_app`.
+- `start_app` creates and retains concrete language, marker, feedback,
+  quick-diff, and logging backings, derives their narrow handles into an opaque
+  `ViewerServices`, installs MoonBit/JSON/JavaScript tokenizers (TypeScript
+  reuses JavaScript), remote hover/document-symbol providers, and
+  agent-feedback persistence; then it calls `mount_app`.
 - Rabbita owns topbar/sidebar/status/diagnostics/theme state and renders one
   stable, childless `.viewer-host`. After the first paint `Viewer::create`
   mounts the imperative editor into that element.
@@ -21,10 +22,13 @@ reusable `viewer`, file tree, remote transport, and browser-test observability.
   reset it.
 - The protocol client correlates in-flight requests by ID and resolves all
   pending requests on connection loss. Watch results and diagnostics are push
-  paths; diagnostics update `ViewerServices.markers` rather than a pull
-  provider.
-- Viewer lifecycle subscriptions update shell state, drive tree `autoReveal`,
-  and emit the structured harness events in `../../../docs/harness.md`.
+  paths; diagnostics update the workbench-retained `MarkerService` rather than
+  a field recovered from `ViewerServices`.
+- Public Viewer lifecycle subscriptions update shell state and drive tree
+  `autoReveal`. Build/render/hover telemetry comes from the internal
+  Viewer-id-keyed `viewer/browser/testing` registry; diagnostic telemetry is
+  reread from the retained marker store. Together they emit the structured
+  harness events in `../../../docs/harness.md`.
 - Agent-feedback state is enabled per opened resource and persisted in
   `localStorage`; this reference host has no agent execution loop.
 
@@ -34,7 +38,9 @@ The only exported functions are `start_app`, `mount_app`, and the harness-facing
 ## Boundary and validation
 
 Composition belongs here. Viewer and file tree do not know about each other or
-the transport. Workbench uses only public viewer APIs; its JavaScript FFI is
+the transport. As an internal workbench-tier consumer this package may retain
+feature implementations and use `viewer/browser/testing`; external embedders
+remain restricted to root `viewer` and `viewer/common/**`. JavaScript FFI is
 limited to host capabilities, harness events, storage, and protocol URL lookup.
 
 Run `moon test internal/shell/workbench --target js`, `just check`, and the

@@ -132,8 +132,42 @@ test "exact cursor state is a render and public event no-op" {
     viewer.set_position(Position(1, 1))
     assert_eq(outgoing, 0)
     assert_eq(public_events, 0)
-    assert_eq(viewer.cursor_delivery_queue.length(), 0)
+    assert_eq(viewer.cursor_delivery.queue.length(), 0)
   })
+}
+
+///|
+test "ready empty Flush is consumed before Viewer skips public cursor emission" {
+  let viewer = Viewer::Viewer()
+  let mut positions = 0
+  let mut selections = 0
+  viewer.on_did_change_cursor_position(_ => positions += 1) |> ignore
+  viewer.on_did_change_cursor_selection(_ => selections += 1) |> ignore
+  let event : @view_model.CursorStateChangedEvent = {
+    kind: CursorStateChanged,
+    old_selections: None,
+    selections: [],
+    old_model_version_id: 0,
+    model_version_id: 17,
+    source: "model",
+    reason: ContentFlush,
+    reached_max_cursor_count: false,
+  }
+  viewer.cursor_delivery.enqueue(event)
+  assert_eq(viewer.cursor_delivery.content_barrier_depth, 1)
+  viewer.cursor_delivery.mark_content_complete(17)
+  assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 1)
+  assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+
+  viewer.drain_cursor_delivery_queue()
+
+  assert_eq(positions, 0)
+  assert_eq(selections, 0)
+  assert_eq(viewer.cursor_delivery.queue.length(), 0)
+  assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 0)
+  assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+  assert_false(viewer.cursor_delivery.is_draining)
+  viewer.dispose()
 }
 
 ///|
@@ -221,6 +255,50 @@ test "cursor delivery FIFO keeps reentrant position and selection pairs adjacent
 }
 
 ///|
+test "model swap in a position listener keeps the old pair ahead of the new model pair" {
+  let viewer = Viewer::Viewer()
+  let first = test_model("abcdef")
+  let second = test_model("uvwxyz")
+  viewer.set_model(Some(first))
+  let order : Array[String] = []
+  let mut swapped = false
+  let mut retained_drain_gate = false
+  let mut queued_new_pair = false
+  viewer.on_did_change_cursor_position(event => {
+    order.push("position:\{event.position.column}")
+    if !swapped {
+      swapped = true
+      viewer.set_model(Some(second))
+      retained_drain_gate = viewer.cursor_delivery.is_draining
+      viewer.set_position(Position(1, 5))
+      queued_new_pair = viewer.cursor_delivery.is_draining &&
+        viewer.cursor_delivery.queue.length() == 1
+    }
+  })
+  |> ignore
+  viewer.on_did_change_cursor_selection(event => {
+    order.push("selection:\{event.selection.get_position().column}")
+  })
+  |> ignore
+
+  viewer.set_position(Position(1, 3))
+
+  assert_true(
+    order == ["position:3", "selection:3", "position:5", "selection:5"],
+  )
+  assert_true(retained_drain_gate)
+  assert_true(queued_new_pair)
+  assert_true(viewer.get_model().unwrap().same(second))
+  assert_false(viewer.cursor_delivery.is_draining)
+  assert_eq(viewer.cursor_delivery.queue.length(), 0)
+  assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+  assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 0)
+  viewer.dispose()
+  first.dispose()
+  second.dispose()
+}
+
+///|
 test "selection-listener reentrancy queues the later cursor pair" {
   with_test_viewer("abcdef", viewer => {
     let order : Array[String] = []
@@ -267,8 +345,8 @@ test "selection listener set_value delivers ContentFlush without barrier deadloc
       order ==
       ["position:3", "selection:3", "content", "position:1", "selection:1"],
     )
-    assert_eq(viewer.cursor_content_barrier_depth, 0)
-    assert_eq(viewer.cursor_delivery_queue.length(), 0)
+    assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+    assert_eq(viewer.cursor_delivery.queue.length(), 0)
 
     // A later transition proves the delivery spine did not remain wedged.
     viewer.set_position(Position(1, 4))
@@ -304,9 +382,9 @@ test "nested content completion releases only its matching Flush version" {
     assert_true(
       order == ["content:3", "content:2", "selection:2", "selection:3"],
     )
-    assert_eq(viewer.cursor_content_barrier_depth, 0)
-    assert_eq(viewer.cursor_delivery_queue.length(), 0)
-    assert_eq(viewer.cursor_completed_content_versions.length(), 0)
+    assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+    assert_eq(viewer.cursor_delivery.queue.length(), 0)
+    assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 0)
   })
 }
 
@@ -333,12 +411,12 @@ test "old-model content completion cannot release a same-version new-model Flush
 
   viewer.set_value("first replacement")
   assert_true(order == ["content:2"])
-  assert_eq(viewer.cursor_completed_content_versions.length(), 0)
+  assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 0)
 
   order.clear()
   viewer.set_value("second replacement")
   assert_true(order == ["content:2", "selection:2"])
-  assert_eq(viewer.cursor_completed_content_versions.length(), 0)
+  assert_eq(viewer.cursor_delivery.completed_content_versions.length(), 0)
   viewer.dispose()
   first.dispose()
   second.dispose()
@@ -400,8 +478,8 @@ test "reentrant ContentFlush retains every queued cursor fact" {
       ],
     )
     assert_true(versions == [2, 3])
-    assert_eq(viewer.cursor_delivery_queue.length(), 0)
-    assert_eq(viewer.cursor_content_barrier_depth, 0)
+    assert_eq(viewer.cursor_delivery.queue.length(), 0)
+    assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
   })
 }
 
@@ -450,8 +528,8 @@ test "public ContentFlush reason does not open a model-content delivery barrier"
       reason=ContentFlush,
     )
     assert_true(order == ["position", "selection"])
-    assert_eq(viewer.cursor_content_barrier_depth, 0)
-    assert_eq(viewer.cursor_delivery_queue.length(), 0)
+    assert_eq(viewer.cursor_delivery.content_barrier_depth, 0)
+    assert_eq(viewer.cursor_delivery.queue.length(), 0)
   })
 }
 

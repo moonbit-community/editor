@@ -44,14 +44,7 @@ pub struct Viewer {
   /// adjacent position/selection pair. The drain gate prevents reentrant
   /// listeners from interleaving a later pair; content barriers hold Flush
   /// facts until the corresponding public model-content callback completes.
-  priv cursor_delivery_queue : Array[@view_model.CursorStateChangedEvent]
-  priv mut cursor_delivery_is_draining : Bool
-  priv mut cursor_content_barrier_depth : Int
-  /// Exact model-content versions whose public listeners have completed but
-  /// whose matching Flush cursor fact has not yet been consumed. A nested
-  /// higher version can complete before its outer version, so a scalar high-
-  /// water mark would release the wrong barrier.
-  priv cursor_completed_content_versions : Array[Int]
+  priv cursor_delivery : CursorEventDelivery
   priv did_build_view_model : @base_common.Emitter[
     @viewer_testing.ViewModelBuiltObservation,
   ]
@@ -155,10 +148,7 @@ fn Viewer::Viewer(
     did_change_model_content: @base_common.Emitter::new(),
     did_change_cursor_position: @base_common.Emitter::new(),
     did_change_cursor_selection: @base_common.Emitter::new(),
-    cursor_delivery_queue: [],
-    cursor_delivery_is_draining: false,
-    cursor_content_barrier_depth: 0,
-    cursor_completed_content_versions: [],
+    cursor_delivery: CursorEventDelivery(),
     did_build_view_model: @base_common.Emitter::new(),
     did_scroll: @base_common.Emitter::new(),
     did_change_view_zones: @base_common.Emitter::new(),
@@ -557,7 +547,7 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
     return None
   }
   self.cancel_render_frame()
-  self.reset_cursor_delivery()
+  self.cursor_delivery.reset_model_scope()
   let model = model_data.model
   // Feature state belongs to the outgoing model: the per-model resets Track
   // C moved onto the controllers, plus the widget teardown.

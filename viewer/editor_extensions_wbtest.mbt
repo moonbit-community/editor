@@ -13,7 +13,7 @@ test "contributions instantiate centrally in the reviewed order and expose every
     "quickDiff.decorator",
   ]
   let actual : Array[String] = []
-  for id, entry in viewer.contributions {
+  for id, entry in viewer.contributions.instances {
     actual.push(id)
     match (id, entry.instance) {
       ("agentFeedback.editorInputContribution", AgentFeedbackInput(_)) => ()
@@ -26,11 +26,11 @@ test "contributions instantiate centrally in the reviewed order and expose every
   }
   assert_eq(actual, expected)
   for id in expected {
-    guard viewer.contributions.get(id) is Some(_) else {
+    guard viewer.contributions.lookup(id) is Some(_) else {
       fail("missing known contribution: " + id)
     }
   }
-  assert_false(viewer.contributions.contains("editor.contrib.unknown"))
+  assert_true(viewer.contributions.lookup("editor.contrib.unknown") is None)
   assert_true(viewer.agent_feedback_input_contribution() is Some(_))
   assert_true(viewer.agent_feedback_widget_contribution() is Some(_))
   assert_true(viewer.folding_controller() is Some(_))
@@ -39,17 +39,17 @@ test "contributions instantiate centrally in the reviewed order and expose every
 
   // Every typed accessor validates both its fixed id and the enum variant.
   // Temporarily put a valid but mismatched payload under quick diff's id.
-  let quick_diff_entry = viewer.contributions["quickDiff.decorator"]
-  let hover = viewer.content_hover_controller().unwrap()
-  viewer.contributions["quickDiff.decorator"] = EditorContributionEntry(
+  let quick_diff_entry = viewer.contributions.instances["quickDiff.decorator"]
+  let hover = viewer.content_hover_contribution().unwrap()
+  viewer.contributions.instances["quickDiff.decorator"] = EditorContributionEntry(
     ContentHover(hover),
   )
   assert_true(viewer.quick_diff_contribution() is None)
-  viewer.contributions["quickDiff.decorator"] = quick_diff_entry
+  viewer.contributions.instances["quickDiff.decorator"] = quick_diff_entry
 
   viewer.dispose()
   for id in expected {
-    assert_false(viewer.contributions.contains(id))
+    assert_false(viewer.contributions.instances.contains(id))
   }
 }
 
@@ -112,7 +112,7 @@ test "duplicate contribution ids are first-wins before later side effects" {
   assert_eq(first_initialized.val, 1)
   assert_eq(second_constructed.val, 0)
   assert_eq(second_initialized.val, 0)
-  guard viewer.contributions.get("test.duplicate") is Some(entry) else {
+  guard viewer.contributions.instances.get("test.duplicate") is Some(entry) else {
     fail("first duplicate row was not installed")
   }
   entry.dispose(viewer)
@@ -123,20 +123,23 @@ test "duplicate contribution ids are first-wins before later side effects" {
   viewer.dispose()
   assert_eq(first_disposed.val, 1)
   assert_eq(second_disposed.val, 0)
-  assert_false(viewer.contributions.contains("test.duplicate"))
+  assert_false(viewer.contributions.instances.contains("test.duplicate"))
 }
 
 ///|
 test "direct entry disposal retires typed lookup without removing the row early" {
   let viewer = Viewer::Viewer()
-  guard viewer.contributions.get("editor.contrib.contentHover") is Some(hover) else {
+  guard viewer.contributions.instances.get("editor.contrib.contentHover")
+    is Some(hover) else {
     fail("missing hover contribution entry")
   }
   hover.dispose(viewer)
   assert_true(viewer.content_hover_controller() is None)
-  assert_true(viewer.contributions.contains("editor.contrib.contentHover"))
   assert_true(
-    viewer.contributions["editor.contrib.contentHover"].lifecycle ==
+    viewer.contributions.instances.contains("editor.contrib.contentHover"),
+  )
+  assert_true(
+    viewer.contributions.instances["editor.contrib.contentHover"].lifecycle ==
     ContributionDisposed,
   )
   hover.dispose(viewer)
@@ -156,14 +159,18 @@ test "viewer disposes all five real rows once in order while the map stays insta
   let order : Array[String] = []
   let map_stayed_installed = Ref(true)
   let typed_row_stayed_available = Ref(true)
+  let wrapper_stayed_live = Ref(true)
   let track = label => {
     @base_common.Disposable::from(() => {
       order.push(label)
-      if viewer.contributions.length() != expected_ids.length() {
+      if viewer.contributions.lifecycle != ContributionsLive {
+        wrapper_stayed_live.val = false
+      }
+      if viewer.contributions.instances.length() != expected_ids.length() {
         map_stayed_installed.val = false
       }
       for id in expected_ids {
-        if !viewer.contributions.contains(id) {
+        if !viewer.contributions.instances.contains(id) {
           map_stayed_installed.val = false
         }
       }
@@ -180,13 +187,13 @@ test "viewer disposes all five real rows once in order while the map stays insta
       }
     })
   }
-  viewer.contributions["agentFeedback.editorInputContribution"].listeners.push(
+  viewer.contributions.instances["agentFeedback.editorInputContribution"].listeners.push(
     track("input"),
   )
-  viewer.contributions["agentFeedback.editorWidgetContribution"].listeners.push(
+  viewer.contributions.instances["agentFeedback.editorWidgetContribution"].listeners.push(
     track("widget"),
   )
-  viewer.contributions[@folding_browser.FOLDING_CONTROLLER_ID].listeners.push(
+  viewer.contributions.instances[@folding_browser.FOLDING_CONTROLLER_ID].listeners.push(
     track("folding"),
   )
   viewer.content_hover_controller().unwrap().install_react_timer(track("hover"))
@@ -196,7 +203,36 @@ test "viewer disposes all five real rows once in order while the map stays insta
   assert_eq(order, ["input", "widget", "folding", "hover", "quickDiff"])
   assert_true(map_stayed_installed.val)
   assert_true(typed_row_stayed_available.val)
-  assert_eq(viewer.contributions.length(), 0)
+  assert_true(wrapper_stayed_live.val)
+  assert_true(viewer.contributions.lifecycle == ContributionsDisposed)
+  assert_eq(viewer.contributions.instances.length(), 0)
+}
+
+///|
+test "contribution wrapper retires lookup between behavior and retained-resource phases" {
+  let viewer = Viewer::Viewer()
+  let hover_state = viewer.content_hover_contribution().unwrap()
+  viewer.contributions.dispose_behavior(viewer)
+  assert_true(viewer.contributions.lifecycle == ContributionsDisposing)
+  assert_eq(viewer.contributions.instances.length(), 5)
+  assert_true(viewer.content_hover_contribution() is None)
+  assert_true(
+    viewer.contributions.lookup("editor.contrib.contentHover") is None,
+  )
+  // The retained state is still present in the sole map until the later root
+  // hover-resource slot completes.
+  guard viewer.contributions.instances.get("editor.contrib.contentHover")
+    is Some(entry) else {
+    fail("hover entry cleared before retained-resource phase")
+  }
+  guard entry.instance is ContentHover(stored) else {
+    fail("hover entry variant changed during disposal")
+  }
+  assert_true(physical_equal(hover_state, stored))
+  viewer.contributions.dispose_retained_browser_resources()
+  assert_true(viewer.contributions.lifecycle == ContributionsDisposed)
+  assert_eq(viewer.contributions.instances.length(), 0)
+  viewer.dispose()
 }
 
 ///|
@@ -237,16 +273,16 @@ test "two viewers isolate mutable contribution state and disposal owners" {
 
   let first_disposals : Array[String] = []
   let second_disposals : Array[String] = []
-  first.contributions["agentFeedback.editorInputContribution"].listeners.push(
+  first.contributions.instances["agentFeedback.editorInputContribution"].listeners.push(
     @base_common.Disposable::from(() => first_disposals.push("input")),
   )
-  second.contributions["agentFeedback.editorInputContribution"].listeners.push(
+  second.contributions.instances["agentFeedback.editorInputContribution"].listeners.push(
     @base_common.Disposable::from(() => second_disposals.push("input")),
   )
-  first.contributions["agentFeedback.editorWidgetContribution"].listeners.push(
+  first.contributions.instances["agentFeedback.editorWidgetContribution"].listeners.push(
     @base_common.Disposable::from(() => first_disposals.push("widget")),
   )
-  second.contributions["agentFeedback.editorWidgetContribution"].listeners.push(
+  second.contributions.instances["agentFeedback.editorWidgetContribution"].listeners.push(
     @base_common.Disposable::from(() => second_disposals.push("widget")),
   )
   first_folding.local_to_dispose.push(

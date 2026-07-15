@@ -125,8 +125,8 @@ fn Viewer::is_current_resource(
 fn Viewer::agent_feedback_input_contribution(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackEditorInputContribution? {
-  match self.contributions.get("agentFeedback.editorInputContribution") {
-    Some(entry) if entry.typed_lookup_available() =>
+  match self.contributions.lookup("agentFeedback.editorInputContribution") {
+    Some(entry) =>
       match entry.instance {
         AgentFeedbackInput(controller) => Some(controller)
         _ => None

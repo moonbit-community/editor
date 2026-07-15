@@ -84,13 +84,6 @@ pub struct Viewer {
   /// lines intersecting the viewport at the last flush, resynced from the
   /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
-  /// The persistent content-hover widget (Monaco `ContentHoverWidget`),
-  /// created lazily and mounted once through the content-widgets part.
-  priv mut content_hover_widget : @hover_browser.ContentHoverWidget?
-  /// The `HoverWidgetView` last driven into the widget, so
-  /// `sync_content_hover_widget` shows/hides exactly when the derived view
-  /// changed (Monaco `_setCurrentResult`'s changed-result gate).
-  priv mut hover_widget_view : @hover.HoverWidgetView?
   /// The measured font facts (Monaco's `EditorOption.fontInfo`): starts as
   /// the untrusted headless estimate and is replaced by
   /// `FontMeasurements.readFontInfo` at the first attached measure.
@@ -124,13 +117,6 @@ pub struct Viewer {
   /// The cancellable root render request. `None` is both the idle state and
   /// the disposed state; callbacks clear the slot before flushing.
   priv mut render_frame : @base_common.Disposable?
-  /// Host scheduler used by hover's async/sync/loading and mouse-react lanes.
-  /// Production installs the clearable browser timeout; white-box tests may
-  /// inject logical time without sleeping.
-  priv mut hover_schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable
-  /// Fire-and-forget launcher for hover participant work. Production uses the
-  /// JS host; white-box timing tests may suppress launch deterministically.
-  priv mut hover_launch_async_task : (async () -> Unit noraise) -> Unit
   priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
@@ -152,10 +138,9 @@ pub struct Viewer {
   /// client rects are unknown until then). Flushed in `flush_render`, cancelled
   /// when an unrelated scroll moves out of the reveal's band (`reveal.mbt`).
   priv mut horizontal_reveal_request : HorizontalRevealRangeRequest?
-  /// The per-editor contribution instances the registry constructed
-  /// (`codeEditorContributions.ts`'s `_instances`, keyed by contribution
-  /// id); disposed with the viewer.
-  priv mut contributions : Map[String, EditorContributionEntry]
+  /// The per-editor contribution owner around the registry's sole concrete
+  /// instance map, including its two-phase disposal lifecycle.
+  priv contributions : EditorContributions
 }
 
 ///|
@@ -269,8 +254,6 @@ fn Viewer::Viewer(
     model_data: None,
     model_data_generation: 0,
     rendered_window: None,
-    content_hover_widget: None,
-    hover_widget_view: None,
     font_info,
     measured_content_width: 0.0,
     measured_height: 0.0,
@@ -282,8 +265,6 @@ fn Viewer::Viewer(
     placeholder_text: None,
     overlay_widgets: Map([]),
     render_frame: None,
-    hover_schedule_timeout: @base_browser.schedule_timeout,
-    hover_launch_async_task: launch_async_task,
     measure_requested: false,
     pending_rendered: None,
     scroll_dirty: false,
@@ -291,7 +272,7 @@ fn Viewer::Viewer(
     mouse_handler: None,
     editor_has_focus: false,
     horizontal_reveal_request: None,
-    contributions: Map([]),
+    contributions: EditorContributions(),
   }
   // Marker decoration changes reach the render through the model's
   // decoration storage (`onDidChangeDecorations` → `ViewDecorationsChanged`);
@@ -329,8 +310,13 @@ fn Viewer::set_hover_host_for_test(
   schedule : (() -> Unit, Int) -> @base_common.Disposable,
   test_launch_async_task : (async () -> Unit noraise) -> Unit,
 ) -> Unit {
-  self.hover_schedule_timeout = schedule
-  self.hover_launch_async_task = test_launch_async_task
+  match self.content_hover_contribution() {
+    Some(state) => {
+      state.schedule_timeout = schedule
+      state.launch_async_task = test_launch_async_task
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -914,10 +900,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_dispose.fire(())
   // Contributions dispose with the editor (`codeEditorWidget.dispose` →
   // `_onDidDispose.fire()` → `super.dispose()` → contributions/base store).
-  for _, contribution in self.contributions {
-    contribution.dispose(self)
-  }
-  self.contributions = Map([])
+  self.contributions.dispose_behavior(self)
   self.dispose_lifetime_disposables()
   self.placeholder_element = None
   self.placeholder_text = None
@@ -925,12 +908,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.editor_has_focus = false
   self.last_scroll_event = None
   self.overlay_widgets.clear()
-  match self.content_hover_widget {
-    Some(widget) => widget.scrollable.dispose()
-    None => ()
-  }
-  self.content_hover_widget = None
-  self.hover_widget_view = None
+  self.contributions.dispose_retained_browser_resources()
   self.pending_rendered = None
   self.rendered_window = None
   self.horizontal_reveal_request = None

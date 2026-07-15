@@ -13,15 +13,36 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
     typical_halfwidth_character_width: self.font_info.typical_halfwidth_character_width,
     mouse_posx,
     mouse_posy,
-    show_at_position: match self.content_hover_widget {
-      Some(widget) =>
-        match widget.rendered_hover {
-          Some(rendered) => Some(rendered.show_at_position)
+    show_at_position: match self.content_hover_contribution() {
+      Some(state) =>
+        match state.widget {
+          Some(widget) =>
+            match widget.rendered_hover {
+              Some(rendered) => Some(rendered.show_at_position)
+              None => None
+            }
           None => None
         }
       None => None
     },
     content_hover_visible: self.content_hover_visible(),
+  }
+}
+
+///|
+/// The live content-hover state for this editor. This is the one typed view
+/// over the central contribution wrapper; controller, widget/cache, and host
+/// scheduling callers all resolve through it.
+fn Viewer::content_hover_contribution(
+  self : Viewer,
+) -> ContentHoverContributionState? {
+  match self.contributions.lookup("editor.contrib.contentHover") {
+    Some(entry) =>
+      match entry.instance {
+        ContentHover(state) => Some(state)
+        _ => None
+      }
+    _ => None
   }
 }
 
@@ -32,13 +53,9 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
 fn Viewer::content_hover_controller(
   self : Viewer,
 ) -> @hover_browser.ContentHoverController? {
-  match self.contributions.get("editor.contrib.contentHover") {
-    Some(entry) if entry.typed_lookup_available() =>
-      match entry.instance {
-        ContentHover(controller) => Some(controller)
-        _ => None
-      }
-    _ => None
+  match self.content_hover_contribution() {
+    Some(state) => Some(state.controller)
+    None => None
   }
 }
 
@@ -56,7 +73,8 @@ fn Viewer::on_editor_mouse_move(
 ) -> Unit {
   // The public `onMouseMove` fired already (`emit_mouse_move`); this is the
   // hover controller's subscription body. `target` is model-space.
-  guard self.content_hover_controller() is Some(hc) else { return }
+  guard self.content_hover_contribution() is Some(state) else { return }
+  let hc = state.controller
   if hc.hover_ignore_mouse_events {
     return
   }
@@ -82,7 +100,7 @@ fn Viewer::on_editor_mouse_move(
       hc.hover_react_pending = true
       let token = hc.hover_react_token
       hc.install_react_timer(
-        (self.hover_schedule_timeout)(
+        (state.schedule_timeout)(
           () => {
             if hc.hover_react_pending && token == hc.hover_react_token {
               // Monaco `_reactToEditorMouseMoveRunner` fires `_reactToEditorMouseMove`,
@@ -233,7 +251,8 @@ fn Viewer::mouse_on_hover_widget(
   posx : Double,
   posy : Double,
 ) -> Bool {
-  guard self.content_hover_widget is Some(widget) else { return false }
+  guard self.content_hover_contribution() is Some(state) else { return false }
+  guard state.widget is Some(widget) else { return false }
   guard widget.is_visible() else { return false }
   let rect = widget.wrapper.get_bounding_client_rect()
   @hover.mouse_within_element(
@@ -253,8 +272,9 @@ fn Viewer::mouse_on_hover_widget(
 /// with `getBoundingClientRect`, so the recorded client pointer and the
 /// rectangle are both client-space.
 fn Viewer::hover_mouse_getting_closer(self : Viewer) -> Bool {
-  guard self.content_hover_controller() is Some(hc) else { return false }
-  guard self.content_hover_widget is Some(widget) else { return false }
+  guard self.content_hover_contribution() is Some(state) else { return false }
+  let hc = state.controller
+  guard state.widget is Some(widget) else { return false }
   guard widget.is_visible() else { return false }
   let rect = widget.wrapper.get_bounding_client_rect()
   hc.hover_mouse_closer.is_mouse_getting_closer(
@@ -417,7 +437,8 @@ fn Viewer::apply_hover_effect(
   match effect {
     HoverNoEffect => ()
     HoverScheduleDelayed(token) => {
-      guard self.content_hover_controller() is Some(hc) else { return }
+      guard self.content_hover_contribution() is Some(state) else { return }
+      let hc = state.controller
       guard self.get_model() is Some(model) else { return }
       guard hc.hover.operation.options is Some(options) else { return }
       let source = new_hover_cancellation_source()
@@ -429,7 +450,7 @@ fn Viewer::apply_hover_effect(
       )
       hc.hover_async_debouncer = async_debouncer
       hc.install_async_timer(
-        (self.hover_schedule_timeout)(
+        (state.schedule_timeout)(
           () => {
             let (latest, debouncer) = hc.hover_async_debouncer.take(
               async_generation,
@@ -448,7 +469,7 @@ fn Viewer::apply_hover_effect(
       )
       hc.hover_loading_debouncer = loading_debouncer
       hc.install_loading_timer(
-        (self.hover_schedule_timeout)(
+        (state.schedule_timeout)(
           () => {
             let (latest, debouncer) = hc.hover_loading_debouncer.take(
               loading_generation,
@@ -517,7 +538,8 @@ fn Viewer::hover_trigger_async(
   self : Viewer,
   request : @hover.HoverRequestStamp,
 ) -> Unit {
-  guard self.content_hover_controller() is Some(hc) else { return }
+  guard self.content_hover_contribution() is Some(state) else { return }
+  let hc = state.controller
   let (proceed, hover) = hc.hover.op_trigger_async_request(
     request,
     self.get_model(),
@@ -532,7 +554,7 @@ fn Viewer::hover_trigger_async(
     )
     hc.hover_sync_debouncer = sync_debouncer
     hc.install_sync_timer(
-      (self.hover_schedule_timeout)(
+      (state.schedule_timeout)(
         () => {
           let (latest, debouncer) = hc.hover_sync_debouncer.take(
             sync_generation,
@@ -630,7 +652,8 @@ fn Viewer::kick_hover_async(
   self : Viewer,
   request : @hover.HoverRequestStamp,
 ) -> Unit {
-  guard self.content_hover_controller() is Some(hc) else { return }
+  guard self.content_hover_contribution() is Some(state) else { return }
+  let hc = state.controller
   match hc.hover.anchor {
     Some(anchor) => {
       let computer = self.make_hover_computer()
@@ -638,7 +661,7 @@ fn Viewer::kick_hover_async(
         Some(options) => options.source
         None => HoverStartMouse
       }
-      (self.hover_launch_async_task)(() => {
+      (state.launch_async_task)(() => {
         computer.compute_async_each(
           request.model(),
           anchor,

@@ -132,7 +132,7 @@ test "folding: contribution disposal clears folds before silencing listeners" {
   let region = folding_model.get_region_at_line(1).unwrap()
   folding_model.toggle_collapse_state([region])
   assert_eq(viewer.test_view_model().line_count(), 2)
-  let entry = viewer.contributions[@folding_browser.FOLDING_CONTROLLER_ID]
+  let entry = viewer.contributions.instances[@folding_browser.FOLDING_CONTROLLER_ID]
   assert_eq(entry.listeners.length(), 5)
   entry.dispose(viewer)
   // `clear_local` runs while the hidden-range listener is still live, so its

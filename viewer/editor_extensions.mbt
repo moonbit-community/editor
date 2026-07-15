@@ -46,7 +46,7 @@ let _unused_contribution_modes : Array[EditorContributionInstantiation] = [
 /// contribution deliberately requires exhaustive construction, typed-access,
 /// and disposal updates here.
 priv enum EditorContributionInstance {
-  ContentHover(@hover_browser.ContentHoverController)
+  ContentHover(ContentHoverContributionState)
   Folding(@folding_browser.FoldingController)
   AgentFeedbackInput(
     @agent_feedback_browser.AgentFeedbackEditorInputContribution
@@ -55,6 +55,53 @@ priv enum EditorContributionInstance {
     @agent_feedback_browser.AgentFeedbackEditorWidgetContribution
   )
   QuickDiff(QuickDiffContributionState)
+}
+
+///|
+/// Viewer-lifetime content-hover state. The controller, lazily mounted widget,
+/// logical widget cache, and host scheduling policy form one contribution
+/// owner and survive model replacement together.
+priv struct ContentHoverContributionState {
+  controller : @hover_browser.ContentHoverController
+  mut widget : @hover_browser.ContentHoverWidget?
+  mut widget_view : @hover.HoverWidgetView?
+  mut schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable
+  mut launch_async_task : (async () -> Unit noraise) -> Unit
+}
+
+///|
+fn ContentHoverContributionState::ContentHoverContributionState() -> ContentHoverContributionState {
+  {
+    controller: ContentHoverController(),
+    widget: None,
+    widget_view: None,
+    schedule_timeout: @base_browser.schedule_timeout,
+    launch_async_task,
+  }
+}
+
+///|
+/// The contribution-behavior disposal phase intentionally leaves the retained
+/// browser widget alive for the later root disposal slot.
+fn ContentHoverContributionState::dispose_behavior(
+  self : ContentHoverContributionState,
+) -> Unit {
+  self.controller.cancel_all_timers()
+  self.controller.cancel_request()
+}
+
+///|
+/// Releases the retained browser resource at the root hover-widget cleanup
+/// slot, then clears its paired logical cache.
+fn ContentHoverContributionState::dispose_retained_browser_resources(
+  self : ContentHoverContributionState,
+) -> Unit {
+  match self.widget {
+    Some(widget) => widget.scrollable.dispose()
+    None => ()
+  }
+  self.widget = None
+  self.widget_view = None
 }
 
 ///|
@@ -142,10 +189,7 @@ fn EditorContributionEntry::dispose(
       }
       self.listeners.clear()
     }
-    ContentHover(controller) => {
-      controller.cancel_all_timers()
-      controller.cancel_request()
-    }
+    ContentHover(state) => state.dispose_behavior()
     QuickDiff(state) => {
       state.collection.clear()
       for listener in state.listeners {
@@ -155,6 +199,103 @@ fn EditorContributionEntry::dispose(
     }
   }
   self.lifecycle = ContributionDisposed
+}
+
+///|
+/// Wrapper lifecycle separates ordered contribution behavior disposal from
+/// the later retained browser-resource cleanup. The sole instance map remains
+/// allocated but is not lookuppable while disposal is between those phases.
+priv enum EditorContributionsLifecycle {
+  ContributionsLive
+  ContributionsDisposing
+  ContributionsDisposed
+} derive(Eq)
+
+///|
+/// Monaco `CodeEditorContributions._instances`: the sole per-Viewer concrete
+/// contribution store and its two-phase disposal state.
+priv struct EditorContributions {
+  instances : Map[String, EditorContributionEntry]
+  mut lifecycle : EditorContributionsLifecycle
+}
+
+///|
+fn EditorContributions::EditorContributions() -> EditorContributions {
+  { instances: Map([]), lifecycle: ContributionsLive }
+}
+
+///|
+/// Typed-access entry point. Individual rows stay readable during their own
+/// synchronous behavior cleanup; after the complete behavior pass the wrapper
+/// becomes non-lookuppable until retained-resource cleanup clears storage.
+fn EditorContributions::lookup(
+  self : EditorContributions,
+  id : String,
+) -> EditorContributionEntry? {
+  guard self.lifecycle == ContributionsLive else { return None }
+  match self.instances.get(id) {
+    Some(entry) if entry.typed_lookup_available() => Some(entry)
+    _ => None
+  }
+}
+
+///|
+/// Instantiates one description with the reviewed ordering: reject a duplicate
+/// before construction side effects, install the actual row, then initialize
+/// listeners through typed lookup of that installed row.
+fn EditorContributions::instantiate(
+  self : EditorContributions,
+  description : EditorContributionDescription,
+  viewer : Viewer,
+) -> Unit {
+  guard self.lifecycle == ContributionsLive else { return }
+  if self.instances.contains(description.id) {
+    return
+  }
+  // Every mode instantiates eagerly (no idle/interaction schedulers exist);
+  // the declared mode is carried for source fidelity only.
+  match description.instantiation {
+    Eager | AfterFirstRender | BeforeFirstInteraction | Eventually | Lazy => ()
+  }
+  let entry = EditorContributionEntry((description.ctor)(viewer))
+  self.instances.set(description.id, entry)
+  for listener in (description.initialize)(viewer) {
+    entry.listeners.push(listener)
+  }
+}
+
+///|
+/// Runs the ordered contribution-behavior phase while the wrapper remains
+/// live. Each entry's `ContributionDisposing` state is therefore readable by
+/// its own synchronous cleanup. Only after the full pass does lookup retire.
+fn EditorContributions::dispose_behavior(
+  self : EditorContributions,
+  viewer : Viewer,
+) -> Unit {
+  guard self.lifecycle == ContributionsLive else { return }
+  for _, contribution in self.instances {
+    contribution.dispose(viewer)
+  }
+  self.lifecycle = ContributionsDisposing
+}
+
+///|
+/// Finishes the later retained browser-resource phase, then clears the sole
+/// storage map and permanently retires the wrapper.
+fn EditorContributions::dispose_retained_browser_resources(
+  self : EditorContributions,
+) -> Unit {
+  guard self.lifecycle == ContributionsDisposing else { return }
+  match self.instances.get("editor.contrib.contentHover") {
+    Some(contribution) =>
+      match contribution.instance {
+        ContentHover(state) => state.dispose_retained_browser_resources()
+        _ => ()
+      }
+    None => ()
+  }
+  self.instances.clear()
+  self.lifecycle = ContributionsDisposed
 }
 
 ///|
@@ -424,27 +565,7 @@ fn EditorContributionRegistry::instantiate_all(
   viewer : Viewer,
 ) -> Unit {
   for description in self.contributions {
-    // Also guard the actual per-Viewer map: callers may initialize a Viewer
-    // from more than one registry, and a later description must never replace
-    // a live row or run construction side effects.
-    if viewer.contributions.contains(description.id) {
-      continue
-    }
-    // Every mode instantiates eagerly (no idle/interaction schedulers
-    // exist); the declared mode is carried for source fidelity only.
-    match description.instantiation {
-      Eager | AfterFirstRender | BeforeFirstInteraction | Eventually | Lazy =>
-        ()
-    }
-    let instance = (description.ctor)(viewer)
-    let entry = EditorContributionEntry(instance)
-    // This insertion must precede initialization: feedback input/widgets and
-    // folding synchronously resolve their typed contribution in their first
-    // initialization step.
-    viewer.contributions.set(description.id, entry)
-    for listener in (description.initialize)(viewer) {
-      entry.listeners.push(listener)
-    }
+    viewer.contributions.instantiate(description, viewer)
   }
 }
 

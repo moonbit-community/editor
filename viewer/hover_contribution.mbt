@@ -13,7 +13,7 @@ fn register_hover_contribution(registry : EditorContributionRegistry) -> Unit {
   registry.register_editor_contribution(
     "editor.contrib.contentHover",
     BeforeFirstInteraction,
-    _viewer => ContentHover(ContentHoverController()),
+    _viewer => ContentHover(ContentHoverContributionState()),
     _viewer => [],
   )
   // `HideContentHoverAction` (`hoverActions.ts`): Escape, gated on
@@ -85,8 +85,12 @@ fn Viewer::with_hover_widget(
   self : Viewer,
   f : (@hover_browser.ContentHoverWidget) -> Unit,
 ) -> Unit {
-  match self.content_hover_widget {
-    Some(widget) => f(widget)
+  match self.content_hover_contribution() {
+    Some(state) =>
+      match state.widget {
+        Some(widget) => f(widget)
+        None => ()
+      }
     None => ()
   }
 }
@@ -95,9 +99,13 @@ fn Viewer::with_hover_widget(
 /// The `EditorContextKeys.hoverFocused` context key as a live predicate:
 /// whether the document's active element sits inside the hover widget.
 fn Viewer::is_hover_focused(self : Viewer) -> Bool {
-  match self.content_hover_widget {
-    Some(widget) =>
-      @base_browser.element_contains_active_element(widget.wrapper)
+  match self.content_hover_contribution() {
+    Some(state) =>
+      match state.widget {
+        Some(widget) =>
+          @base_browser.element_contains_active_element(widget.wrapper)
+        None => false
+      }
     None => false
   }
 }

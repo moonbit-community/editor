@@ -164,9 +164,10 @@ test "quick diff: disposal window is live and later service events are silent" {
   let contribution_live_in_callback = Ref(false)
   viewer.on_did_dispose(() => {
     callback_seen.val = true
-    contribution_live_in_callback.val = viewer.contributions.contains(
-      "quickDiff.decorator",
-    )
+    contribution_live_in_callback.val = viewer.contributions.lookup(
+        "quickDiff.decorator",
+      )
+      is Some(_)
     // Contribution listeners are intentionally live during `onDidDispose`;
     // with the model already detached this synchronous service emission is a
     // guarded no-op.

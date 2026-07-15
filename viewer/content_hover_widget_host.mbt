@@ -11,26 +11,22 @@
 /// hover-state chokepoint may call it: Monaco's `_setCurrentResult` calls
 /// `_showHover`/`_hideHover` exactly when the result object changed.
 fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
-  let widget_view = match self.content_hover_controller() {
-    Some(hc) => {
-      let loading_message = if hc.hover.operation.state
-        is HoverOpWaitingForAsyncShowingLoading {
-        match hc.hover.anchor {
-          Some(anchor) =>
-            self.make_hover_computer().create_loading_message(anchor)
-          None => None
-        }
-      } else {
-        None
-      }
-      hc.hover.widget_view_with_loading(loading_message)
+  guard self.content_hover_contribution() is Some(state) else { return }
+  let hc = state.controller
+  let loading_message = if hc.hover.operation.state
+    is HoverOpWaitingForAsyncShowingLoading {
+    match hc.hover.anchor {
+      Some(anchor) => self.make_hover_computer().create_loading_message(anchor)
+      None => None
     }
-    None => None
+  } else {
+    None
   }
-  if widget_view == self.hover_widget_view {
+  let widget_view = hc.hover.widget_view_with_loading(loading_message)
+  if widget_view == state.widget_view {
     return
   }
-  self.hover_widget_view = widget_view
+  state.widget_view = widget_view
   match widget_view {
     Some(view) =>
       match self.ensure_content_hover_widget() {
@@ -38,7 +34,7 @@ fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
         None => ()
       }
     None =>
-      match self.content_hover_widget {
+      match state.widget {
         Some(widget) => widget.hide()
         None => ()
       }
@@ -50,7 +46,10 @@ fn Viewer::sync_content_hover_widget(self : Viewer) -> Unit {
 /// This is the source of truth for controller scheduling/command predicates;
 /// it stays correct in headless tests where no DOM widget can be mounted.
 fn Viewer::content_hover_visible(self : Viewer) -> Bool {
-  self.hover_widget_view is Some(_)
+  match self.content_hover_contribution() {
+    Some(state) => state.widget_view is Some(_)
+    None => false
+  }
 }
 
 ///|
@@ -128,7 +127,8 @@ fn Viewer::rendered_content_hover(
 fn Viewer::ensure_content_hover_widget(
   self : Viewer,
 ) -> @hover_browser.ContentHoverWidget? {
-  match self.content_hover_widget {
+  guard self.content_hover_contribution() is Some(state) else { return None }
+  match state.widget {
     Some(widget) => Some(widget)
     None => {
       guard self.container is Some(editor_root) else { return None }
@@ -161,7 +161,7 @@ fn Viewer::ensure_content_hover_widget(
           }
         },
       })
-      self.content_hover_widget = Some(widget)
+      state.widget = Some(widget)
       view.content_widgets.add_widget(widget.content_widget_handle())
       Some(widget)
     }
@@ -173,7 +173,8 @@ fn Viewer::ensure_content_hover_widget(
 /// `get_position()` into the content-widgets part and repaint.
 fn Viewer::layout_content_hover_widget(self : Viewer) -> Unit {
   guard self.get_view() is Some(view) else { return }
-  guard self.content_hover_widget is Some(widget) else { return }
+  guard self.content_hover_contribution() is Some(state) else { return }
+  guard state.widget is Some(widget) else { return }
   view.content_widgets.set_widget_position(widget.content_widget_handle())
   self.schedule_render()
 }

@@ -159,8 +159,8 @@ test "feedback content flush preserves central owners and refreshes model state"
   viewer.set_model(Some(model))
   let input = viewer.test_feedback_input_contribution()
   let widgets = viewer.test_feedback_widget_contribution()
-  let input_entry = viewer.contributions["agentFeedback.editorInputContribution"]
-  let widget_entry = viewer.contributions["agentFeedback.editorWidgetContribution"]
+  let input_entry = viewer.contributions.instances["agentFeedback.editorInputContribution"]
+  let widget_entry = viewer.contributions.instances["agentFeedback.editorWidgetContribution"]
   viewer.update_agent_feedback_hover_glyph(3)
   viewer.highlight_agent_feedback_range(comment)
   input.visible = true
@@ -289,8 +289,8 @@ test "feedback disposal drains entries tears down model state and silences servi
   viewer.set_model(Some(model))
   let input = viewer.test_feedback_input_contribution()
   let widgets = viewer.test_feedback_widget_contribution()
-  let input_entry = viewer.contributions["agentFeedback.editorInputContribution"]
-  let widget_entry = viewer.contributions["agentFeedback.editorWidgetContribution"]
+  let input_entry = viewer.contributions.instances["agentFeedback.editorInputContribution"]
+  let widget_entry = viewer.contributions.instances["agentFeedback.editorWidgetContribution"]
   viewer.update_agent_feedback_hover_glyph(3)
   viewer.highlight_agent_feedback_range(comment)
   widgets.reply_drafts.set(comment.id, "retained reference draft")
@@ -321,10 +321,14 @@ test "feedback disposal drains entries tears down model state and silences servi
   assert_true(viewer.agent_feedback_input_contribution() is None)
   assert_true(viewer.agent_feedback_widget_contribution() is None)
   assert_false(
-    viewer.contributions.contains("agentFeedback.editorInputContribution"),
+    viewer.contributions.instances.contains(
+      "agentFeedback.editorInputContribution",
+    ),
   )
   assert_false(
-    viewer.contributions.contains("agentFeedback.editorWidgetContribution"),
+    viewer.contributions.instances.contains(
+      "agentFeedback.editorWidgetContribution",
+    ),
   )
 
   service.set_feedback_enabled(resource, false)

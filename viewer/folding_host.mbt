@@ -17,8 +17,8 @@
 fn Viewer::folding_controller(
   self : Viewer,
 ) -> @folding_browser.FoldingController? {
-  match self.contributions.get(@folding_browser.FOLDING_CONTROLLER_ID) {
-    Some(entry) if entry.typed_lookup_available() =>
+  match self.contributions.lookup(@folding_browser.FOLDING_CONTROLLER_ID) {
+    Some(entry) =>
       match entry.instance {
         Folding(controller) => Some(controller)
         _ => None

@@ -280,9 +280,10 @@ test "omitted services are owned and Viewer disposal is idempotent" {
   let model_detached_in_event = Ref(false)
   viewer.on_did_dispose(() => {
     dispose_events += 1
-    contribution_alive_in_event.val = viewer.contributions.contains(
-      "editor.contrib.contentHover",
-    )
+    contribution_alive_in_event.val = viewer.contributions.lookup(
+        "editor.contrib.contentHover",
+      )
+      is Some(_)
     lifetime_store_alive_in_event.val = !viewer.lifetime_disposables.is_empty()
     model_detached_in_event.val = viewer.get_model() is None
   })

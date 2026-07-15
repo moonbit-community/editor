@@ -313,22 +313,26 @@ fn Viewer::create_view(
   // the `View`), so a fresh `MouseHandler` hooks each new view.
   self.hook_view_input(view)
   // Re-add every registered widget to the new view (`cew:1893-1909`).
-  match self.content_hover_widget {
-    Some(widget) => {
-      // The widget survives model swaps, but its scrollbar listeners belong
-      // to the per-View MouseHandler. The outgoing handler removed its hooks,
-      // so bind the persistent scrollable to the freshly created handler
-      // before remounting the widget.
-      match self.mouse_handler {
-        Some(handler) =>
-          handler.hook_scrollable_scrollbar_input(
-            widget.scrollable,
-            HoverScrollableElement,
-          )
+  match self.content_hover_contribution() {
+    Some(state) =>
+      match state.widget {
+        Some(widget) => {
+          // The widget survives model swaps, but its scrollbar listeners
+          // belong to the per-View MouseHandler. The outgoing handler removed
+          // its hooks, so bind the persistent scrollable to the freshly
+          // created handler before remounting the widget.
+          match self.mouse_handler {
+            Some(handler) =>
+              handler.hook_scrollable_scrollbar_input(
+                widget.scrollable,
+                HoverScrollableElement,
+              )
+            None => ()
+          }
+          view.content_widgets.add_widget(widget.content_widget_handle())
+        }
         None => ()
       }
-      view.content_widgets.add_widget(widget.content_widget_handle())
-    }
     None => ()
   }
   for _, widget in self.overlay_widgets {

@@ -67,8 +67,8 @@ fn register_quick_diff_contribution(
 fn Viewer::quick_diff_contribution(
   self : Viewer,
 ) -> QuickDiffContributionState? {
-  match self.contributions.get("quickDiff.decorator") {
-    Some(entry) if entry.typed_lookup_available() =>
+  match self.contributions.lookup("quickDiff.decorator") {
+    Some(entry) =>
       match entry.instance {
         QuickDiff(state) => Some(state)
         _ => None

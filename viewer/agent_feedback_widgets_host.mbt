@@ -36,8 +36,8 @@ fn register_agent_feedback_widgets_contribution(
 fn Viewer::agent_feedback_widget_contribution(
   self : Viewer,
 ) -> @agent_feedback_browser.AgentFeedbackEditorWidgetContribution? {
-  match self.contributions.get("agentFeedback.editorWidgetContribution") {
-    Some(entry) if entry.typed_lookup_available() =>
+  match self.contributions.lookup("agentFeedback.editorWidgetContribution") {
+    Some(entry) =>
       match entry.instance {
         AgentFeedbackWidget(controller) => Some(controller)
         _ => None

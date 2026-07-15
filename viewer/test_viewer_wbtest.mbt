@@ -8,9 +8,9 @@
 // The seam is `Viewer::attach_model` (attach_model.mbt): it builds the
 // tokenized document, view model, and cursor context and stores
 // them synchronously before `schedule_render`. Only the DOM flush is deferred,
-// and `schedule_render`/`flush_render` already no-op while `view is None`
-// (view.mbt). So an unattached viewer has fully-populated semantic state after
-// `set_model` — no DOM, no requestAnimationFrame, no measurement needed.
+// and `schedule_render`/`flush_render` already no-op while the model has no
+// browser bundle. So an unattached viewer has fully-populated semantic state
+// after `set_model` — no DOM, no requestAnimationFrame, no measurement needed.
 
 ///|
 /// Builds a TextModel from raw text. The analog of `instantiateTextModel`.
@@ -51,6 +51,175 @@ fn with_test_viewer(
   viewer.set_model(Some(test_model(text)))
   body(viewer)
   viewer.dispose()
+}
+
+///|
+/// Installs the smallest DOM/runtime surface needed for a real attached View.
+/// Timers are held until the Viewer has disposed; the fixture then drains any
+/// uncancelled callback (notably the deferred squiggly-theme read) while the
+/// fake DOM is still live and restores every global synchronously.
+extern "js" fn install_mounted_test_browser() -> Unit =
+  #| () => {
+  #|   class MountedTestElement extends EventTarget {
+  #|     constructor(tag = "div", ownerDocument = null) {
+  #|       super();
+  #|       this.nodeType = 1;
+  #|       this.nodeName = tag.toUpperCase();
+  #|       this.attributes = new Map();
+  #|       this.childNodes = [];
+  #|       this.children = this.childNodes;
+  #|       this.parentNode = null;
+  #|       this.ownerDocument = ownerDocument;
+  #|       this.style = {
+  #|         setProperty(name, value) { this[name] = value; },
+  #|       };
+  #|       this.scrollTop = 0;
+  #|       this.scrollLeft = 0;
+  #|       this.scrollWidth = 1000;
+  #|       this.scrollHeight = 1000;
+  #|     }
+  #|     setAttribute(name, value) { this.attributes.set(name, String(value)); }
+  #|     getAttribute(name) { return this.attributes.get(name) ?? ""; }
+  #|     removeAttribute(name) { this.attributes.delete(name); }
+  #|     appendChild(child) {
+  #|       if (child.parentNode) child.parentNode.removeChild(child);
+  #|       this.childNodes.push(child);
+  #|       child.parentNode = this;
+  #|       return child;
+  #|     }
+  #|     removeChild(child) {
+  #|       this.childNodes = this.childNodes.filter((item) => item !== child);
+  #|       this.children = this.childNodes;
+  #|       child.parentNode = null;
+  #|       return child;
+  #|     }
+  #|     contains(child) {
+  #|       if (child === this) return true;
+  #|       return this.childNodes.some((node) =>
+  #|         typeof node.contains === "function" && node.contains(child));
+  #|     }
+  #|     remove() {
+  #|       if (this.parentNode) this.parentNode.removeChild(this);
+  #|     }
+  #|     getBoundingClientRect() {
+  #|       return {
+  #|         x: 0, y: 0, left: 0, top: 0,
+  #|         right: 100, bottom: 100, width: 100, height: 100,
+  #|       };
+  #|     }
+  #|   }
+  #|   globalThis.__mountedTestOriginalDocument = globalThis.document;
+  #|   globalThis.__mountedTestOriginalElement = globalThis.Element;
+  #|   globalThis.__mountedTestOriginalRequestAnimationFrame =
+  #|     globalThis.requestAnimationFrame;
+  #|   globalThis.__mountedTestOriginalCancelAnimationFrame =
+  #|     globalThis.cancelAnimationFrame;
+  #|   globalThis.__mountedTestOriginalGetComputedStyle =
+  #|     globalThis.getComputedStyle;
+  #|   globalThis.__mountedTestOriginalSetTimeout = globalThis.setTimeout;
+  #|   globalThis.__mountedTestOriginalClearTimeout = globalThis.clearTimeout;
+  #|   globalThis.__mountedTestFrameNextId = 1;
+  #|   globalThis.__mountedTestFrames = new Map();
+  #|   globalThis.__mountedTestTimerNextId = 1;
+  #|   globalThis.__mountedTestTimers = new Map();
+  #|   const ownerDocument = new EventTarget();
+  #|   ownerDocument.nodeType = 9;
+  #|   ownerDocument.defaultView = globalThis;
+  #|   ownerDocument.createElement = (tag) =>
+  #|     new MountedTestElement(tag, ownerDocument);
+  #|   ownerDocument.createTextNode = (value) => ({
+  #|     nodeType: 3,
+  #|     nodeName: "#text",
+  #|     nodeValue: String(value),
+  #|     parentNode: null,
+  #|     ownerDocument,
+  #|   });
+  #|   globalThis.document = ownerDocument;
+  #|   globalThis.Element = MountedTestElement;
+  #|   globalThis.requestAnimationFrame = (callback) => {
+  #|     const id = globalThis.__mountedTestFrameNextId++;
+  #|     globalThis.__mountedTestFrames.set(id, callback);
+  #|     return id;
+  #|   };
+  #|   globalThis.cancelAnimationFrame = (id) => {
+  #|     globalThis.__mountedTestFrames.delete(id);
+  #|   };
+  #|   globalThis.getComputedStyle = () => ({
+  #|     getPropertyValue: () => "",
+  #|   });
+  #|   globalThis.setTimeout = (callback, _ms) => {
+  #|     const id = globalThis.__mountedTestTimerNextId++;
+  #|     globalThis.__mountedTestTimers.set(id, callback);
+  #|     return id;
+  #|   };
+  #|   globalThis.clearTimeout = (id) => {
+  #|     globalThis.__mountedTestTimers.delete(id);
+  #|   };
+  #| }
+
+///|
+extern "js" fn restore_mounted_test_browser() -> Unit =
+  #| () => {
+  #|   while (globalThis.__mountedTestFrames.size > 0) {
+  #|     const pending = Array.from(globalThis.__mountedTestFrames.values());
+  #|     globalThis.__mountedTestFrames.clear();
+  #|     for (const callback of pending) callback(0);
+  #|   }
+  #|   while (globalThis.__mountedTestTimers.size > 0) {
+  #|     const pending = Array.from(globalThis.__mountedTestTimers.values());
+  #|     globalThis.__mountedTestTimers.clear();
+  #|     for (const callback of pending) callback();
+  #|   }
+  #|   const restore = (name, value) => {
+  #|     if (value === undefined) {
+  #|       delete globalThis[name];
+  #|     } else {
+  #|       globalThis[name] = value;
+  #|     }
+  #|   };
+  #|   restore("document", globalThis.__mountedTestOriginalDocument);
+  #|   restore("Element", globalThis.__mountedTestOriginalElement);
+  #|   restore(
+  #|     "requestAnimationFrame",
+  #|     globalThis.__mountedTestOriginalRequestAnimationFrame,
+  #|   );
+  #|   restore(
+  #|     "cancelAnimationFrame",
+  #|     globalThis.__mountedTestOriginalCancelAnimationFrame,
+  #|   );
+  #|   restore("getComputedStyle", globalThis.__mountedTestOriginalGetComputedStyle);
+  #|   restore("setTimeout", globalThis.__mountedTestOriginalSetTimeout);
+  #|   restore("clearTimeout", globalThis.__mountedTestOriginalClearTimeout);
+  #|   delete globalThis.__mountedTestOriginalDocument;
+  #|   delete globalThis.__mountedTestOriginalElement;
+  #|   delete globalThis.__mountedTestOriginalRequestAnimationFrame;
+  #|   delete globalThis.__mountedTestOriginalCancelAnimationFrame;
+  #|   delete globalThis.__mountedTestOriginalGetComputedStyle;
+  #|   delete globalThis.__mountedTestOriginalSetTimeout;
+  #|   delete globalThis.__mountedTestOriginalClearTimeout;
+  #|   delete globalThis.__mountedTestFrameNextId;
+  #|   delete globalThis.__mountedTestFrames;
+  #|   delete globalThis.__mountedTestTimerNextId;
+  #|   delete globalThis.__mountedTestTimers;
+  #| }
+
+///|
+/// Attached counterpart of `with_test_viewer`. The native frame queue is held,
+/// so tests can inspect the browser bundle's pending render/reveal state before
+/// a DOM flush consumes it.
+fn with_mounted_test_viewer(
+  text : String,
+  body : (Viewer) -> Unit raise,
+  options? : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
+) -> Unit raise {
+  install_mounted_test_browser()
+  defer restore_mounted_test_browser()
+  let viewer = Viewer::Viewer(options~)
+  defer viewer.dispose()
+  let host = @rdom.document().create_element("div")
+  viewer.attach(host)
+  viewer.set_model(Some(test_model(text)))
+  body(viewer)
 }
 
 ///|

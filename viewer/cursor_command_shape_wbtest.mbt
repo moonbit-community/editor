@@ -61,9 +61,10 @@ test "move core command accepts absent and supplied view positions" {
 
 ///|
 test "omitted move command reveal type follows undefined non-None gate" {
-  with_test_viewer(long_document(40), viewer => {
+  with_mounted_test_viewer(long_document(40), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
     let view_model = viewer.test_view_model()
+    let browser = viewer.current_browser_data().unwrap()
 
     assert_true(
       viewer.run_move_to_core_command(
@@ -73,7 +74,7 @@ test "omitted move command reveal type follows undefined non-None gate" {
       ),
     )
     assert_true(view_model.view_layout.position().scroll_top > 0.0)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
+    assert_true(browser.horizontal_reveal_request is Some(_))
 
     reset_cursor_mouse_reveal(viewer)
     viewer.run_word_core_command(
@@ -83,7 +84,7 @@ test "omitted move command reveal type follows undefined non-None gate" {
     )
     |> ignore
     assert_true(view_model.view_layout.position().scroll_top > 0.0)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
+    assert_true(browser.horizontal_reveal_request is Some(_))
 
     reset_cursor_mouse_reveal(viewer)
     viewer.run_line_core_command(
@@ -93,7 +94,7 @@ test "omitted move command reveal type follows undefined non-None gate" {
     )
     |> ignore
     assert_true(view_model.view_layout.position().scroll_top > 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
+    assert_true(browser.horizontal_reveal_request is None)
   })
 }
 

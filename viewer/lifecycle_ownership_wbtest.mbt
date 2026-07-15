@@ -71,6 +71,41 @@ fn RootTestServiceBackings::dispose(self : RootTestServiceBackings) -> Unit {
 }
 
 ///|
+test "model slot generation and browser shape follow headless lifecycle" {
+  let viewer = Viewer::Viewer()
+  let model = test_model("alpha")
+  assert_eq(viewer.model_slot.generation, 0)
+  assert_true(viewer.model_slot.current is None)
+
+  viewer.set_model(Some(model))
+  assert_eq(viewer.model_slot.generation, 1)
+  guard viewer.model_slot.current is Some(first) else {
+    fail("headless model slot was not installed")
+  }
+  assert_true(first.browser is None)
+
+  viewer.set_value("beta")
+  viewer.set_model(Some(model))
+  assert_eq(viewer.model_slot.generation, 1)
+
+  viewer.set_model(None)
+  assert_eq(viewer.model_slot.generation, 2)
+  assert_true(viewer.model_slot.current is None)
+
+  viewer.set_model(Some(model))
+  assert_eq(viewer.model_slot.generation, 3)
+  guard viewer.model_slot.current is Some(second) else {
+    fail("headless model slot was not reinstalled")
+  }
+  assert_true(second.browser is None)
+
+  viewer.dispose()
+  assert_eq(viewer.model_slot.generation, 4)
+  assert_true(viewer.model_slot.current is None)
+  model.dispose()
+}
+
+///|
 test "preloaded markers survive detach and seed again on reattach" {
   let backings = RootTestServiceBackings::new()
   let viewer = Viewer::Viewer(services=backings.services)

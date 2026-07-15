@@ -10,10 +10,10 @@
 test "set_value keeps the model and view model instances" {
   with_test_viewer("one\ntwo", viewer => {
     let model_before = viewer.get_model().unwrap()
-    let model_data_generation_before = viewer.model_data_generation
+    let model_data_generation_before = viewer.model_slot.generation
     viewer.set_value("a\nb\nc")
     assert_true(viewer.get_model().unwrap().same(model_before))
-    assert_eq(viewer.model_data_generation, model_data_generation_before)
+    assert_eq(viewer.model_slot.generation, model_data_generation_before)
     assert_eq(viewer.get_value(), "a\nb\nc")
     assert_eq(viewer.test_view_model().line_count(), 3)
   })
@@ -40,11 +40,39 @@ test "set_value without a model is a no-op (cew:490-492)" {
 }
 
 ///|
-test "set_value marks the rendered content stale and drops the window" {
-  with_test_viewer("one\ntwo", viewer => {
-    viewer.rendered_window = Some({ start: 1, end: 2 })
+extern "js" fn same_test_model_browser_data(
+  left : ModelBrowserData,
+  right : ModelBrowserData,
+) -> Bool = "(left, right) => left === right"
+
+///|
+test "set_value marks mounted rendered content stale on the same browser data" {
+  with_mounted_test_viewer("one\ntwo", viewer => {
+    let browser = viewer.current_browser_data().unwrap()
+    browser.rendered_window = Some({ start: 1, end: 2 })
     viewer.set_value("a")
-    assert_true(viewer.rendered_window is None)
+    assert_true(browser.rendered_window is None)
+    assert_true(
+      same_test_model_browser_data(
+        viewer.current_browser_data().unwrap(),
+        browser,
+      ),
+    )
+  })
+}
+
+///|
+test "set_value preserves the headless model slot without browser state" {
+  with_test_viewer("one\ntwo", viewer => {
+    guard viewer.model_slot.current is Some(before) else {
+      fail("headless model data missing before set_value")
+    }
+    assert_true(before.browser is None)
+    viewer.set_value("a")
+    guard viewer.model_slot.current is Some(after) else {
+      fail("headless model data missing after set_value")
+    }
+    assert_true(after.browser is None)
   })
 }
 

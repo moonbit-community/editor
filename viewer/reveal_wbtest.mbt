@@ -1,19 +1,21 @@
 // Phase 2 behavior tests for the `Viewer::reveal*` surface, on the headless
-// `with_test_viewer` harness (no DOM): an unattached viewer still owns a full
-// view model + layout, so reveals drive real model→view conversion and the
-// vertical scroll math. Horizontal reveal needs rendered client rects, so its
-// coverage lives in the browser suite (Phase 3).
+// `with_test_viewer` harness (no DOM): an unattached viewer owns a full model +
+// ViewModel but no `ModelBrowserData`, so reveals drive model→view conversion
+// and vertical scroll math without retaining browser-only requests. Pure
+// request construction/cancellation is pinned here; real arm/flush behavior
+// lives in the browser suite (Phase 3).
 
 ///|
 fn reveal_test_scroll_change(
   scroll_top : Double,
   top_changed : Bool,
+  left_changed? : Bool = false,
 ) -> @view_layout.ScrollChange {
   {
     position: { scroll_left: 0.0, scroll_top },
     delta_left: 0.0,
     delta_top: 0.0,
-    left_changed: false,
+    left_changed,
     top_changed,
     dimensions_changed: false,
     in_smooth_scrolling: false,
@@ -96,20 +98,19 @@ test "reveal_range over multiple lines resets horizontal scroll" {
 }
 
 ///|
-/// A single-line `reveal_range` defers the horizontal scroll: it registers a
-/// pending request (flushed against real client rects once the line renders),
-/// so `scroll_left` is not changed synchronously. Headlessly there is no DOM, so
-/// the deferred flush never runs and `scroll_left` stays put.
-test "reveal_range over a single line defers the horizontal scroll" {
+/// A single-line `reveal_range` cannot measure horizontal geometry headlessly,
+/// so it changes only the semantic vertical layout and retains no browser data.
+test "headless single-line reveal retains no browser request" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
     viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
     viewer.set_scroll_position(scroll_top=0.0, scroll_left=500.0)
     let range = @base_common.Range::Range(50, 3, 50, 8)
     viewer.reveal_range(range)
-    // A pending horizontal reveal is registered; the reveal's own vertical
-    // scroll did not cancel it.
-    assert_true(viewer.horizontal_reveal_request is Some(_))
+    guard viewer.model_slot.current is Some(model_data) else {
+      fail("headless model data missing")
+    }
+    assert_true(model_data.browser is None)
     // No synchronous horizontal movement.
     assert_eq(
       viewer.test_view_model().view_layout.position().scroll_left,
@@ -119,7 +120,7 @@ test "reveal_range over a single line defers the horizontal scroll" {
 }
 
 ///|
-test "source-shaped revealRange forwards source minimal and scroll type" {
+test "source-shaped revealRange forwards source and pure request facts" {
   with_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
     viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
@@ -133,8 +134,15 @@ test "source-shaped revealRange forwards source minimal and scroll type" {
     )
     // Minimal omits the ordinary Simple bottom line: 900 - 180 = 720.
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 720.0)
-    guard viewer.horizontal_reveal_request is Some(request) else {
-      fail("expected a deferred horizontal reveal")
+    guard horizontal_reveal_request_for_range(
+        Range(50, 3, 50, 8),
+        true,
+        0.0,
+        720.0,
+        Immediate,
+      )
+      is Some(request) else {
+      fail("expected a single-line horizontal reveal request")
     }
     assert_true(request.minimal_reveal)
     assert_true(request.scroll_type == Immediate)
@@ -142,19 +150,25 @@ test "source-shaped revealRange forwards source minimal and scroll type" {
 }
 
 ///|
-/// A horizontal multi-line reveal does not explicitly clear an outstanding
-/// request. Its scroll-to-base change normally cancels the request; when both
-/// axes already equal the target, the source leaves the request intact.
-test "stationary multi-line reveal retains a pending horizontal request" {
-  with_test_viewer(long_document(200), viewer => {
+/// A horizontal multi-line reveal creates no replacement request and does not
+/// explicitly clear an already armed one. When both scroll axes are already at
+/// the target, no scroll-change cancellation runs, so the existing browser
+/// request must remain installed.
+test "stationary multi-line reveal retains a pending browser request" {
+  with_mounted_test_viewer(long_document(200), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
     viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
+    let browser = viewer.current_browser_data().unwrap()
     let single = @base_common.Range::Range(5, 3, 5, 8)
     viewer.reveal_range(single)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
+    assert_true(browser.horizontal_reveal_request is Some(_))
     let multi = @base_common.Range::Range(5, 1, 6, 1)
     viewer.reveal_range(multi)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
+    assert_true(
+      horizontal_reveal_request_for_range(multi, false, 0.0, 0.0, Immediate)
+      is None,
+    )
+    assert_true(browser.horizontal_reveal_request is Some(_))
   })
 }
 
@@ -188,23 +202,26 @@ test "vertical reveal resets an in-flight horizontal animation target" {
 /// the deferred request; one that leaves the band cancels it (Monaco's
 /// `onScrollChanged`).
 test "vertical scroll inside the band keeps, outside cancels, the deferral" {
-  with_test_viewer(long_document(200), viewer => {
-    viewer.test_set_viewport(width=800.0, height=180.0)
-    viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
-    // Reveal line 50 from the top: band is [0, 738].
-    let range = @base_common.Range::Range(50, 3, 50, 8)
-    viewer.reveal_range(range)
-    viewer.set_scroll_top(100.0)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
-    viewer.set_scroll_top(2000.0)
-    assert_true(viewer.horizontal_reveal_request is None)
-  })
+  let request : HorizontalRevealRangeRequest = {
+    minimal_reveal: false,
+    view_line_number: 50,
+    start_column: 3,
+    end_column: 8,
+    start_scroll_top: 0.0,
+    stop_scroll_top: 738.0,
+    scroll_type: Immediate,
+  }
+  assert_false(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(100.0, true)),
+  )
+  assert_true(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(2000.0, true)),
+  )
 }
 
 ///|
 test "horizontal reveal cancellation gates top changes and keeps reversed-band endpoints" {
-  let viewer = Viewer::Viewer()
-  viewer.horizontal_reveal_request = Some({
+  let request : HorizontalRevealRangeRequest = {
     minimal_reveal: false,
     view_line_number: 1,
     start_column: 1,
@@ -212,37 +229,36 @@ test "horizontal reveal cancellation gates top changes and keeps reversed-band e
     start_scroll_top: 100.0,
     stop_scroll_top: 0.0,
     scroll_type: Immediate,
-  })
-  viewer.cancel_horizontal_reveal_on_scroll(
-    reveal_test_scroll_change(-1.0, false),
+  }
+  assert_false(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(-1.0, false)),
   )
-  assert_true(viewer.horizontal_reveal_request is Some(_))
-  viewer.cancel_horizontal_reveal_on_scroll(
-    reveal_test_scroll_change(100.0, true),
+  assert_false(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(100.0, true)),
   )
-  assert_true(viewer.horizontal_reveal_request is Some(_))
-  viewer.cancel_horizontal_reveal_on_scroll(
-    reveal_test_scroll_change(0.0, true),
+  assert_false(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(0.0, true)),
   )
-  assert_true(viewer.horizontal_reveal_request is Some(_))
-  viewer.cancel_horizontal_reveal_on_scroll(
-    reveal_test_scroll_change(-1.0, true),
+  assert_true(
+    request.should_cancel_on_scroll(reveal_test_scroll_change(-1.0, true)),
   )
-  assert_true(viewer.horizontal_reveal_request is None)
-  viewer.dispose()
 }
 
 ///|
 /// A horizontal scroll by anyone else cancels the deferred reveal.
 test "horizontal scroll cancels a pending horizontal reveal" {
-  with_test_viewer(long_document(200), viewer => {
-    viewer.test_set_viewport(width=800.0, height=180.0)
-    viewer.test_view_model().view_layout.set_content_width(2000.0) |> ignore
-    let range = @base_common.Range::Range(50, 3, 50, 8)
-    viewer.reveal_range(range)
-    assert_true(viewer.horizontal_reveal_request is Some(_))
-    // Keep scroll_top at the settled 738 (inside the band) but move scroll_left.
-    viewer.set_scroll_position(scroll_top=738.0, scroll_left=300.0)
-    assert_true(viewer.horizontal_reveal_request is None)
-  })
+  let request : HorizontalRevealRangeRequest = {
+    minimal_reveal: false,
+    view_line_number: 50,
+    start_column: 3,
+    end_column: 8,
+    start_scroll_top: 0.0,
+    stop_scroll_top: 738.0,
+    scroll_type: Immediate,
+  }
+  assert_true(
+    request.should_cancel_on_scroll(
+      reveal_test_scroll_change(738.0, false, left_changed=true),
+    ),
+  )
 }

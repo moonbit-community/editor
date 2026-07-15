@@ -67,12 +67,13 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   if self.disposed {
     return
   }
-  guard self.model_data is Some(model_data) else {
+  guard self.model_slot.current is Some(model_data) else {
     // No model → no view; the Viewer-owned placeholder is the whole paint.
     self.render_placeholder()
     return
   }
-  guard model_data.view is Some(view) else { return }
+  guard model_data.browser is Some(browser) else { return }
+  let view = browser.view
   let view_model = model_data.view_model
   // Read phase: measure only when a re-measure was requested.
   if self.configuration.consume_measure_request() {
@@ -81,7 +82,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   // Write phase.
   self.sync_hover_decorations()
   let write_started = @base_browser.monotonic_now_ms()
-  let window = self.synced_window(view_model)
+  let window = browser.sync_rendered_window(view_model)
   let view_context = self.build_view_context(view)
   let configuration = self.configuration.snapshot()
   view.render(view_context, {
@@ -105,9 +106,9 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   })
   // The lines are now in the DOM: a deferred horizontal reveal can measure its
   // target line's client rects and apply the horizontal scroll.
-  self.flush_horizontal_reveal(view)
+  browser.flush_horizontal_reveal(view_model)
   let patch_ms = @base_browser.monotonic_now_ms() - write_started
-  match (self.pending_rendered, self.rendered_window) {
+  match (self.pending_rendered, browser.rendered_window) {
     (Some(pending), Some(window)) => {
       self.pending_rendered = None
       self.emit_model_rendered({
@@ -187,19 +188,4 @@ fn Viewer::schedule_render(self : Viewer) -> Unit {
       }
     }),
   )
-}
-
-///|
-/// The view-line window this flush renders: exactly the lines intersecting
-/// the viewport (Monaco's `ViewLayout.getLinesViewportData()` band,
-/// partially visible edge lines included), recomputed every flush and
-/// clamped to the document so every consumer (viewport build, DOM recycler,
-/// hit tests) agrees on the rendered range.
-fn Viewer::synced_window(
-  self : Viewer,
-  view_model : @view_model.ViewModel,
-) -> @view_layout.LineWindow {
-  let window = view_model.clamp_window(view_model.view_layout.visible_window())
-  self.rendered_window = Some(window)
-  window
 }

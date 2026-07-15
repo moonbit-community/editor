@@ -8,8 +8,7 @@
 /// explicit/visible/background demand owns lexer work. The paint happens in
 /// the next render flush.
 fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
-  self.model_data_generation += 1
-  let model_data_generation = self.model_data_generation
+  let model_data_generation = self.model_slot.begin_attach_generation()
   let listeners_to_remove : Array[@base_common.Disposable] = []
   // `data-mode-id` on the container (`cew:1758`), removed at detach.
   match self.container {
@@ -170,16 +169,15 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       self.apply_scroll_change(Some(change))
     }),
   )
-  let view = self.create_view(model, view_model)
-  self.model_data = Some({
+  let browser = self.create_view(model, view_model)
+  self.model_slot.install_current({
     model,
     view_model,
-    view,
+    browser,
     attached_view,
     listeners_to_remove,
   })
   self.emit_view_event(ViewFlushed)
-  self.rendered_window = None
   self.apply_view_model_layout(view_model)
   // `CodeEditorWidget.handleInitialized` owns the ordinary one-time stable
   // visible-range publication; generic renders never repeat it.
@@ -203,19 +201,20 @@ fn Viewer::is_current_model_data_generation(
   self : Viewer,
   generation : Int,
 ) -> Bool {
-  self.model_data is Some(_) && self.model_data_generation == generation
+  self.model_slot.is_current_generation(generation)
 }
 
 ///|
 /// Monaco's `_createView` + the widget re-add loop (`cew:1889-1912`): build
 /// the browser `View` inside the container, hook its per-view input, re-add
-/// every registered content/overlay widget, and stamp `data-uri`. `None`
-/// while unattached (the headless harness).
+/// every registered content/overlay widget, and stamp `data-uri`. The returned
+/// browser bundle pairs the View with its retained MouseHandler reference and
+/// empty render/reveal facts. `None` while unattached (the headless harness).
 fn Viewer::create_view(
   self : Viewer,
   model : @model.TextModel,
   view_model : @view_model.ViewModel,
-) -> @view.View? {
+) -> ModelBrowserData? {
   guard self.container is Some(host) else { return None }
   let read_view_zones_configuration = () => {
     self.configuration
@@ -293,7 +292,7 @@ fn Viewer::create_view(
   self.apply_font_info_to_view(view)
   // The pointer handler is view-owned (Monaco's `PointerHandler` lives in
   // the `View`), so a fresh `MouseHandler` hooks each new view.
-  self.hook_view_input(view)
+  let mouse_handler = self.hook_view_input(view)
   // Re-add every registered widget to the new view (`cew:1893-1909`).
   match self.content_hover_contribution() {
     Some(state) =>
@@ -303,14 +302,10 @@ fn Viewer::create_view(
           // belong to the per-View MouseHandler. The outgoing handler removed
           // its hooks, so bind the persistent scrollable to the freshly
           // created handler before remounting the widget.
-          match self.mouse_handler {
-            Some(handler) =>
-              handler.hook_scrollable_scrollbar_input(
-                widget.scrollable,
-                HoverScrollableElement,
-              )
-            None => ()
-          }
+          mouse_handler.hook_scrollable_scrollbar_input(
+            widget.scrollable,
+            HoverScrollableElement,
+          )
           view.content_widgets.add_widget(widget.content_widget_handle())
         }
         None => ()
@@ -327,7 +322,7 @@ fn Viewer::create_view(
     Some(placeholder) => remove_element_if_contained(host, placeholder)
     None => ()
   }
-  Some(view)
+  Some(ModelBrowserData(view, mouse_handler))
 }
 
 ///|
@@ -472,7 +467,10 @@ fn Viewer::on_line_mapping_changed(
   } else {
     self.apply_view_model_layout(view_model)
   }
-  self.rendered_window = None
+  match self.current_browser_data() {
+    Some(browser) => browser.invalidate_rendered_window()
+    None => ()
+  }
   let current_model_line_count = model.snapshot.line_count()
   let current_view_line_count = view_model.line_count()
   self.sync_content_box_for_model_line_count(

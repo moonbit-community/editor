@@ -320,6 +320,44 @@ fn apply_cursor_reveal_scroll_position(
 }
 
 ///|
+/// Builds the browser-only single-line request without mutating Viewer state.
+/// A multi-line horizontal reveal deliberately returns `None` without clearing
+/// an older request; its scroll-to-base change normally performs cancellation.
+fn horizontal_reveal_request_for_range(
+  view_range : @base_common.Range,
+  minimal_reveal : Bool,
+  start_scroll_top : Double,
+  stop_scroll_top : Double,
+  scroll_type : CursorRevealScrollType,
+) -> HorizontalRevealRangeRequest? {
+  if view_range.start_line_number != view_range.end_line_number {
+    return None
+  }
+  Some({
+    minimal_reveal,
+    view_line_number: view_range.start_line_number,
+    start_column: view_range.start_column,
+    end_column: view_range.end_column,
+    start_scroll_top,
+    stop_scroll_top,
+    scroll_type,
+  })
+}
+
+///|
+fn ModelBrowserData::arm_horizontal_reveal(
+  self : ModelBrowserData,
+  request : HorizontalRevealRangeRequest,
+) -> Unit {
+  self.horizontal_reveal_request = Some(request)
+}
+
+///|
+fn ModelBrowserData::clear_horizontal_reveal(self : ModelBrowserData) -> Unit {
+  self.horizontal_reveal_request = None
+}
+
+///|
 fn Viewer::send_reveal_view_range(
   self : Viewer,
   view_range : @base_common.Range,
@@ -359,20 +397,29 @@ fn Viewer::send_reveal_view_range(
   // exactly like `ViewLines.onRevealRangeRequest`. The start/stop band keeps
   // the reveal's own vertical scroll from cancelling this request.
   if reveal_horizontal {
-    if !multi_line {
-      self.horizontal_reveal_request = Some({
+    match
+      horizontal_reveal_request_for_range(
+        view_range,
         minimal_reveal,
-        view_line_number: view_range.start_line_number,
-        start_column: view_range.start_column,
-        end_column: view_range.end_column,
         start_scroll_top,
-        stop_scroll_top: target.scroll_top,
+        target.scroll_top,
         scroll_type,
-      })
-      self.schedule_render()
+      ) {
+      Some(request) =>
+        match self.current_browser_data() {
+          Some(browser) => {
+            browser.arm_horizontal_reveal(request)
+            self.schedule_render()
+          }
+          None => ()
+        }
+      None => ()
     }
   } else {
-    self.horizontal_reveal_request = None
+    match self.current_browser_data() {
+      Some(browser) => browser.clear_horizontal_reveal()
+      None => ()
+    }
   }
   // (4) Commit the vertical scroll. A multi-line range under horizontal reveal
   // also resets `scroll_left` to 0 so most of both lines show
@@ -396,17 +443,19 @@ fn Viewer::send_reveal_view_range(
 /// Monaco `ViewLines.renderText` horizontal step (`viewLines.ts:623`–`:648`).
 /// Called from `flush_render` after the lines are in the DOM. Keeps the request
 /// pending if the line is not yet rendered, so a later frame can flush it.
-fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
+fn ModelBrowserData::flush_horizontal_reveal(
+  self : ModelBrowserData,
+  view_model : @view_model.ViewModel,
+) -> Unit {
   guard self.horizontal_reveal_request is Some(request) else { return }
-  guard self.get_view_model() is Some(view_model) else { return }
   // The line is not in the rendered window yet — keep waiting.
-  guard view.is_line_rendered(request.view_line_number) else { return }
+  guard self.view.is_line_rendered(request.view_line_number) else { return }
   // The line is rendered: consume the request (Monaco nulls it here) and apply
   // the horizontal scroll, if any was measurable.
   self.horizontal_reveal_request = None
   // `keep_empty=true`: a collapsed range (a `reveal_position` caret) measures to
   // a single zero-width rect at the caret x, which Monaco keeps and reveals.
-  let ranges = view.measure_line_selection(
+  let ranges = self.view.measure_line_selection(
     request.view_line_number,
     request.start_column - 1,
     request.end_column - 1,
@@ -436,29 +485,43 @@ fn Viewer::flush_horizontal_reveal(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
+fn HorizontalRevealRangeRequest::should_cancel_on_scroll(
+  self : HorizontalRevealRangeRequest,
+  change : @view_layout.ScrollChange,
+) -> Bool {
+  if change.left_changed {
+    return true
+  }
+  if !change.top_changed {
+    return false
+  }
+  let scroll_top = change.position.scroll_top
+  let low = if self.start_scroll_top < self.stop_scroll_top {
+    self.start_scroll_top
+  } else {
+    self.stop_scroll_top
+  }
+  let high = if self.start_scroll_top > self.stop_scroll_top {
+    self.start_scroll_top
+  } else {
+    self.stop_scroll_top
+  }
+  scroll_top < low || scroll_top > high
+}
+
+///|
 /// Monaco's `ViewLines.onScrollChanged` horizontal-cancel (`viewLines.ts:305`–
 /// `:317`): drop a pending horizontal reveal when an unrelated scroll moves the
 /// horizontal position, or moves the vertical position outside the reveal's
 /// `[start_scroll_top, stop_scroll_top]` band. The reveal's own vertical scroll
 /// lands inside that band and does not change `scroll_left`, so it never
 /// cancels itself.
-fn Viewer::cancel_horizontal_reveal_on_scroll(
-  self : Viewer,
+fn ModelBrowserData::cancel_horizontal_reveal_on_scroll(
+  self : ModelBrowserData,
   change : @view_layout.ScrollChange,
 ) -> Unit {
   guard self.horizontal_reveal_request is Some(request) else { return }
-  if change.left_changed {
+  if request.should_cancel_on_scroll(change) {
     self.horizontal_reveal_request = None
-    return
-  }
-  if change.top_changed {
-    let scroll_top = change.position.scroll_top
-    let a = request.start_scroll_top
-    let b = request.stop_scroll_top
-    let low = if a < b { a } else { b }
-    let high = if a > b { a } else { b }
-    if scroll_top < low || scroll_top > high {
-      self.horizontal_reveal_request = None
-    }
   }
 }

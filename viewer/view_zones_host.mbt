@@ -52,8 +52,7 @@ pub fn Viewer::change_view_zones(
   if self.disposed {
     return
   }
-  guard self.model_data is Some(model_data) else { return }
-  guard model_data.view is Some(view) else { return }
-  view.change_view_zones(update)
+  guard self.current_browser_data() is Some(browser) else { return }
+  browser.view.change_view_zones(update)
   self.schedule_render()
 }

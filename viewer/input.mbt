@@ -7,9 +7,13 @@
 /// local analog of Monaco's `View._createPointerHandlerHelper`). Copy,
 /// keyboard, focus tracking, wheel and the scrollbar/browser-reveal cluster
 /// stay here.
-fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
+fn Viewer::hook_view_input(
+  self : Viewer,
+  view : @view.View,
+) -> @controller.MouseHandler {
   let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
-  self.mouse_handler = Some(handler)
+  // View is the sole disposable owner. ModelBrowserData only retains this
+  // reference so lifecycle commands can reach the live per-View handler.
   view.add_disposable(@base_common.Disposable::from(() => handler.dispose()))
   // Monaco tracks focus on the hidden textarea / edit context and fans it out
   // as `ViewFocusChangedEvent`; the viewer's focusable surface is the root
@@ -68,6 +72,7 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
     EditorScrollableElement,
   )
   handler.hook_browser_desperate_reveal()
+  handler
 }
 
 ///|

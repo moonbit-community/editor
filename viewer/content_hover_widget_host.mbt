@@ -156,9 +156,11 @@ fn Viewer::ensure_content_hover_widget(
           self.handle_hover_keydown(event, keyboard)
         },
         hook_scrollable_scrollbar_input: (scrollable, owner) => {
-          match self.mouse_handler {
-            Some(handler) =>
-              handler.hook_scrollable_scrollbar_input(scrollable, owner)
+          match self.current_browser_data() {
+            Some(browser) =>
+              browser.mouse_handler.hook_scrollable_scrollbar_input(
+                scrollable, owner,
+              )
             None => ()
           }
         },

@@ -56,7 +56,10 @@ fn assert_last_cursor_transition(
 ///|
 fn reset_cursor_mouse_reveal(viewer : Viewer) -> Unit {
   viewer.set_scroll_position(scroll_top=0.0, scroll_left=0.0)
-  viewer.horizontal_reveal_request = None
+  match viewer.current_browser_data() {
+    Some(browser) => browser.clear_horizontal_reveal()
+    None => ()
+  }
 }
 
 ///|
@@ -344,28 +347,17 @@ test "mouse navigation reveal types preserve command-specific gates" {
   with_test_viewer(long_document(40), viewer => {
     viewer.test_set_viewport(width=800.0, height=180.0)
 
-    // Pointer commands always request minimal reveal after either Regular or
-    // Minimal passes the command's None gate. Line 10 ends exactly at the
-    // viewport edge and therefore stays at scrollTop 0; keyboard reveal below
-    // retains the source's extra bottom line.
+    // Pointer commands reveal after either Regular or Minimal passes the
+    // command's None gate. Line 10 ends exactly at the viewport edge and stays
+    // at scrollTop 0; keyboard reveal below retains the extra bottom line.
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(10, 1), reveal_type=Regular),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    guard viewer.horizontal_reveal_request is Some(edge_request) else {
-      fail("expected the minimal horizontal pointer reveal")
-    }
-    assert_true(edge_request.minimal_reveal)
-    assert_true(edge_request.scroll_type == Smooth)
     reset_cursor_mouse_reveal(viewer)
     viewer.set_position(Position(9, 1))
     assert_true(dispatch_navigation_key(viewer, "ArrowDown"))
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 18.0)
-    guard viewer.horizontal_reveal_request is Some(keyboard_request) else {
-      fail("expected the keyboard horizontal reveal")
-    }
-    assert_false(keyboard_request.minimal_reveal)
-    assert_true(keyboard_request.scroll_type == Smooth)
     reset_cursor_mouse_reveal(viewer)
 
     // MoveTo reveals only after a changed state, and None suppresses both
@@ -374,20 +366,17 @@ test "mouse navigation reveal types preserve command-specific gates" {
       mouse_dispatch_data(Position(30, 1), reveal_type=None),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(31, 1), reveal_type=Regular),
     )
     assert_true(
       viewer.test_view_model().view_layout.position().scroll_top > 0.0,
     )
-    assert_true(viewer.horizontal_reveal_request is Some(_))
     reset_cursor_mouse_reveal(viewer)
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(31, 1), reveal_type=Minimal),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
 
     // Word commands reveal even when replaying an identical selection; their
     // reveal includes the horizontal axis. None remains an exact no-op.
@@ -409,13 +398,11 @@ test "mouse navigation reveal types preserve command-specific gates" {
     assert_true(
       viewer.test_view_model().view_layout.position().scroll_top > 0.0,
     )
-    assert_true(viewer.horizontal_reveal_request is Some(_))
     reset_cursor_mouse_reveal(viewer)
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(30, 3), mouse_down_count=2, reveal_type=None),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
 
     // Line commands also reveal after an identical selection, but vertically
     // only. SelectAll intentionally performs no reveal at all.
@@ -437,13 +424,11 @@ test "mouse navigation reveal types preserve command-specific gates" {
     assert_true(
       viewer.test_view_model().view_layout.position().scroll_top > 0.0,
     )
-    assert_true(viewer.horizontal_reveal_request is None)
     reset_cursor_mouse_reveal(viewer)
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(30, 3), mouse_down_count=3, reveal_type=None),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
     viewer.dispatch_mouse(
       mouse_dispatch_data(
         Position(30, 3),
@@ -452,7 +437,102 @@ test "mouse navigation reveal types preserve command-specific gates" {
       ),
     )
     assert_eq(viewer.test_view_model().view_layout.position().scroll_top, 0.0)
-    assert_true(viewer.horizontal_reveal_request is None)
+  })
+}
+
+///|
+/// Browser-state companion to the headless vertical matrix above. The mounted
+/// frame queue stays paused so each command's horizontal request can be read
+/// before a render consumes it.
+test "mounted mouse navigation retains exact horizontal reveal requests" {
+  with_mounted_test_viewer(long_document(40), viewer => {
+    viewer.test_set_viewport(width=800.0, height=180.0)
+    let browser = viewer.current_browser_data().unwrap()
+
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(10, 1), reveal_type=Regular),
+    )
+    guard browser.horizontal_reveal_request is Some(edge_request) else {
+      fail("expected the minimal horizontal pointer reveal")
+    }
+    assert_true(edge_request.minimal_reveal)
+    assert_true(edge_request.scroll_type == Smooth)
+    reset_cursor_mouse_reveal(viewer)
+
+    viewer.set_position(Position(9, 1))
+    assert_true(dispatch_navigation_key(viewer, "ArrowDown"))
+    guard browser.horizontal_reveal_request is Some(keyboard_request) else {
+      fail("expected the keyboard horizontal reveal")
+    }
+    assert_false(keyboard_request.minimal_reveal)
+    assert_true(keyboard_request.scroll_type == Smooth)
+    reset_cursor_mouse_reveal(viewer)
+
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(30, 1), reveal_type=None),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(31, 1), reveal_type=Regular),
+    )
+    assert_true(browser.horizontal_reveal_request is Some(_))
+    reset_cursor_mouse_reveal(viewer)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(31, 1), reveal_type=Minimal),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
+
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(30, 3),
+        mouse_down_count=2,
+        reveal_type=Minimal,
+      ),
+    )
+    reset_cursor_mouse_reveal(viewer)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(30, 3),
+        mouse_down_count=2,
+        reveal_type=Minimal,
+      ),
+    )
+    assert_true(browser.horizontal_reveal_request is Some(_))
+    reset_cursor_mouse_reveal(viewer)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(30, 3), mouse_down_count=2, reveal_type=None),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
+
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(30, 3),
+        mouse_down_count=3,
+        reveal_type=Minimal,
+      ),
+    )
+    reset_cursor_mouse_reveal(viewer)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(30, 3),
+        mouse_down_count=3,
+        reveal_type=Regular,
+      ),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
+    reset_cursor_mouse_reveal(viewer)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(Position(30, 3), mouse_down_count=3, reveal_type=None),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
+    viewer.dispatch_mouse(
+      mouse_dispatch_data(
+        Position(30, 3),
+        mouse_down_count=4,
+        reveal_type=Minimal,
+      ),
+    )
+    assert_true(browser.horizontal_reveal_request is None)
   })
 }
 
@@ -588,7 +668,7 @@ test "shift gutter forward from Simple uses line continuation" {
 ///|
 test "mouse reveal uses wrapped injected-text view cursor without round trip" {
   let options = ViewerOptions(soft_wrap=true)
-  with_test_viewer(
+  with_mounted_test_viewer(
     "a\nabcdefghijklmnop\nlast",
     viewer => {
       viewer.test_set_soft_wrap_column(6)
@@ -617,7 +697,7 @@ test "mouse reveal uses wrapped injected-text view cursor without round trip" {
       }
       viewer.dispatch_mouse(mouse_dispatch_data(supplied, reveal_type=Minimal))
       assert_position(viewer.test_cursor().view_state().position, authoritative)
-      match viewer.horizontal_reveal_request {
+      match viewer.current_browser_data().unwrap().horizontal_reveal_request {
         Some(request) => {
           assert_true(request.minimal_reveal)
           assert_true(request.scroll_type == Smooth)

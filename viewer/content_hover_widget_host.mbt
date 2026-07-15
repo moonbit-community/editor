@@ -131,9 +131,13 @@ fn Viewer::ensure_content_hover_widget(
   match self.content_hover_widget {
     Some(widget) => Some(widget)
     None => {
+      guard self.container is Some(editor_root) else { return None }
       guard self.get_view() is Some(view) else { return None }
       let widget = @hover_browser.ContentHoverWidget::new({
-        root: view.root,
+        // Monaco's `ContentHoverWidget` retains the editor and measures its
+        // stable `_domElement`; a per-model View root is disposed on every
+        // `setModel` transition and cannot outlive this persistent widget.
+        root: editor_root,
         layout_content_widget: () => self.layout_content_hover_widget(),
         render_now: () => self.flush_render(),
         focus_editor: () => self.focus(),

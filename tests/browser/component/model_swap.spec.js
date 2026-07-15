@@ -8,10 +8,11 @@ import {
 // codeEditorWidget.ts:506): across a model swap the old view's DOM leaves
 // the container and a fresh view appears with data-uri/data-mode-id stamps,
 // model-scoped view zones are lost, viewer-scoped unmanaged overlays replay,
-// text focus carries over, detaching to no model restores the placeholder,
-// and idempotent disposal cancels a pending frame while removing owned DOM but
-// retaining the host and caller-owned overlay node. The assertions run
-// MoonBit-side in tests/browser/moonbit/model_swap.
+// text focus carries over, the persistent hover keeps its editor-relative
+// geometry, detaching to no model restores the placeholder, and idempotent
+// disposal cancels a pending frame while removing owned DOM but retaining the
+// host and caller-owned overlay node. The assertions run MoonBit-side in
+// tests/browser/moonbit/model_swap except for browser-measured widget geometry.
 test('rebuilds the view per model and carries focus across set_model', async ({ page }, testInfo) => {
   const reporter = await installMoonBitReporter(page);
   try {
@@ -24,19 +25,27 @@ test('rebuilds the view per model and carries focus across set_model', async ({ 
       expect(box).not.toBeNull();
       await page.mouse.move(0, 0);
       await page.mouse.move(box.x + 3, box.y + box.height / 2);
-      await expect(
-        page.locator(
-          '[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover',
-        ),
-      ).toContainText('persistent hover diagnostic', { timeout: 3_000 });
+      const hover = page.locator(
+        '[data-content-widget="editor.contrib.resizableContentHoverWidget"] .monaco-hover:not(.hidden)',
+      );
+      await expect(hover).toBeVisible({ timeout: 3_000 });
+      await expect(hover).toContainText('persistent hover diagnostic', {
+        timeout: 3_000,
+      });
+      const hoverBox = await hover.boundingBox();
+      expect(hoverBox).not.toBeNull();
+      return hoverBox;
     };
 
     await page.waitForFunction(() => globalThis.__modelSwapPhase === 'model-a');
-    await hoverMarkerStart();
+    const modelAHoverBox = await hoverMarkerStart();
     await page.evaluate(() => globalThis.__modelSwapContinue());
 
     await page.waitForFunction(() => globalThis.__modelSwapPhase === 'model-b');
-    await hoverMarkerStart();
+    const modelBHoverBox = await hoverMarkerStart();
+    expect(
+      Math.abs(modelBHoverBox.width - modelAHoverBox.width),
+    ).toBeLessThanOrEqual(1);
     const slider = page.locator(
       '[data-content-widget="editor.contrib.resizableContentHoverWidget"] .scrollbar.vertical .slider',
     );

@@ -12,39 +12,51 @@ ownership and lifecycle rules that are not obvious from signatures.
   element must stay mounted and must not receive host-rendered children.
   This is the only public construction path. The package keeps a private
   headless constructor for white-box tests; there is no public two-step mounting
-  API. `get_container_dom_node` returns the original non-null host before and
-  after disposal, while `get_dom_node` is nullable when no model/view exists.
+  API. Headless means no host, placeholder, browser `View`, DOM focus state, or
+  root animation frame, although a model and `ViewModel` may still be installed
+  with `ModelData.browser=None`; a model installed through the public mounted
+  path always has `Some(ModelBrowserData)`.
+- Mounting is a one-way private transition. A mounted Viewer with no model owns
+  one atomic placeholder root/text pair; attaching a model replaces that DOM
+  with its `View`, and ordinary detach restores the same pair. Disposal removes
+  Viewer-owned DOM and clears placeholder/frame/focus state without returning
+  to headless or releasing the caller's host. `get_container_dom_node` returns
+  that original host before and after disposal, while `get_dom_node` is nullable
+  when no model/browser View exists.
 - Omitting `services` makes the Viewer create and own an internal bundle.
   Passing `services` explicitly always borrows that bundle, including a bundle
   returned by `ViewerServices::new`; this is the form for sharing languages,
   diagnostics, feedback, and quick-diff state between Viewers.
-- `set_model(TextModel?)` installs a caller-owned readonly model. The same
-  object is a no-op; replacing or clearing it disposes the old model-scoped
-  listeners, detaches the exact model-owned attached-view handle, and then
-  disposes the DOM `View` and `ViewModel`. Attachment acquires the handle before
-  ViewModel construction and, in a browser host, offers the shared idle/timer
-  scheduler to the model. It then creates a new `ViewModel` and, when mounted,
-  a new `View`. Model swaps reset scroll and feature model state; use
-  `save_view_state`/`restore_view_state` when the host wants persistence.
+- `set_model(TextModel?)` installs a caller-owned readonly model in the one
+  `ViewerModelSlot.current` bundle. The same object is a no-op; replacement or
+  clearing invalidates the generation before cleanup, then disposes the old
+  model-scoped listeners, exact model-owned attached-view handle, optional DOM
+  `View`, and `ViewModel` in order. Attachment acquires the handle before
+  `ViewModel` construction and, when mounted, creates one `ModelBrowserData`
+  that cannot hold a `View` without its retained mouse handler and render/reveal
+  facts. The `View` remains the handler's sole disposal owner. Model swaps reset
+  scroll and feature model state; use `save_view_state`/`restore_view_state`
+  when the host wants persistence.
 - Contributions are created once per `Viewer` and disposed with it.
-  `Viewer.contributions` is their only instance map: each private central entry
-  owns one concrete hover, folding, feedback-input, feedback-widget, or
-  quick-diff state value plus its root listeners. Feature packages keep no
-  editor-id-keyed instance table. Construction rejects duplicate ids before
-  side effects, inserts the bare typed entry before synchronous initialization,
-  and then installs listeners. Their Monaco instantiation modes are recorded,
-  but all modes currently instantiate eagerly. During disposal the complete
-  map stays installed for ordered callbacks. Entries tear down input, widgets,
-  folding, hover, then quick diff directly from their stored payloads; each
-  retires typed lookup exactly once, and only then is the map cleared. The
-  registry, contribution variants, instantiation modes, and lookup helpers are
-  package-private. `dispose` is idempotent: it cancels pending render work, removes
-  Viewer/View listeners and owned DOM, and never disposes the caller's model,
-  host, or explicitly supplied services. For an internally created bundle it
-  disposes marker decorations, markers, then agent feedback after Viewer
-  teardown. `on_did_dispose` fires after model detach and owner-decoration
-  cleanup, but before contribution and Viewer-lifetime disposal, matching the
-  source base-store boundary, while every central entry is still reachable.
+  `Viewer.contributions` is the `EditorContributions` owner, and its `instances`
+  map is the only per-Viewer instance store. Each central entry owns one
+  concrete hover, folding, feedback-input, feedback-widget, or quick-diff state
+  value plus its root listeners; feature packages keep no editor-id-keyed
+  instance table. The content-hover payload additionally owns its controller,
+  lazy widget and logical widget view, and timeout/async launch policy across
+  model swaps. Construction rejects duplicate ids before side effects, inserts
+  the bare typed entry before synchronous initialization, and then installs
+  listeners. All modes currently instantiate eagerly.
+- `dispose` is idempotent. The complete contribution map remains installed for
+  ordered behavior teardown, then becomes non-lookuppable; retained hover
+  browser resources are released at the later root cleanup slot before the map
+  is cleared. `on_did_dispose` fires after model detach and owner-decoration
+  cleanup but before those contribution and Viewer-lifetime phases, while every
+  central entry is still reachable. Disposal cancels pending render work,
+  removes Viewer/View listeners and owned DOM, and never disposes the caller's
+  model, host, or explicitly supplied services. An internally created service
+  bundle is released afterward in marker-decoration, marker, then feedback
+  order.
 - Each attached model stores one marker-decoration acquisition lease and one
   exact attached-view handle in its `ModelData`. Multiple Viewers sharing a
   service and model share the identity owner until the final lease and maintain
@@ -108,7 +120,11 @@ the cursor to `(1,1)` and emits source `model`/reason `ContentFlush`, old versio
 origin. State is committed and rendering is scheduled before public cursor
 callbacks. Delivery is FIFO and reentrancy-safe: ordinary transitions fire
 position then selection as an adjacent pair, while flush delivery is model
-content, position, then selection.
+content, position, then selection. The private `CursorEventDelivery` owns the
+queue, active drain gate, exact content-barrier depth, and completed versions.
+A model reset clears queued model facts and versions but never clears an active
+outer drain gate; active-model checks and public event effects remain at the
+root Viewer boundary.
 
 Cursor-command reveals keep the committed view coordinate. Keyboard commands
 request non-minimal Smooth reveal; pointer MoveTo/Word/Line commands use the

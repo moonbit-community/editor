@@ -26,10 +26,22 @@ host document
   -> DOM
 ```
 
-`Viewer` owns a nullable per-model `ModelData` bundle containing the model,
-view model, browser view, and swap-scoped listeners. `set_model` detaches that
-bundle and creates a fresh one. With no attached DOM, the same model/view-model
-pipeline remains usable by white-box tests; only the browser `View` is absent.
+`Viewer` keeps cross-domain ordering at the root and delegates private state to
+five concrete owners: `EditorConfigurationState`, `ViewerModelSlot`,
+`ViewerMount`, `EditorContributions`, and `CursorEventDelivery`.
+`ViewerModelSlot.current` is the one nullable `ModelData`; its optional
+`ModelBrowserData` pairs a real `View` with its retained mouse handler and
+view-scoped render/reveal facts.
+
+Headless means `ViewerMount::Headless`: there is no caller host, placeholder,
+browser `View`, DOM focus state, or root animation frame. A headless Viewer may
+still have a model and `ViewModel`, represented only by
+`ModelData.browser=None`; on supported construction paths, a mounted model
+always has `Some(ModelBrowserData)`. This is distinct from a mounted Viewer with
+no model, which owns and paints one complete placeholder pair. Mounting is
+one-way; disposal removes Viewer-owned DOM and clears mounted
+placeholder/frame/focus state, but retains the caller's host for container
+lookup.
 
 The host owns files, transport, persistence, reload policy, shell chrome, and
 error presentation. The viewer owns readonly rendering, selection, scrolling,
@@ -131,9 +143,9 @@ depends on them.
 
 The root editor registry has two distinct ownership layers. Its process-wide
 contribution-description table contains constructors only; the adjacent command
-and keybinding tables likewise contain no per-Viewer state. Each
-`Viewer.contributions` map is the sole owner and lookup table for that Viewer's
-five concrete contribution instances, retained behind a private closed enum;
+and keybinding tables likewise contain no per-Viewer state.
+`Viewer.contributions` is an `EditorContributions` owner whose `instances` map
+is the sole lookup table for that Viewer's five concrete contribution entries;
 feature packages do not keep second maps keyed by editor id. Root `Viewer::`
 helpers recover typed controllers by matching both the fixed id and central
 entry variant, mirroring Monaco's typed view over
@@ -141,9 +153,12 @@ entry variant, mirroring Monaco's typed view over
 
 Contribution construction is two-phase: reject a duplicate id before side
 effects, construct the bare controller, insert the actual entry, then install
-listeners and run initial synchronization. The complete map remains installed
-during ordered disposal, while each entry's lifecycle prevents repeated
-teardown and direct typed-payload dispatch avoids re-looking up state by id.
+listeners and run initial synchronization. The content-hover entry's
+`ContentHoverContributionState` owns its controller, lazy widget and logical
+widget view, and timeout/async launch policy across model swaps. During
+disposal, the complete map remains installed while entry behavior tears down;
+the owner then becomes non-lookuppable, and retained hover browser resources
+are released at their later root cleanup slot before the map is cleared.
 Declared instantiation modes are retained for source parity, but all modes
 currently instantiate eagerly.
 

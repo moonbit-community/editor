@@ -1,7 +1,7 @@
 # Viewer Lifecycle-Domain Internal Aggregates
 
-Status: inventory ready — STOP FOR REVIEW; Gate A refreshed 2026-07-15 and no
-product implementation has started.
+Status: implemented and fully validated 2026-07-15. Gate A was refreshed and
+approved before Milestones B–G began.
 
 Date: 2026-07-15
 
@@ -823,24 +823,95 @@ measurement, pointer input, real focus, and rAF behavior remain browser tests.
 
 ## Acceptance Criteria
 
-- [ ] Gate A field count equals ledger count and every moving field's readers
+- [x] Gate A field count equals ledger count and every moving field's readers
       and writers are inventoried.
-- [ ] `Viewer` has the five selected concrete owners plus direct facade fields;
+- [x] `Viewer` has the five selected concrete owners plus direct facade fields;
       there is no generic catch-all state bag.
-- [ ] `ModelData.browser=None` is the only no-real-View model state.
-- [ ] A real browser View cannot be installed without its MouseHandler
+- [x] `ModelData.browser=None` is the only no-real-View model state.
+- [x] A real browser View cannot be installed without its MouseHandler
       reference and browser-scoped render/reveal facts.
-- [ ] Placeholder root/text cannot become partially initialized.
-- [ ] The central contribution map remains the sole contribution instance map.
-- [ ] Content-hover controller/widget/scheduler state has one concrete owner.
-- [ ] Cursor delivery has one state-machine owner and all reentrant ordering
+- [x] Placeholder root/text cannot become partially initialized.
+- [x] The central contribution map remains the sole contribution instance map.
+- [x] Content-hover controller/widget/scheduler state has one concrete owner.
+- [x] Cursor delivery has one state-machine owner and all reentrant ordering
       tests pass.
-- [ ] `Viewer::set_model` and `Viewer::dispose` still visibly express global
+- [x] `Viewer::set_model` and `Viewer::dispose` still visibly express global
       ordering instead of delegating to a manager with a Viewer back-reference.
-- [ ] No public API or generated interface changes.
-- [ ] No DOM structure, CSS, geometry, public event, focus, model-swap, or
+- [x] No public API or generated interface changes.
+- [x] No DOM structure, CSS, geometry, public event, focus, model-swap, or
       disposal behavior changes.
-- [ ] `just check`, `just test`, `just build`, and `just test-browser` pass.
+- [x] `just check`, `just test`, `just build`, and the complete
+      `just test-browser` suite pass.
+
+## Implementation Closeout
+
+The 49-field Gate A denominator reconciled exactly: 22 fields remain direct and
+27 moved. The final root `Viewer` has 27 fields—those same 22 direct facade and
+cross-domain facts plus the five selected owners:
+
+```text
+configuration  model_slot  mount  contributions  cursor_delivery
+```
+
+The exact final record is:
+
+```text
+services owns_services disposed testing_registration lifetime_disposables
+configuration did_change_model did_change_model_content
+did_change_cursor_position did_change_cursor_selection cursor_delivery
+did_build_view_model did_scroll did_change_view_zones did_dispose
+did_mouse_down did_mouse_up did_mouse_move did_mouse_leave last_scroll_event
+model_slot mount overlay_widgets pending_rendered scroll_dirty editor_id
+contributions
+```
+
+The landed owner shapes match the ledger: `EditorConfigurationState` has 8
+fields; `ViewerModelSlot` has 2; `ModelBrowserData` has 4; `MountedViewer` has
+4 and `PlaceholderDom` has 2; `EditorContributions` has 2 and its
+`ContentHoverContributionState` has 5; `CursorEventDelivery` has 4. No generic
+state bag, raw Viewer back-reference, second contribution map, compatibility
+mirror field, or public headless API was introduced.
+
+| Milestone | Commit | Result |
+| --- | --- | --- |
+| Gate A | `3a1ef52` | 49 fields, 49 ledger rows, ownership traces and baseline characterization recorded |
+| B | `98e7aba` | contribution storage and content-hover ownership |
+| C | `78569b5` | configuration transition owner |
+| D | `f409ea4` | model slot and browser-only model data |
+| E | `c249e59` | one-way headless/mounted owner and atomic placeholder |
+| F | `76fada8` | reentrant cursor-delivery state machine |
+| G | the commit containing this closeout record | current architecture/harness docs, API audit, and full validation |
+
+Focused final evidence includes 217/217 root Viewer JS tests, 19/19 cursor
+transition tests, 12/12 cursor behavior tests, 11/11 lifecycle ownership tests,
+8/8 `set_value` tests, 4/4 mount-owner tests, and the 3/3 D browser scenarios
+for model swap, reveal, and `set_value`. The complete browser gate passed
+83/83, including all 57 component scenarios.
+
+Final validation passed:
+
+```text
+moon fmt
+moon info --target js
+git diff -- viewer/pkg.generated.mbti
+git diff --check
+just check
+just test
+just build
+READONLY_EDITOR_BASE_URL=http://127.0.0.1:5187 just test-browser
+```
+
+`viewer/pkg.generated.mbti` remained byte-for-byte unchanged at SHA-256
+`6f1aba10c05f08fd1e3f61f829c69226d75e97b2608f6de30db1c5f7b6c46bac`.
+The browser command used the repository's documented already-running-server
+path after two ordinary invocations spent Playwright's fixed 60-second server
+startup window rebuilding bundles; no browser assertion ran or failed in those
+startup-only attempts, and the final command executed the unchanged full suite.
+
+There are no product-behavior deviations from the reviewed plan. Milestone D
+used the plan-authorized direct Playwright fallback because the `just`
+component wrapper accepts no `--grep` arguments; it expanded the focused gate
+to `model_swap.spec.js`, `reveal.spec.js`, and `set_value.spec.js`.
 
 ## Risks and Guardrails
 

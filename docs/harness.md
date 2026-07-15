@@ -46,6 +46,15 @@ Useful white-box seams are:
 Use this layer for positions, selections, wrapping, model/view conversion,
 visible windows, scroll/reveal math, decoration inputs, and contribution state.
 
+### Mounted Viewer white-box tests
+
+`with_mounted_test_viewer` is a package-private `_wbtest` fixture, not a public
+Viewer or host API. It installs the smallest fake DOM/browser runtime and holds
+the animation-frame queue so MoonBit tests can inspect synchronous
+model-browser ownership, render/reveal requests, and lifecycle ordering before
+a flush consumes them. Use Playwright component tests instead for real DOM
+layout, focus, pointer input, and native animation-frame behavior.
+
 ### Browser suites
 
 ```text

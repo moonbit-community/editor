@@ -13,7 +13,6 @@
 pub(all) struct View {
   root : @rdom.Element
   overflow_guard : @rdom.Element
-  priv lines_content : @scrollbar.CachedDomNode
   priv squiggly_style : @rdom.Element
   view_lines : ViewLines
   view_zones : ViewZones
@@ -99,16 +98,16 @@ pub fn View::View(
   // `overlayWidgets.ts:62/66`, `view.ts:160`). This constructor centralizes
   // those writes while assembling the complete DOM tree; the numeric mapping
   // lives in `view_part.mbt`.
-  PartFingerprints::write(overflow_guard, OverflowGuard)
-  PartFingerprints::write(view_lines.get_dom_node(), ViewLines)
-  PartFingerprints::write(editor_scrollbar.get_dom_node(), ScrollableElement)
-  PartFingerprints::write(content_widgets.dom_node(), ContentWidgets)
-  PartFingerprints::write(
+  PartFingerprint::write(overflow_guard, OverflowGuard)
+  PartFingerprint::write(view_lines.get_dom_node(), ViewLines)
+  PartFingerprint::write(editor_scrollbar.get_dom_node(), ScrollableElement)
+  PartFingerprint::write(content_widgets.dom_node(), ContentWidgets)
+  PartFingerprint::write(
     content_widgets.overflowing_content_widgets_dom_node(),
     OverflowingContentWidgets,
   )
-  PartFingerprints::write(overlay_widgets.get_dom_node(), OverlayWidgets)
-  PartFingerprints::write(
+  PartFingerprint::write(overlay_widgets.get_dom_node(), OverlayWidgets)
+  PartFingerprint::write(
     overlay_widgets.overflowing_overlay_widgets_dom_node(),
     OverflowingOverlayWidgets,
   )
@@ -128,7 +127,6 @@ pub fn View::View(
   let view : View = {
     root,
     overflow_guard,
-    lines_content,
     squiggly_style,
     view_lines,
     view_zones,
@@ -236,18 +234,6 @@ pub fn View::end_view_event_batch(self : View) -> Unit {
 }
 
 ///|
-/// Generic cleanup-safe batch helper.  The callback result is returned
-/// unchanged; `end` runs on normal return and on a raised error.
-fn[T] View::with_view_event_batch(
-  self : View,
-  body : (ViewEventCollector) -> T raise,
-) -> T raise {
-  let collector = self.event_dispatcher.begin()
-  defer self.event_dispatcher.end()
-  body(collector)
-}
-
-///|
 /// Emits one source event synchronously.  Reentrant emissions are queued as a
 /// later FIFO batch and never interleave the current handler pass.
 pub fn View::emit_view_event(self : View, event : ViewEvent) -> Unit {
@@ -269,16 +255,6 @@ pub fn View::emit_view_zones_changed_then(
     return
   }
   self.event_dispatcher.emit_view_event_then(ViewZonesChanged, emit_outgoing)
-}
-
-///|
-/// Emits one ordered source batch.  When a collector scope is open these are
-/// appended to that collector instead of being delivered early.
-fn View::emit_view_events(self : View, events : Array[ViewEvent]) -> Unit {
-  if self.disposed {
-    return
-  }
-  self.event_dispatcher.emit_view_events(events)
 }
 
 ///|

@@ -96,7 +96,8 @@ fn Viewer::with_hover_widget(
 /// whether the document's active element sits inside the hover widget.
 fn Viewer::is_hover_focused(self : Viewer) -> Bool {
   match self.content_hover_widget {
-    Some(widget) => element_contains_active(widget.wrapper)
+    Some(widget) =>
+      @base_browser.element_contains_active_element(widget.wrapper)
     None => false
   }
 }

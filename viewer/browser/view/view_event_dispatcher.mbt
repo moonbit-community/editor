@@ -20,16 +20,6 @@ pub fn ViewEventCollector::emit(
 }
 
 ///|
-pub fn ViewEventCollector::emit_many(
-  self : ViewEventCollector,
-  events : Array[ViewEvent],
-) -> Unit {
-  for event in events {
-    self.view_events.push(event)
-  }
-}
-
-///|
 /// Reentrant FIFO dispatcher corresponding to Monaco's `ViewEventDispatcher`
 /// plus `ViewEventsCollector`.  The callback represents the fixed, ordered
 /// ViewPart handler array owned by `View`.
@@ -114,24 +104,6 @@ fn ViewEventDispatcher::emit_view_event(
       let collector = self.begin()
       defer self.end()
       collector.emit(event)
-    }
-  }
-}
-
-///|
-fn ViewEventDispatcher::emit_view_events(
-  self : ViewEventDispatcher,
-  events : Array[ViewEvent],
-) -> Unit {
-  if events.length() == 0 {
-    return
-  }
-  match self.collector {
-    Some(collector) => collector.emit_many(events)
-    None => {
-      let collector = self.begin()
-      defer self.end()
-      collector.emit_many(events)
     }
   }
 }

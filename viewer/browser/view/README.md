@@ -80,19 +80,20 @@ Whole event batches are delivered FIFO through a nested collector. An event
 emitted reentrantly becomes a later batch and cannot interleave the handler
 pass in progress. Events are emitted at the mutation source, so an A -> B -> A
 sequence before a frame is not collapsed into one final-state snapshot. The
-closed local union covers the fifteen scoped Monaco event classes. Composition
-has no readonly producer; theme retains the existing string identity and
-dispatch shape, while concrete theme application remains direct root/CSS
-state.
+closed local union contains only the nine events emitted by the current Viewer
+and consumed by current view parts: configuration, cursor state, decorations,
+flush, focus, line mapping, scroll, tokens, and zones. Composition and typed
+theme events have no readonly producer; concrete theme application remains
+direct root/CSS state.
 
 `ViewContext` provides live measurement and conversion capabilities.
 `ViewRenderInput` supplies the active `ViewModel`, layout, viewport,
 configuration, selection, and zones. `RenderingContext` and
 `RestrictedRenderingContext` separate the read/measure and write phases.
-Selection geometry consumes live ViewLines ranges; the compatibility
-single-line helpers use the same producer. `HorizontalRange`,
-`FloatHorizontalRange`, and `HorizontalPosition` are immutable because the
-scoped viewer has no mutating consumer for Monaco's mutable fields.
+Selection geometry consumes live ViewLines ranges. Its package-private range
+carriers retain only the rounded coordinates read by current selection and
+widget consumers; Monaco's additional mutable/source-shape fields have no
+current browser-view consumer.
 
 Disposal is idempotent and source-ordered: dispose `ViewLines`, then the seven
 ordinary parts, then the View-lifetime disposable store and dispatcher. The
@@ -124,17 +125,17 @@ rewrites a row only when the concatenated content changes.
 widgets remain in `viewer/contrib/hover/browser`.
 
 - `ContentWidgetHandle` retains live id, DOM-node, and position getters;
-  `allowEditorOverflow`, `useDisplayNone`, and `suppressMouseDown`; and
-  independently optional before/after-render callbacks. Safe callback helpers
-  preserve exception fallbacks and argument order. This layer owns the
-  `suppressMouseDown` lookup and false default; forwarding that query through
-  the controller remains an input-boundary seam.
+  `allowEditorOverflow` and `useDisplayNone`; and independently optional
+  before/after-render callbacks. Safe callback helpers preserve exception
+  fallbacks and argument order. Content-widget mouse suppression is absent
+  because no current pointer-input consumer queries it.
 - `add_widget` mounts a node once in `.contentWidgets` or
-  `.overflowingContentWidgets`; `remove_widget` is the unmount path.
-  `set_widget_position` retains model anchors, projects them through the live
-  model-to-view converter, and invalidates cached dimensions. Mapping,
-  changed, inserted, and deleted events synchronously reproject those anchors
-  before marking the part dirty.
+  `.overflowingContentWidgets`, where it remains for the owning View lifetime;
+  disposing the View removes the complete subtree. `set_widget_position`
+  retains model anchors, projects them through the live model-to-view
+  converter, and invalidates cached dimensions. Line-mapping events
+  synchronously reproject those anchors; flush and mapping invalidation mark
+  the part dirty.
 - A `LayoutInfo` change refreshes retained `contentLeft`, `contentWidth`, and
   `maxWidth` values. The pre-text phase completes the max-width writes; the
   later measured phase rounds dimensions and runs source-ordered two-pass
@@ -142,8 +143,7 @@ widgets remain in `viewer/contrib/hover/browser`.
   widget at `top:-1000px`, and reports the selected coordinate safely.
 - Every outer phase snapshots insertion-ordered widget ids before live map
   lookup, matching `Object.keys(_widgets)`. Reentrant additions wait for the
-  next phase; removing the current widget is safe, while removing an unvisited
-  id preserves the source's missing-lookup failure.
+  next phase and cannot change the traversal already in progress.
 - Overflow width and explicit page-layout scroll subtraction use each node's
   `ownerDocument` and `defaultView`, with zero fallbacks for a detached
   document. The external page-position helper instead falls back to the main

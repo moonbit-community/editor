@@ -76,7 +76,7 @@ fn mapped_fixture_line(
 }
 
 ///|
-test "ViewLine slow width cache reads once resets and marks layout" {
+test "ViewLine slow width cache reads once and marks layout" {
   let fixture = new_view_line_fixture(42.0, 10.0)
   let line = render_fixture_line(geometry_line_input("alpha"), fixture)
   assert_false(line.get_width_is_fast())
@@ -89,9 +89,6 @@ test "ViewLine slow width cache reads once resets and marks layout" {
   assert_true(line.get_width_is_fast())
   view_line_fixture_set_width(fixture, 55.0)
   inspect(line.get_width(Some(context)), content="42")
-  line.reset_cached_width()
-  assert_false(line.get_width_is_fast())
-  inspect(line.get_width(Some(context)), content="55")
 }
 
 ///|
@@ -319,12 +316,6 @@ test "ViewLine pixel cache whitespace endpoint and prior DOM reuse" {
     cached.get_visible_ranges_for_range(1, 2, 2, cache_context) is Some(_),
   )
   inspect(view_line_fixture_range_read_count(cache_fixture), content="1")
-  cached.reset_cached_width()
-  assert_true(
-    cached.get_visible_ranges_for_range(1, 2, 2, cache_context) is Some(_),
-  )
-  inspect(view_line_fixture_range_read_count(cache_fixture), content="2")
-
   let whitespace_fixture = new_view_line_fixture(42.0, 10.0)
   let whitespace_input = geometry_line_input("   ")
   let whitespace = mapped_fixture_line(whitespace_input, whitespace_fixture, 4)
@@ -351,7 +342,7 @@ test "ViewLine pixel cache whitespace endpoint and prior DOM reuse" {
   guard prior.get_dom_node() is Some(prior_dom_node) else {
     fail("expected attached prior DOM")
   }
-  prior.on_content_changed()
+  prior.on_tokens_changed()
   assert_true(
     prior.render_line(1, geometry_line_input("b"), 0, 20, StringBuilder()),
   )

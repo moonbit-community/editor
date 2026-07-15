@@ -216,14 +216,11 @@ priv struct TestContentWidget {
   mut position : ContentWidgetPosition?
   allow_overflow : Bool
   use_display_none : Bool
-  suppress_mouse_down : Bool
   before_enabled : Bool
   mut before_dimension : ContentWidgetDimension?
   mut throw_before : Bool
-  mut before_action : (() -> Unit)?
   after_enabled : Bool
   throw_after : Bool
-  mut after_action : (() -> Unit)?
 }
 
 ///|
@@ -258,10 +255,6 @@ fn TestContentWidget::before_render(
   self : TestContentWidget,
 ) -> ContentWidgetDimension? raise {
   content_widgets_test_log_event("before:" + self.id)
-  match self.before_action {
-    Some(action) => action()
-    None => ()
-  }
   if self.throw_before {
     raise TestWidgetCallbackError
   }
@@ -282,10 +275,6 @@ fn TestContentWidget::after_render(
     ":" +
     callback_coordinate_name(coordinate),
   )
-  match self.after_action {
-    Some(action) => action()
-    None => ()
-  }
   if self.throw_after {
     raise TestWidgetCallbackError
   }
@@ -324,7 +313,6 @@ fn TestContentWidget::content_widget_handle(
     () => self.position,
     allow_editor_overflow=self.allow_overflow,
     use_display_none=self.use_display_none,
-    suppress_mouse_down=self.suppress_mouse_down,
     before_render?,
     after_render?,
   )
@@ -349,7 +337,6 @@ fn new_test_content_widget(
   secondary : @base_common.Position?,
   allow_overflow? : Bool = false,
   use_display_none? : Bool = false,
-  suppress_mouse_down? : Bool = false,
   before_enabled? : Bool = false,
   after_enabled? : Bool = false,
   throw_after? : Bool = false,
@@ -365,14 +352,11 @@ fn new_test_content_widget(
     }),
     allow_overflow,
     use_display_none,
-    suppress_mouse_down,
     before_enabled,
     before_dimension: None,
     throw_before: false,
-    before_action: None,
     after_enabled,
     throw_after,
-    after_action: None,
   }
 }
 
@@ -411,7 +395,6 @@ test "constructor and add preserve container styles and overflow mount choice" {
     None,
     None,
     allow_overflow=true,
-    suppress_mouse_down=true,
   )
   widgets.add_widget(normal.content_widget_handle())
   widgets.add_widget(overflow.content_widget_handle())
@@ -438,9 +421,6 @@ test "constructor and add preserve container styles and overflow mount choice" {
     content_widgets_test_attribute(normal.dom_node, "widgetId"),
     "normal",
   )
-  assert_false(widgets.should_suppress_mouse_down_on_widget("normal"))
-  assert_true(widgets.should_suppress_mouse_down_on_widget("overflow"))
-  assert_false(widgets.should_suppress_mouse_down_on_widget("missing"))
 }
 
 ///|
@@ -1245,7 +1225,7 @@ test "display ownership and read phase preserve source ordering and caches" {
     use_display_none=true,
   )
   widgets.add_widget(owned_display.content_widget_handle())
-  set_content_widget_style_property(owned_display.dom_node, "display", "grid")
+  @base_browser.set_style_property(owned_display.dom_node, "display", "grid")
   widgets.should_render = false
   widgets.set_widget_position(owned_display.content_widget_handle())
   assert_false(widgets.should_render)
@@ -1336,193 +1316,6 @@ test "useDisplayNone and positionability preserve the full display scheduling ma
     ),
     "none",
   )
-}
-
-///|
-fn reentrant_content_widgets_context() -> ContentWidgetsRenderContext {
-  {
-    vertical_offset_for_line: _ => 40.0,
-    line_height_for_line: _ => 20.0,
-    visible_range_for_position: _ => Some(10.0),
-    typical_fullwidth_character_width: 16.0,
-    scroll_top: 0.0,
-    scroll_left: 0.0,
-    viewport_width: 300.0,
-    viewport_height: 200.0,
-  }
-}
-
-///|
-test "prepare snapshot continues after beforeRender removes its current widget" {
-  install_content_widgets_test_browser()
-  let document = @rdom.document()
-  let widgets = ContentWidgets::ContentWidgets(
-    document,
-    document.create_element("section"),
-  )
-  widgets.install_live_view_context(() => (0.0, 300.0), position => {
-    Some(position)
-  })
-  let first = new_test_content_widget(
-    document,
-    "prepare-current",
-    Some(Position(1, 1)),
-    None,
-    before_enabled=true,
-  )
-  first.before_dimension = Some({ width: 10.0, height: 10.0 })
-  let second = new_test_content_widget(
-    document,
-    "prepare-next",
-    Some(Position(1, 1)),
-    None,
-    before_enabled=true,
-  )
-  second.before_dimension = Some({ width: 10.0, height: 10.0 })
-  let first_handle = new_test_content_widget(
-    document,
-    "prepare-current",
-    None,
-    None,
-  )
-  first.before_action = Some(() => {
-    widgets.remove_widget(first_handle.content_widget_handle())
-  })
-  widgets.add_widget(first.content_widget_handle())
-  widgets.set_widget_position(first.content_widget_handle())
-  widgets.add_widget(second.content_widget_handle())
-  widgets.set_widget_position(second.content_widget_handle())
-  content_widgets_test_clear_events()
-  widgets.prepare_render_widgets(reentrant_content_widgets_context())
-  assert_true(
-    content_widgets_test_events() ==
-    ["before:prepare-current", "before:prepare-next"],
-  )
-  assert_true(widgets.widgets.get("prepare-current") is None)
-  assert_true(widgets.widgets.get("prepare-next") is Some(_))
-}
-
-///|
-test "render snapshot continues after afterRender removes its current widget" {
-  install_content_widgets_test_browser()
-  let document = @rdom.document()
-  let widgets = ContentWidgets::ContentWidgets(
-    document,
-    document.create_element("section"),
-  )
-  widgets.install_live_view_context(() => (0.0, 300.0), position => {
-    Some(position)
-  })
-  let first = new_test_content_widget(
-    document,
-    "render-current",
-    Some(Position(1, 1)),
-    None,
-    after_enabled=true,
-  )
-  let second = new_test_content_widget(
-    document,
-    "render-next",
-    Some(Position(1, 1)),
-    None,
-    after_enabled=true,
-  )
-  let first_handle = new_test_content_widget(
-    document,
-    "render-current",
-    None,
-    None,
-  )
-  first.after_action = Some(() => {
-    widgets.remove_widget(first_handle.content_widget_handle())
-  })
-  widgets.add_widget(first.content_widget_handle())
-  widgets.set_widget_position(first.content_widget_handle())
-  widgets.add_widget(second.content_widget_handle())
-  widgets.set_widget_position(second.content_widget_handle())
-  widgets.prepare_render_widgets(reentrant_content_widgets_context())
-  content_widgets_test_clear_events()
-  widgets.render_widgets(0.0, 0.0)
-  assert_true(
-    content_widgets_test_events() ==
-    [
-      "style:render-current:top:60px", "style:render-current:left:10px", "style:render-current:visibility:inherit",
-      "after:render-current:below:60,10", "style:render-next:top:60px", "style:render-next:left:10px",
-      "style:render-next:visibility:inherit", "after:render-next:below:60,10",
-    ],
-  )
-  assert_true(widgets.widgets.get("render-current") is None)
-  assert_true(widgets.widgets.get("render-next") is Some(_))
-}
-
-///|
-test "panic prepare snapshot directly looks up a reentrantly removed future widget" {
-  install_content_widgets_test_browser()
-  let document = @rdom.document()
-  let widgets = ContentWidgets::ContentWidgets(
-    document,
-    document.create_element("section"),
-  )
-  widgets.install_live_view_context(() => (0.0, 300.0), position => {
-    Some(position)
-  })
-  let first = new_test_content_widget(
-    document,
-    "prepare-remover",
-    Some(Position(1, 1)),
-    None,
-    before_enabled=true,
-  )
-  first.before_dimension = Some({ width: 10.0, height: 10.0 })
-  let future = new_test_content_widget(
-    document,
-    "prepare-future",
-    Some(Position(1, 1)),
-    None,
-  )
-  first.before_action = Some(() => {
-    widgets.remove_widget(future.content_widget_handle())
-  })
-  widgets.add_widget(first.content_widget_handle())
-  widgets.set_widget_position(first.content_widget_handle())
-  widgets.add_widget(future.content_widget_handle())
-  widgets.set_widget_position(future.content_widget_handle())
-  widgets.prepare_render_widgets(reentrant_content_widgets_context())
-}
-
-///|
-test "panic render snapshot directly looks up a reentrantly removed future widget" {
-  install_content_widgets_test_browser()
-  let document = @rdom.document()
-  let widgets = ContentWidgets::ContentWidgets(
-    document,
-    document.create_element("section"),
-  )
-  widgets.install_live_view_context(() => (0.0, 300.0), position => {
-    Some(position)
-  })
-  let first = new_test_content_widget(
-    document,
-    "render-remover",
-    Some(Position(1, 1)),
-    None,
-    after_enabled=true,
-  )
-  let future = new_test_content_widget(
-    document,
-    "render-future",
-    Some(Position(1, 1)),
-    None,
-  )
-  first.after_action = Some(() => {
-    widgets.remove_widget(future.content_widget_handle())
-  })
-  widgets.add_widget(first.content_widget_handle())
-  widgets.set_widget_position(first.content_widget_handle())
-  widgets.add_widget(future.content_widget_handle())
-  widgets.set_widget_position(future.content_widget_handle())
-  widgets.prepare_render_widgets(reentrant_content_widgets_context())
-  widgets.render_widgets(0.0, 0.0)
 }
 
 ///|
@@ -2034,9 +1827,9 @@ test "owner document supplies max width, page scroll, and paired clamps" {
   let owner_focus = owner.create_element("button")
   node.append_child(owner_focus.as_node())
   content_widgets_test_set_active_element(owner, owner_focus)
-  assert_true(element_contains_active_element(node))
+  assert_true(@base_browser.element_contains_active_element(node))
   content_widgets_test_clear_active_element(owner)
-  assert_false(element_contains_active_element(node))
+  assert_false(@base_browser.element_contains_active_element(node))
   assert_eq(content_widget_max_width(node, true, 123.0), 700.0)
   let (owner_width, owner_height) = body_client_area(node)
   assert_eq(owner_width, 700.0)

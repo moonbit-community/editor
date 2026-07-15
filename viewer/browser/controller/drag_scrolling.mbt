@@ -156,7 +156,7 @@ fn DragScrollingOperation::new(
     dispatch_mouse,
     position,
     mouse_event,
-    last_time: drag_scrolling_now(),
+    last_time: @base_browser.wall_clock_now_ms(),
     animation_frame_id: None,
     disposed: false,
   }
@@ -198,7 +198,7 @@ fn DragScrollingOperation::set_position(
 ///|
 /// `_tick` (dragScrolling.ts:89-94): elapsed ms since the last frame.
 fn DragScrollingOperation::tick(self : DragScrollingOperation) -> Double {
-  let now = drag_scrolling_now()
+  let now = @base_browser.wall_clock_now_ms()
   let elapsed = now - self.last_time
   self.last_time = now
   elapsed
@@ -377,7 +377,3 @@ fn DragScrollingOperation::probe_mouse_target(
     None,
   )
 }
-
-///|
-/// Monaco reads `Date.now()` (dragScrolling.ts:72,90).
-extern "js" fn drag_scrolling_now() -> Double = "() => Date.now()"

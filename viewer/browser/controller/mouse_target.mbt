@@ -239,7 +239,7 @@ pub fn create_outside_editor(
 
 ///|
 /// `ElementPath` (mouseTarget.ts:157-235): predicates over the root-first
-/// fingerprint path bytes `PartFingerprints::collect` produces. The numeric
+/// fingerprint path bytes `PartFingerprint::collect` produces. The numeric
 /// byte values are `PartFingerprint::to_int` (`view_part.mbt`).
 pub(all) struct ElementPath {}
 
@@ -637,7 +637,7 @@ pub fn HitTestRequest::target_path(self : HitTestRequest) -> Bytes {
   }
   if !cache_valid {
     self.target_path_cache_element = target
-    self.target_path_cache_value = @view.PartFingerprints::collect(
+    self.target_path_cache_value = @view.PartFingerprint::collect(
       target,
       self.ctx.view_dom_node,
     )
@@ -824,7 +824,7 @@ pub fn MouseTargetFactory::mouse_target_is_widget(
   self : MouseTargetFactory,
   e : @editor_browser.EditorDomMouseEvent,
 ) -> Bool {
-  let path = @view.PartFingerprints::collect(
+  let path = @view.PartFingerprint::collect(
     e.target,
     self.view_helper.view_dom_node,
   )

@@ -14,8 +14,6 @@ priv struct MarginViewOverlays {
   dom_node : @rdom.Element
   overlays : ViewOverlays
   current_line_margin : CurrentLineMarginHighlightOverlay
-  lines_decorations : LinesDecorationsOverlay
-  line_numbers : LineNumbersOverlay
   mut should_render : Bool
   // `MarginViewOverlays._contentLeft` (`viewOverlays.ts:238,244-248,265`).
   mut content_left : Double
@@ -42,8 +40,6 @@ fn MarginViewOverlays::MarginViewOverlays(
     dom_node,
     overlays,
     current_line_margin,
-    lines_decorations,
-    line_numbers,
     should_render: true,
     content_left: 0.0,
     read_content_left: () => 0.0,

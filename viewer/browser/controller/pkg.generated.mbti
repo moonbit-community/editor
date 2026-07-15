@@ -179,7 +179,6 @@ pub(all) struct PointerHandlerHelper {
   get_last_render_data : () -> PointerHandlerLastRenderData
   render_now : () -> Unit
   should_suppress_mouse_down_on_view_zone : (String) -> Bool
-  should_suppress_mouse_down_on_widget : (String) -> Bool
   get_position_from_dom_info : (@dom.Element, Int) -> @common.Position?
   visible_range_for_position : (Int, Int) -> @view.HorizontalPosition?
   get_line_width : (Int) -> Double

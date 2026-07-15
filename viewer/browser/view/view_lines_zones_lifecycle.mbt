@@ -9,8 +9,6 @@ fn view_zones_on_view_event(part : ViewZones, event : ViewEvent) -> Bool {
     ViewConfigurationChanged(e) =>
       self.on_configuration_changed(e.has_changed(LineHeight))
     ViewLineMappingChanged => self.on_line_mapping_changed()
-    ViewLinesDeleted(_) => self.on_lines_deleted()
-    ViewLinesInserted(_) => self.on_lines_inserted()
     ViewScrollChanged(e) =>
       self.on_scroll_changed(e.scroll_top_changed, e.scroll_width_changed)
     ViewZonesChanged => self.on_zones_changed()
@@ -50,16 +48,7 @@ fn view_lines_on_view_event(part : ViewLines, event : ViewEvent) -> Bool {
       self.flush_retained_lines()
       true
     }
-    ViewLinesChanged(e) => self.on_lines_changed(e.from_line_number, e.count)
-    ViewLinesDeleted(e) => {
-      self.on_lines_deleted(e.from_line_number, e.to_line_number)
-      true
-    }
-    ViewLinesInserted(e) => {
-      self.on_lines_inserted(e.from_line_number, e.to_line_number)
-      true
-    }
-    ViewDecorationsChanged(_) => {
+    ViewDecorationsChanged => {
       self.on_decorations_changed()
       true
     }

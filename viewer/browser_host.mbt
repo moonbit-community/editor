@@ -1,15 +1,4 @@
 ///|
-/// Monotonic high-resolution timestamp in milliseconds, for render timing
-/// instrumentation.
-extern "js" fn now_ms() -> Double =
-  #| () => globalThis.performance?.now() ?? Date.now()
-
-///|
-/// Wall-clock milliseconds used by Monaco's smooth-scrolling operation.
-extern "js" fn date_now_ms() -> Double =
-  #| () => Date.now()
-
-///|
 extern "js" fn request_animation_frame(callback : () -> Unit) -> Double =
   #| (callback) => globalThis.requestAnimationFrame(callback)
 
@@ -129,9 +118,11 @@ fn schedule_tokenization_idle(
 ///|
 let browser_tokenization_scheduler : @model.TokenizationScheduler = TokenizationScheduler(
   idle=schedule_tokenization_idle,
-  zero_timeout=callback => schedule_timeout(callback, 0),
-  delay=(milliseconds, callback) => schedule_timeout(callback, milliseconds),
-  now=now_ms,
+  zero_timeout=callback => @base_browser.schedule_timeout(callback, 0),
+  delay=(milliseconds, callback) => {
+    @base_browser.schedule_timeout(callback, milliseconds)
+  },
+  now=@base_browser.monotonic_now_ms,
 )
 
 ///|
@@ -184,39 +175,6 @@ fn run_at_this_or_schedule_at_next_animation_frame(
 }
 
 ///|
-/// One-shot timer. The viewer's hover and scrollbar delays run through this
-/// instead of framework commands.
-extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
-  #| (callback, ms) => globalThis.setTimeout(callback, ms)
-
-///|
-extern "js" fn clear_timeout(handle : Double) -> Unit =
-  #| (handle) => globalThis.clearTimeout(handle)
-
-///|
-/// Owns one timeout as an idempotent disposable. Disposal prevents delivery
-/// and clears the browser handle; the callback also retires the handle before
-/// invoking user code so a reentrant cancel is a no-op.
-fn schedule_timeout(callback : () -> Unit, ms : Int) -> @base_common.Disposable {
-  let active = Ref(true)
-  let handle = set_timeout(
-    () => {
-      if active.val {
-        active.val = false
-        callback()
-      }
-    },
-    ms,
-  )
-  @base_common.Disposable::from(() => {
-    if active.val {
-      active.val = false
-      clear_timeout(handle)
-    }
-  })
-}
-
-///|
 /// Starts every task in its own JavaScript async continuation and resumes when
 /// the last continuation finishes. Completion callbacks therefore observe real
 /// completion order while shared packages remain independent of the browser's
@@ -249,10 +207,3 @@ async fn run_async_tasks_concurrently(tasks : Array[async () -> Unit]) -> Unit {
 fn launch_async_task(task : async () -> Unit noraise) -> Unit {
   @js.async_run(task)
 }
-
-///|
-/// The microtask scheduler Monaco's `MicrotaskEmitter` hardcodes
-/// (`event.ts:1610`); injected into `MarkerService`'s change emitter here in
-/// the js-only host package (`@base_common` compiles for native too).
-extern "js" fn queue_microtask(callback : () -> Unit) -> Unit =
-  #| (callback) => globalThis.queueMicrotask(callback)

@@ -47,9 +47,7 @@ fn Viewer::set_hidden_areas(
         // cursor reprojection/event → layout flush/recovery Scroll.
         self.emit_view_event(ViewFlushed)
         self.emit_view_event(ViewLineMappingChanged)
-        self.emit_view_event(
-          ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
-        )
+        self.emit_view_event(ViewDecorationsChanged)
         reproject_cursor()
         match previous_view_selection.val {
           Some(previous) =>

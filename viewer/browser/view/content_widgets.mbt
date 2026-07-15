@@ -3,10 +3,11 @@
 // `IContentWidgetPosition` contracts of `editorBrowser.ts`. Its focused
 // lifecycle wiring lives beside the package-private rendering context.
 //
-// The widget lifecycle is the source's: a widget's DOM is appended once by
-// `add_widget` and stays mounted until `remove_widget`; `set_widget_position`
-// only records anchors/preference; each frame `prepare_render` computes the
-// box layout and `render` writes `top`/`left`/`visibility`. Hiding is
+// The widget lifecycle is the viewer's consumed source slice: a widget's DOM
+// is appended once by `add_widget` and stays mounted for the View lifetime;
+// `set_widget_position` only records anchors/preference; each frame
+// `prepare_render` computes the box layout and `render` writes
+// `top`/`left`/`visibility`. Hiding is
 // normally `visibility:hidden`; a focused off-viewport widget is parked at
 // `top:-1000px` instead. Neither path unmounts — re-inserting a mounted node
 // would restart CSS animations on its subtree (the hover's `fade-in`).
@@ -58,7 +59,6 @@ pub struct ContentWidgetHandle {
   priv get_position : () -> ContentWidgetPosition?
   priv allow_editor_overflow : Bool
   priv use_display_none : Bool
-  priv suppress_mouse_down : Bool
   priv before_render : (() -> ContentWidgetDimension? raise)?
   priv after_render : ((
     ContentWidgetPositionPreference?,
@@ -76,7 +76,6 @@ pub fn ContentWidgetHandle::ContentWidgetHandle(
   get_position : () -> ContentWidgetPosition?,
   allow_editor_overflow? : Bool = false,
   use_display_none? : Bool = false,
-  suppress_mouse_down? : Bool = false,
   before_render? : () -> ContentWidgetDimension? raise,
   after_render? : (
     ContentWidgetPositionPreference?,
@@ -89,7 +88,6 @@ pub fn ContentWidgetHandle::ContentWidgetHandle(
     get_position,
     allow_editor_overflow,
     use_display_none,
-    suppress_mouse_down,
     before_render,
     after_render,
   }
@@ -143,7 +141,6 @@ priv struct Widget {
   mut max_width : Double
   mut is_visible : Bool
   use_display_none : Bool
-  suppress_mouse_down : Bool
   mut render_data : WidgetRenderData?
 }
 
@@ -176,8 +173,8 @@ pub fn ContentWidgets::ContentWidgets(
   let dom_node = document.create_element("div")
   dom_node.set_attribute("class", "contentWidgets")
   dom_node.set_attribute("data-view-part", "contentWidgets")
-  set_content_widget_style_property(dom_node, "position", "absolute")
-  set_content_widget_style_property(dom_node, "top", "0px")
+  @base_browser.set_style_property(dom_node, "position", "absolute")
+  @base_browser.set_style_property(dom_node, "top", "0px")
   let overflowing_content_widgets_dom_node = document.create_element("div")
   overflowing_content_widgets_dom_node.set_attribute(
     "class", "overflowingContentWidgets",
@@ -254,7 +251,6 @@ pub fn ContentWidgets::add_widget(
   let id = (actual.get_id)()
   let allow_editor_overflow = actual.allow_editor_overflow
   let use_display_none = actual.use_display_none
-  let suppress_mouse_down = actual.suppress_mouse_down
   let widget : Widget = {
     actual,
     dom_node,
@@ -273,12 +269,11 @@ pub fn ContentWidgets::add_widget(
     ),
     is_visible: false,
     use_display_none,
-    suppress_mouse_down,
     render_data: None,
   }
-  set_content_widget_style_property(widget.dom_node, "position", "absolute")
-  set_content_widget_style_property(widget.dom_node, "display", "none")
-  set_content_widget_style_property(widget.dom_node, "visibility", "hidden")
+  @base_browser.set_style_property(widget.dom_node, "position", "absolute")
+  @base_browser.set_style_property(widget.dom_node, "display", "none")
+  @base_browser.set_style_property(widget.dom_node, "visibility", "hidden")
   // `widgetId` is the attribute Monaco's hit test resolves through
   // `HitTestContext.findAttribute` (contentWidgets.ts:246).
   dom_node.set_attribute("widgetId", widget.id)
@@ -337,7 +332,7 @@ pub fn ContentWidgets::set_widget_position(
       }
     None => "none"
   }
-  set_content_widget_style_property(widget.dom_node, "display", display)
+  @base_browser.set_style_property(widget.dom_node, "display", display)
   widget.cached_dom_node_offset_width = -1.0
   widget.cached_dom_node_offset_height = -1.0
   if !widget.use_display_none {
@@ -386,38 +381,6 @@ fn ContentWidgets::widget_ids_snapshot(self : ContentWidgets) -> Array[String] {
     widget_ids.push(widget_id)
   }
   widget_ids
-}
-
-///|
-/// Monaco `ViewContentWidgets.removeWidget` (`contentWidgets.ts:124-136`).
-fn ContentWidgets::remove_widget(
-  self : ContentWidgets,
-  actual : ContentWidgetHandle,
-) -> Unit {
-  let id = (actual.get_id)()
-  guard self.widgets.get(id) is Some(widget) else { return }
-  self.widgets.remove(id)
-  let parent = if actual.allow_editor_overflow {
-    self.overflowing_content_widgets_dom_node
-  } else {
-    self.dom_node
-  }
-  parent.remove_child(widget.dom_node.as_node())
-  self.should_render = true
-}
-
-///|
-/// Monaco `ViewContentWidgets.shouldSuppressMouseDownOnWidget`
-/// (`contentWidgets.ts:138-143`). The controller wiring remains a separate
-/// input-boundary seam; this method owns the registered widget lookup/default.
-fn ContentWidgets::should_suppress_mouse_down_on_widget(
-  self : ContentWidgets,
-  widget_id : String,
-) -> Bool {
-  match self.widgets.get(widget_id) {
-    Some(widget) => widget.suppress_mouse_down
-    None => false
-  }
 }
 
 ///|
@@ -522,7 +485,7 @@ fn content_widget_max_width(
 ///|
 /// Monaco `onBeforeRender`'s `setMaxWidth(this._maxWidth)` write.
 fn Widget::apply_max_width(self : Widget) -> Unit {
-  set_content_widget_style_property(
+  @base_browser.set_style_property(
     self.dom_node,
     "max-width",
     self.max_width.to_string() + "px",
@@ -638,7 +601,11 @@ fn Widget::prepare_render_widget(
   let (primary, secondary) = self.anchors_coordinates(ctx)
   guard primary is Some(primary) else {
     return Some(
-      OffViewport(preserve_focus=element_contains_active_element(self.dom_node)),
+      OffViewport(
+        preserve_focus=@base_browser.element_contains_active_element(
+          self.dom_node,
+        ),
+      ),
     )
   }
   if self.cached_dom_node_offset_width == -1.0 ||
@@ -961,22 +928,18 @@ fn Widget::render(
       } else {
         coordinate.top + scroll_top - big_numbers_delta
       }
-      set_content_widget_style_property(
+      @base_browser.set_style_property(
         self.dom_node,
         "top",
         top.to_string() + "px",
       )
-      set_content_widget_style_property(
+      @base_browser.set_style_property(
         self.dom_node,
         "left",
         coordinate.left.to_string() + "px",
       )
       if !self.is_visible {
-        set_content_widget_style_property(
-          self.dom_node,
-          "visibility",
-          "inherit",
-        )
+        @base_browser.set_style_property(self.dom_node, "visibility", "inherit")
         self.dom_node.set_attribute("monaco-visible-content-widget", "true")
         self.is_visible = true
       }
@@ -995,9 +958,9 @@ fn Widget::render(
         self.dom_node.remove_attribute("monaco-visible-content-widget")
         self.is_visible = false
         if preserve_focus {
-          set_content_widget_style_property(self.dom_node, "top", "-1000px")
+          @base_browser.set_style_property(self.dom_node, "top", "-1000px")
         } else {
-          set_content_widget_style_property(
+          @base_browser.set_style_property(
             self.dom_node,
             "visibility",
             "hidden",
@@ -1013,7 +976,7 @@ fn Widget::render(
       if self.is_visible {
         self.dom_node.remove_attribute("monaco-visible-content-widget")
         self.is_visible = false
-        set_content_widget_style_property(self.dom_node, "visibility", "hidden")
+        @base_browser.set_style_property(self.dom_node, "visibility", "hidden")
       }
       match self.actual.after_render {
         Some(after_render) => safe_invoke_after_render(after_render, None, None)
@@ -1076,15 +1039,6 @@ fn safe_invoke_after_render(
 }
 
 ///|
-/// Whether the document's active element sits inside `element` — the
-/// `OffViewport` `preserveFocus` probe (`contentWidgets.ts:456`).
-extern "js" fn element_contains_active_element(element : @rdom.Element) -> Bool =
-  #| (element) => {
-  #|   const active = element?.ownerDocument?.activeElement;
-  #|   return Boolean(active && element.contains(active));
-  #| }
-
-///|
 /// Monaco `_getMaxWidth`: use the widget node's owner document/window, never
 /// the ambient global window. JavaScript `||` intentionally treats a zero
 /// `innerWidth` as unavailable before the two offset-width fallbacks.
@@ -1117,15 +1071,6 @@ extern "js" fn dom_helper_window_scroll_x(element : @rdom.Element) -> Double =
 ///|
 extern "js" fn dom_helper_window_scroll_y(element : @rdom.Element) -> Double =
   #| (element) => (element?.ownerDocument?.defaultView ?? globalThis.window)?.scrollY ?? 0
-
-///|
-/// `element.style.setProperty` — the `FastDomNode` per-property style write.
-extern "js" fn set_content_widget_style_property(
-  element : @rdom.Element,
-  name : String,
-  value : String,
-) -> Unit =
-  #| (element, name, value) => { element.style.setProperty(name, value); }
 
 ///|
 /// Monaco `dom.getClientArea(elDocument.body)`: the page box the overflowing

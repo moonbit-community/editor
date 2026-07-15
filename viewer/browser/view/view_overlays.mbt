@@ -307,8 +307,6 @@ fn ViewOverlays::render_lines(
 priv struct ContentViewOverlays {
   overlays : ViewOverlays
   current_line : CurrentLineHighlightOverlay
-  selections : SelectionsOverlay
-  decorations : DecorationsOverlay
   mut should_render : Bool
   // `ContentViewOverlays._contentWidth` (`viewOverlays.ts:204,210-213,226`).
   mut content_width : Double
@@ -329,8 +327,6 @@ fn ContentViewOverlays::ContentViewOverlays(
   {
     overlays,
     current_line,
-    selections,
-    decorations,
     should_render: true,
     content_width: 0.0,
     read_content_width: () => 0.0,

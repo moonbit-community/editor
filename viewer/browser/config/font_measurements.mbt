@@ -23,7 +23,7 @@ let instance : FontMeasurementsImpl = {
   evict_untrusted_readings_pending: false,
   did_change: @base_common.Emitter::new(),
   read_widths: read_char_widths,
-  read_pixel_ratio: device_pixel_ratio,
+  read_pixel_ratio: @base_browser.device_pixel_ratio,
   schedule_timeout,
 }
 
@@ -311,15 +311,6 @@ fn max_double(left : Double, right : Double) -> Double {
 }
 
 ///|
-extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Double =
-  #| (cb, ms) => setTimeout(cb, ms)
-
-///|
 fn schedule_timeout(callback : () -> Unit, ms : Int) -> Unit {
-  set_timeout(callback, ms) |> ignore
+  @base_browser.schedule_timeout(callback, ms) |> ignore
 }
-
-///|
-/// Monaco `PixelRatio.getInstance(window).value`; `1` outside a browser.
-pub extern "js" fn device_pixel_ratio() -> Double =
-  #| () => (typeof window !== "undefined" && window.devicePixelRatio) || 1

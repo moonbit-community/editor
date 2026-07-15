@@ -112,7 +112,7 @@ fn workbench_services() -> WorkbenchServices {
       let log_service = workbench_log_service()
       let languages = @languages.default_languages()
       let markers = @markers.MarkerService::new(
-        schedule=workbench_queue_microtask,
+        schedule=@base_browser.queue_microtask,
       )
       let agent_feedback = @agent_feedback.AgentFeedbackService::new()
       let viewer = @viewer.ViewerServices::new(
@@ -133,12 +133,6 @@ fn workbench_services() -> WorkbenchServices {
     }
   }
 }
-
-///|
-/// Monaco's marker emitter schedules on the browser microtask queue. These
-/// workbench-owned backings live for the page lifetime.
-extern "js" fn workbench_queue_microtask(callback : () -> Unit) -> Unit =
-  #| (callback) => globalThis.queueMicrotask(callback)
 
 ///|
 /// Resolves the workbench viewer, creating it into the shell-rendered

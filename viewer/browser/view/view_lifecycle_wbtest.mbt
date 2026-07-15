@@ -106,7 +106,7 @@ test "View mounts both ViewZones containers at the source relative positions" {
     ),
     1,
   )
-  let lines_content = view.lines_content.element()
+  let lines_content = view.view_lines.lines_content.element()
   assert_true(
     view_lifecycle_test_child_index(
       lines_content,

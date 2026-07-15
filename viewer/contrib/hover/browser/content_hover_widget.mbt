@@ -303,7 +303,9 @@ pub fn ContentHoverWidget::show(
 /// node), and give focus back to the editor when the hover had stolen it.
 pub fn ContentHoverWidget::hide(self : ContentHoverWidget) -> Unit {
   guard self.rendered_hover is Some(_) else { return }
-  let hover_stole_focus = hover_element_contains_active(self.wrapper)
+  let hover_stole_focus = @base_browser.element_contains_active_element(
+    self.wrapper,
+  )
   self.set_rendered_hover(None)
   (self.host.layout_content_widget)()
   if hover_stole_focus {
@@ -409,8 +411,8 @@ fn apply_dimensions(
   width : String,
   height : String,
 ) -> Unit {
-  set_style_property(container, "width", width)
-  set_style_property(container, "height", height)
+  @base_browser.set_style_property(container, "width", width)
+  @base_browser.set_style_property(container, "height", height)
 }
 
 ///|
@@ -425,7 +427,7 @@ fn ContentHoverWidget::set_hover_widget_max_dimensions(
   apply_max_dimensions(self.scrollable.content, width, height)
   apply_max_dimensions(self.scrollable.wrapper, width, height)
   apply_max_dimensions(self.hover, width, height)
-  set_style_property(self.hover, "--vscode-hover-maxWidth", width)
+  @base_browser.set_style_property(self.hover, "--vscode-hover-maxWidth", width)
   self.layout_content_widget()
 }
 
@@ -435,8 +437,8 @@ fn apply_max_dimensions(
   width : String,
   height : String,
 ) -> Unit {
-  set_style_property(container, "max-width", width)
-  set_style_property(container, "max-height", height)
+  @base_browser.set_style_property(container, "max-width", width)
+  @base_browser.set_style_property(container, "max-height", height)
 }
 
 ///|
@@ -449,8 +451,8 @@ fn ContentHoverWidget::resizable_layout(
   height : Double,
   width : Double,
 ) -> Unit {
-  set_style_property(self.wrapper, "height", px(height))
-  set_style_property(self.wrapper, "width", px(width))
+  @base_browser.set_style_property(self.wrapper, "height", px(height))
+  @base_browser.set_style_property(self.wrapper, "width", px(width))
 }
 
 ///|
@@ -687,25 +689,6 @@ extern "js" fn hover_mousedown_is_interactive(event : @rdom.Event) -> Bool =
   #|   const target = event?.target;
   #|   return Boolean(target?.closest?.("button, a, input, textarea, select, [role='button'], .hover-copy-button"));
   #| }
-
-///|
-extern "js" fn hover_element_contains_active(el : @rdom.Element) -> Bool =
-  #| (el) => {
-  #|   const active = el?.ownerDocument?.activeElement;
-  #|   return Boolean(active && el.contains(active));
-  #| }
-
-///|
-/// `element.style.setProperty` — Monaco's per-property style writes
-/// (`container.style.width = …`, `style.setProperty('--vscode-hover-maxWidth',
-/// …)`), kept property-level so the content-widget layer's positioning writes
-/// on the wrapper survive.
-extern "js" fn set_style_property(
-  element : @rdom.Element,
-  name : String,
-  value : String,
-) -> Unit =
-  #| (element, name, value) => { element.style.setProperty(name, value); }
 
 ///|
 /// Monaco `dom.getClientArea(editorDomNode.ownerDocument.body).height`

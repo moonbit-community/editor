@@ -240,7 +240,7 @@ fn Viewer::Viewer(
     None => (ViewerServices::new(), true)
   }
   let font_info = @config.FontInfo::estimated(
-    options.bare_font_info(pixel_ratio=@browser_config.device_pixel_ratio()),
+    options.bare_font_info(pixel_ratio=@base_browser.device_pixel_ratio()),
   )
   let viewer : Viewer = {
     services,
@@ -282,7 +282,7 @@ fn Viewer::Viewer(
     placeholder_text: None,
     overlay_widgets: Map([]),
     render_frame: None,
-    hover_schedule_timeout: schedule_timeout,
+    hover_schedule_timeout: @base_browser.schedule_timeout,
     hover_launch_async_task: launch_async_task,
     measure_requested: false,
     pending_rendered: None,
@@ -730,7 +730,7 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
           if !self.disposed {
             match self.placeholder_element {
               Some(placeholder) =>
-                if !element_contains_node(host, placeholder) {
+                if !@base_browser.element_contains(host, placeholder) {
                   host.append_child(placeholder.as_node())
                 }
               None => ()
@@ -829,7 +829,7 @@ pub fn Viewer::get_container_dom_node(self : Viewer) -> @rdom.Element {
 /// root itself.
 pub fn Viewer::focus(self : Viewer) -> Unit {
   match self.get_view() {
-    Some(view) => focus_element(view.root)
+    Some(view) => @base_browser.focus_prevent_scroll(view.root)
     None => ()
   }
 }
@@ -845,7 +845,9 @@ pub fn Viewer::has_text_focus(self : Viewer) -> Bool {
 /// widgets — `hasWidgetFocus()`.
 pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
   match self.get_view() {
-    Some(view) => self.editor_has_focus || element_contains_active(view.root)
+    Some(view) =>
+      self.editor_has_focus ||
+      @base_browser.element_contains_active_element(view.root)
     None => false
   }
 }

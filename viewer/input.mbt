@@ -107,39 +107,17 @@ fn Viewer::handle_editor_key_down(
 }
 
 ///|
-/// FFI gap-fill (no `focus()` binding in the vendored `@rdom`).
-/// `preventScroll`: focusing must not double-scroll the root the layout model
-/// already positions.
-extern "js" fn focus_element(el : @rdom.Element) -> Unit =
-  #| (el) => el.focus({ preventScroll: true })
-
-///|
-/// Whether the document's active element sits inside `el` — the
-/// `hasWidgetFocus` containment test (no `document.activeElement` binding in
-/// the vendored `@rdom`).
-extern "js" fn element_contains_active(el : @rdom.Element) -> Bool =
-  #| (el) => el.contains(document.activeElement)
-
-///|
-/// Monaco's `container.contains(node)` branch, also used to avoid moving an
-/// already nested placeholder back to the host root.
-extern "js" fn element_contains_node(
-  container : @rdom.Element,
-  child : @rdom.Element,
-) -> Bool =
-  #| (container, child) => container.contains(child)
-
-///|
 /// Removes an owned descendant without assuming it is a direct child. This is
 /// the source `contains` guard plus `node.remove()`, avoiding `removeChild`
 /// exceptions when host DOM was rearranged.
-extern "js" fn remove_element_if_contained(
+fn remove_element_if_contained(
   container : @rdom.Element,
   child : @rdom.Element,
-) -> Unit =
-  #| (container, child) => {
-  #|   if (container.contains(child)) child.remove();
-  #| }
+) -> Unit {
+  if @base_browser.element_contains(container, child) {
+    @base_browser.remove_element(child)
+  }
+}
 
 ///|
 /// Re-derives the active `FontInfo` from the current options: through
@@ -148,7 +126,7 @@ extern "js" fn remove_element_if_contained(
 /// height re-flows the layout; the view root is restyled in place.
 fn Viewer::refresh_font_info(self : Viewer) -> Unit {
   let bare = self.options.bare_font_info(
-    pixel_ratio=@browser_config.device_pixel_ratio(),
+    pixel_ratio=@base_browser.device_pixel_ratio(),
   )
   let font_info = match self.get_view() {
     Some(_) => @browser_config.font_measurements().read_font_info(bare)
@@ -177,17 +155,17 @@ fn Viewer::refresh_font_info(self : Viewer) -> Unit {
 fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
   let bare = self.font_info.bare()
   @browser_config.apply_font_info(view.root, bare)
-  @browser_config.set_style_property(
+  @base_browser.set_style_property(
     view.root,
     "--editor-font-family",
     bare.get_massaged_font_family(),
   )
-  @browser_config.set_style_property(
+  @base_browser.set_style_property(
     view.root,
     "--editor-font-size",
     "\{bare.font_size}px",
   )
-  @browser_config.set_style_property(
+  @base_browser.set_style_property(
     view.root,
     "--editor-line-height",
     "\{bare.line_height}px",

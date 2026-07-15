@@ -92,12 +92,6 @@ fn ViewLine::option_snapshot(self : ViewLine) -> ViewLineOptions {
 }
 
 ///|
-/// `ViewLine.onContentChanged` (`viewLine.ts:81-83`).
-fn ViewLine::on_content_changed(self : ViewLine) -> Unit {
-  self.is_maybe_invalid = true
-}
-
-///|
 /// `ViewLine.onTokensChanged` (`viewLine.ts:84-86`).
 fn ViewLine::on_tokens_changed(self : ViewLine) -> Unit {
   self.is_maybe_invalid = true
@@ -254,14 +248,6 @@ fn ViewLine::get_width_is_fast(self : ViewLine) -> Bool {
 }
 
 ///|
-fn ViewLine::reset_cached_width(self : ViewLine) -> Unit {
-  match self.rendered_view_line {
-    Some(rendered) => rendered.reset_cached_width()
-    None => ()
-  }
-}
-
-///|
 /// Source-shaped visible-range query. Doubles remain unrounded here; the
 /// multi-line ViewLines facade applies JavaScript `Math.round` only at the
 /// source `HorizontalRange` boundary.
@@ -388,18 +374,6 @@ fn RenderedViewLine::get_width_is_fast(self : RenderedViewLine) -> Bool {
     return false
   }
   true
-}
-
-///|
-fn RenderedViewLine::reset_cached_width(self : RenderedViewLine) -> Unit {
-  self.cached_width = -1.0
-  match self.pixel_offset_cache {
-    Some(cache) =>
-      for index in 0..<cache.length() {
-        cache[index] = -1.0
-      }
-    None => ()
-  }
 }
 
 ///|
@@ -601,9 +575,9 @@ extern "js" fn reading_target(line_node : @rdom.Element) -> @rdom.Element = "(li
 extern "js" fn element_has_first_child(element : @rdom.Element) -> Bool = "(element) => Boolean(element.firstChild)"
 
 ///|
-extern "js" fn element_first_child_offset_width(
-  element : @rdom.Element,
-) -> Double = "(element) => element.firstChild.offsetWidth"
+fn element_first_child_offset_width(element : @rdom.Element) -> Double {
+  @base_browser.element_offset_width(reading_target(element))
+}
 
 ///|
 /// `getColumnOfNodeOffset` (viewLine.ts:724-733): resolves a browser caret
@@ -624,25 +598,8 @@ fn get_column_of_node_offset(
 }
 
 ///|
-/// `RenderedViewLine.getWidth` (viewLine.ts:516-531): the rendered width of a
-/// line node, read as the `offsetWidth` of its reading target — the
-/// `.view-line-content` span (`_getReadingTarget`: the line node's first
-/// child). This is a layout read; the passed context records it.
-fn rendered_view_line_width(
-  line_node : @rdom.Element,
-  context : DomReadingContext?,
-) -> Double {
-  let width = reading_target_offset_width(line_node)
-  match context {
-    Some(ctx) => ctx.mark_did_dom_layout()
-    None => ()
-  }
-  width
-}
-
-///|
-/// FFI gap-fills (no `textContent`/`previousSibling`/`firstChild.offsetWidth`
-/// bindings in the vendored `@rdom`).
+/// FFI gap-fills for `textContent` and sibling traversal, which are not
+/// exposed by the vendored `@rdom` element wrapper.
 extern "js" fn element_text_content_length(el : @rdom.Element) -> Int =
   #| (el) => (el.textContent || "").length
 
@@ -661,8 +618,10 @@ extern "js" fn count_previous_siblings(el : @rdom.Element) -> Int =
   #| }
 
 ///|
-extern "js" fn reading_target_offset_width(line_node : @rdom.Element) -> Double =
-  #| (el) => {
-  #|   const target = el.firstChild;
-  #|   return target ? target.offsetWidth : 0;
-  #| }
+fn reading_target_offset_width(line_node : @rdom.Element) -> Double {
+  if element_has_first_child(line_node) {
+    @base_browser.element_offset_width(reading_target(line_node))
+  } else {
+    0.0
+  }
+}

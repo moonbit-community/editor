@@ -98,9 +98,9 @@ pub fn create_coordinates_relative_to_editor(
   pos : PageCoordinates,
 ) -> CoordinatesRelativeToEditor {
   let scale_x = editor_page_position.width /
-    element_offset_width(editor_view_dom_node)
+    @base_browser.element_offset_width(editor_view_dom_node)
   let scale_y = editor_page_position.height /
-    element_offset_height(editor_view_dom_node)
+    @base_browser.element_offset_height(editor_view_dom_node)
   let relative_x = (pos.x - editor_page_position.x) / scale_x
   let relative_y = (pos.y - editor_page_position.y) / scale_y
   { x: relative_x, y: relative_y }
@@ -434,14 +434,6 @@ extern "js" fn window_scroll_x() -> Double = "() => window.scrollX"
 
 ///|
 extern "js" fn window_scroll_y() -> Double = "() => window.scrollY"
-
-///|
-extern "js" fn element_offset_width(el : @rdom.Element) -> Double =
-  #| (el) => el.offsetWidth
-
-///|
-extern "js" fn element_offset_height(el : @rdom.Element) -> Double =
-  #| (el) => el.offsetHeight
 
 ///|
 extern "js" fn keyboard_event_key(e : @rdom.Event) -> String =

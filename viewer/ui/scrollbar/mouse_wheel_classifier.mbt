@@ -70,7 +70,7 @@ pub fn MouseWheelClassifier::accept_standard_wheel_event(
     1.0
   }
   self.accept(
-    classifier_now(),
+    @base_browser.wall_clock_now_ms(),
     event.delta_x * page_zoom_factor,
     event.delta_y * page_zoom_factor,
   )
@@ -161,10 +161,6 @@ pub fn global_mouse_wheel_classifier() -> MouseWheelClassifier {
 ///|
 extern "js" fn double_remainder(left : Double, right : Double) -> Double =
   #| (left, right) => left % right
-
-///|
-extern "js" fn classifier_now() -> Double =
-  #| () => Date.now()
 
 ///|
 extern "js" fn classifier_is_chrome() -> Bool =

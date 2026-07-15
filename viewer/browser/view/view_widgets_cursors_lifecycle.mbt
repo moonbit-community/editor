@@ -18,11 +18,8 @@ fn content_widgets_on_view_event(
       self.on_configuration_changed(e.has_changed(LayoutInfo))
       true
     }
-    ViewDecorationsChanged(_) => true
-    ViewLineMappingChanged
-    | ViewLinesChanged(_)
-    | ViewLinesDeleted(_)
-    | ViewLinesInserted(_) => {
+    ViewDecorationsChanged => true
+    ViewLineMappingChanged => {
       self.update_anchors_view_positions()
       true
     }
@@ -61,9 +58,8 @@ fn content_widgets_render(
 // `RenderingContext` / `ViewContext` capabilities it consumes.
 
 ///|
-// Event map from `viewCursors.ts`: `onFlushed` (:180), `onLinesChanged`
-// (:188; the port's merged lines/tokens/decorations event also covers
-// `onTokensChanged`/`onDecorationsChanged`, :176,:200), `onScrollChanged`
+// Event map from the consumed `viewCursors.ts` slice: `onFlushed` (:180),
+// token/decorations invalidation (:176,:200), `onScrollChanged`
 // (:197, unconditionally true), `onCursorStateChanged` (:161),
 // `onConfigurationChanged` (:112), `onZonesChanged` (:219), `onFocusChanged`
 // (:183 — Monaco flips visibility inline and returns false; the readonly port
@@ -75,7 +71,6 @@ fn view_cursors_on_view_event(part : ViewCursors, event : ViewEvent) -> Bool {
   let self = part
   match event {
     ViewFlushed => true
-    ViewLinesChanged(_) | ViewLinesDeleted(_) | ViewLinesInserted(_) => true
     ViewScrollChanged(_) => true
     ViewCursorStateChanged(e) => {
       self.last_position = if e.selections.length() == 0 {
@@ -98,7 +93,7 @@ fn view_cursors_on_view_event(part : ViewCursors, event : ViewEvent) -> Bool {
       }
       true
     }
-    ViewDecorationsChanged(_) => true
+    ViewDecorationsChanged => true
     ViewConfigurationChanged(_) => true
     ViewTokensChanged(e) =>
       match self.last_position {
@@ -157,7 +152,7 @@ fn view_cursors_prepare_render(
               left,
               context.viewport.relative_vertical_offset[index],
               context.viewport.line_height,
-              device_pixel_ratio(),
+              @base_browser.device_pixel_ratio(),
             ),
           )
         }

@@ -19,17 +19,6 @@ extern "js" fn test_view_configuration_has_changed(
 ) -> Bool = "(event, option) => event.changed_options.includes(option)"
 
 ///|
-extern "js" fn test_view_decorations_flags(
-  event : @view.ViewDecorationsChangedEvent,
-) -> Array[Bool] =
-  #| (event) => [
-  #|   event.affects_minimap,
-  #|   event.affects_overview_ruler,
-  #|   event.affects_glyph_margin,
-  #|   event.affects_line_number,
-  #| ]
-
-///|
 extern "js" fn test_view_tokens_range_count(
   event : @view.ViewTokensChangedEvent,
 ) -> Int = "(event) => event.ranges.length"
@@ -47,15 +36,9 @@ extern "js" fn test_view_tokens_range_to(
 ) -> Int = "(event, index) => event.ranges[index].to_line_number"
 
 ///|
-extern "js" fn test_view_scroll_values(
+extern "js" fn test_view_scroll_width(
   event : @view.ViewScrollChangedEvent,
-) -> Array[Double] =
-  #| (event) => [
-  #|   event.scroll_width,
-  #|   event.scroll_left,
-  #|   event.scroll_height,
-  #|   event.scroll_top,
-  #| ]
+) -> Double = "(event) => event.scroll_width"
 
 ///|
 extern "js" fn test_view_scroll_flags(
@@ -72,16 +55,6 @@ extern "js" fn test_view_scroll_flags(
 extern "js" fn test_view_cursor_selections(
   event : @view.ViewCursorStateChangedEvent,
 ) -> Array[@core.Selection] = "(event) => event.selections"
-
-///|
-extern "js" fn test_view_cursor_model_selections(
-  event : @view.ViewCursorStateChangedEvent,
-) -> Array[@core.Selection] = "(event) => event.model_selections"
-
-///|
-extern "js" fn test_view_cursor_reason(
-  event : @view.ViewCursorStateChangedEvent,
-) -> @editor_api.CursorChangeReason = "(event) => event.reason"
 
 ///|
 test "view configuration source preserves independent paint axes and no-op" {
@@ -303,28 +276,6 @@ test "wrapped view-line growth does not widen the model line-number band" {
 }
 
 ///|
-test "decoration source copies four flags and null-reset uses all" {
-  let event = view_decorations_changed_event({
-    affects_minimap: false,
-    affects_overview_ruler: true,
-    affects_glyph_margin: false,
-    affects_injected_text: true,
-    affects_line_number: true,
-  })
-  let event_flags = test_view_decorations_flags(event)
-  assert_false(event_flags[0])
-  assert_true(event_flags[1])
-  assert_false(event_flags[2])
-  assert_true(event_flags[3])
-  let all = @view.ViewDecorationsChangedEvent::all()
-  let all_flags = test_view_decorations_flags(all)
-  assert_true(all_flags[0])
-  assert_true(all_flags[1])
-  assert_true(all_flags[2])
-  assert_true(all_flags[3])
-}
-
-///|
 test "token source preserves inclusive ranges in producer order" {
   let event = view_tokens_changed_event([(2, 4), (9, 9)])
   assert_eq(test_view_tokens_range_count(event), 2)
@@ -335,7 +286,7 @@ test "token source preserves inclusive ranges in producer order" {
 }
 
 ///|
-test "scroll source copies four values and independent flags" {
+test "scroll source copies consumed width and independent flags" {
   let previous = @view_layout.ScrollState::new(
     force_integer_values=false,
     100.0,
@@ -357,11 +308,7 @@ test "scroll source copies four values and independent flags" {
   let event = view_scroll_changed_event(
     current.create_scroll_event(previous, false),
   )
-  let event_values = test_view_scroll_values(event)
-  assert_eq(event_values[0], 550.0)
-  assert_eq(event_values[1], 30.0)
-  assert_eq(event_values[2], 900.0)
-  assert_eq(event_values[3], 40.0)
+  assert_eq(test_view_scroll_width(event), 550.0)
   let event_flags = test_view_scroll_flags(event)
   assert_true(event_flags[0])
   assert_true(event_flags[1])
@@ -388,24 +335,15 @@ test "scroll source copies four values and independent flags" {
 }
 
 ///|
-test "cursor source carries committed view and model selections with reason" {
+test "cursor source carries the committed view selection" {
   with_test_viewer("alpha", viewer => {
     let position = @base_common.Position::Position(1, 3)
     viewer.set_position(position, source="source-fact-test")
     let view_model = viewer.test_view_model()
-    let model_selection = view_model.cursor.get_model_selection()
-    let event = view_cursor_state_changed_event(
-      view_model,
-      [model_selection],
-      Explicit,
-    )
+    let event = view_cursor_state_changed_event(view_model)
     let selections = test_view_cursor_selections(event)
-    let model_selections = test_view_cursor_model_selections(event)
     assert_eq(selections.length(), 1)
-    assert_eq(model_selections.length(), 1)
     assert_true(selections[0] == view_model.cursor.get_view_selection())
-    assert_true(model_selections[0] == model_selection)
-    assert_true(test_view_cursor_reason(event) == Explicit)
   })
 }
 

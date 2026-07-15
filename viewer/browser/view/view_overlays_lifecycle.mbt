@@ -13,17 +13,14 @@ fn margin_view_overlays_on_view_event(
   let _self = part
   match event {
     ViewFlushed => true
-    ViewLinesChanged(_)
-    | ViewLinesDeleted(_)
-    | ViewLinesInserted(_)
-    | ViewTokensChanged(_) => {
+    ViewTokensChanged(_) => {
       _self.overlays.on_content_or_tokens_changed()
       true
     }
     // The line-decorations lane renders margin decorations
     // (`LinesDecorationsOverlay.onDecorationsChanged` → true); the
     // glyph-margin view part stays deferred.
-    ViewDecorationsChanged(_) => true
+    ViewDecorationsChanged => true
     ViewScrollChanged(e) => {
       let nested_current_line_dirty = current_line_scroll_changed(e)
       // The retained ViewOverlays collection itself always invalidates on a
@@ -55,7 +52,6 @@ fn margin_view_overlays_on_view_event(
       _self.current_line_margin.state.on_focus_changed(e.is_focused) |> ignore
       true
     }
-    _ => false
   }
 }
 
@@ -251,15 +247,12 @@ fn content_view_overlays_on_view_event(
   let _self = part
   match event {
     ViewFlushed => true
-    ViewLinesChanged(_)
-    | ViewLinesDeleted(_)
-    | ViewLinesInserted(_)
-    | ViewTokensChanged(_) => {
+    ViewTokensChanged(_) => {
       _self.overlays.on_content_or_tokens_changed()
       true
     }
     // `DecorationsOverlay.onDecorationsChanged` (`decorations.ts:44-46`).
-    ViewDecorationsChanged(_) => true
+    ViewDecorationsChanged => true
     // `DecorationsOverlay.onConfigurationChanged` (`decorations.ts:39-43`)
     // and `AbstractLineHighlightOverlay.onConfigurationChanged` (`:87-96`)
     // both re-read their live configuration before returning true.
@@ -287,7 +280,6 @@ fn content_view_overlays_on_view_event(
       _self.current_line.state.on_focus_changed(e.is_focused) |> ignore
       true
     }
-    _ => false
   }
 }
 

@@ -89,7 +89,6 @@ pub(all) struct PointerHandlerHelper {
   get_last_render_data : () -> PointerHandlerLastRenderData
   render_now : () -> Unit
   should_suppress_mouse_down_on_view_zone : (String) -> Bool
-  should_suppress_mouse_down_on_widget : (String) -> Bool
   get_position_from_dom_info : (@rdom.Element, Int) -> @base_common.Position?
   visible_range_for_position : (Int, Int) -> @view.HorizontalPosition?
   get_line_width : (Int) -> Double
@@ -358,7 +357,7 @@ fn MouseHandler::on_mouse_leave(
     None => ()
   }
   self.mouse_leave_monitor = None
-  self.last_mouse_leave_time = handler_now()
+  self.last_mouse_leave_time = @base_browser.wall_clock_now_ms()
   (self.view_helper.emit_mouse_leave)(e)
 }
 
@@ -391,7 +390,6 @@ fn MouseHandler::on_mouse_down(
   let select_on_line_numbers = true
   let target_is_view_zone = target_type is ContentViewZone ||
     target_type is GutterViewZone
-  let target_is_widget = target_type is ContentWidget
   let mut should_handle = e.left_button || e.middle_button
   if @base_common.is_macintosh && e.left_button && e.ctrl_key {
     should_handle = false
@@ -416,15 +414,6 @@ fn MouseHandler::on_mouse_down(
           ) {
           focus()
           self.mouse_down_operation.start(target_type, e, pointer_id)
-          e.prevent_default()
-        }
-      _ => ()
-    }
-  } else if target_is_widget {
-    match t {
-      MouseTargetContentWidget(detail~, ..) =>
-        if (self.view_helper.should_suppress_mouse_down_on_widget)(detail) {
-          focus()
           e.prevent_default()
         }
       _ => ()
@@ -896,7 +885,7 @@ pub fn MouseDownState::try_set_count(
   // a. Invalidate multiple clicking if too much time has passed
   let current_time = match now {
     Some(now) => now
-    None => handler_now()
+    None => @base_browser.wall_clock_now_ms()
   }
   if current_time - self.last_set_mouse_down_count_time >
     CLEAR_MOUSE_DOWN_COUNT_TIME {
@@ -932,10 +921,6 @@ fn controller_double_max(a : Double, b : Double) -> Double {
     b
   }
 }
-
-///|
-/// Monaco reads `new Date().getTime()` (mouseHandler.ts:296,726).
-extern "js" fn handler_now() -> Double = "() => Date.now()"
 
 ///|
 /// FFI gap-fill: whether a raw mouse event's target sits inside `container`

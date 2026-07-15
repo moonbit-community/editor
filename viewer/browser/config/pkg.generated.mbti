@@ -10,13 +10,9 @@ import {
 // Values
 pub fn apply_font_info(@dom.Element, @moonbit-community/editor/viewer/common/config.BareFontInfo) -> Unit
 
-pub fn device_pixel_ratio() -> Double
-
 pub fn font_measurements() -> FontMeasurementsImpl
 
 pub fn read_char_widths(@moonbit-community/editor/viewer/common/config.BareFontInfo, Array[CharWidthRequest]) -> Unit
-
-pub fn set_style_property(@dom.Element, String, String) -> Unit
 
 // Errors
 

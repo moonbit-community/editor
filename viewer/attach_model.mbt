@@ -29,9 +29,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
           view_model.decorations().on_model_decorations_changed()
           // Cache first, typed View event second. The direct model
           // subscription remains the approved outgoing-event seam.
-          self.emit_view_event(
-            ViewDecorationsChanged(view_decorations_changed_event(event)),
-          )
+          self.emit_view_event(ViewDecorationsChanged)
           // Injected-text deltas re-run the line-breaks computer per line in
           // Monaco (`onDidChangeContentOrInjectedText`); the viewer's
           // granularity is the whole-document reproject
@@ -122,7 +120,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       model.on_before_attached(scheduler=browser_tokenization_scheduler)
     None => model.on_before_attached()
   }
-  let build_started = now_ms()
+  let build_started = @base_browser.monotonic_now_ms()
   let view_model = self.build_view_model(model, attached_view)
   self.layout_model_line_count = model.snapshot.line_count()
   self.layout_line_count = view_model.line_count()
@@ -136,11 +134,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
         // `ViewFlushed` remains before the cursor event. Ordinary cursor
         // transitions notify ViewParts before the public outgoing pair.
         if !is_model_flush_cursor_event(event) {
-          self.emit_view_cursor_state_changed(
-            view_model,
-            event.selections,
-            event.reason,
-          )
+          self.emit_view_cursor_state_changed(view_model)
         }
         self.enqueue_cursor_state_change(event)
       }
@@ -188,7 +182,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // `CodeEditorWidget.handleInitialized` owns the ordinary one-time stable
   // visible-range publication; generic renders never repeat it.
   view_model.visible_lines_stabilized()
-  let build_finished = now_ms()
+  let build_finished = @base_browser.monotonic_now_ms()
   self.emit_view_model_built({
     model,
     line_count: view_model.line_count(),
@@ -368,7 +362,7 @@ fn Viewer::build_view_model(
     options,
     smooth_scrolling=self.options.smooth_scrolling,
     schedule_at_next_animation_frame~,
-    now=date_now_ms,
+    now=@base_browser.wall_clock_now_ms,
     attached_view~,
     emit_view_tokens_changed=ranges => {
       let changed_ranges : Array[(Int, Int)] = []
@@ -439,9 +433,7 @@ fn Viewer::on_configuration_changed(
         // cursor reprojection, followed by the layout flush.
         self.emit_view_event(ViewFlushed)
         self.emit_view_event(ViewLineMappingChanged)
-        self.emit_view_event(
-          ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
-        )
+        self.emit_view_event(ViewDecorationsChanged)
         self.emit_view_cursor_reprojection(view_model, previous_view_selection)
         self.on_line_mapping_changed(
           view_model,
@@ -457,9 +449,7 @@ fn Viewer::on_configuration_changed(
         // `ViewModel::on_configuration_changed` has already rotated the
         // filtered decoration provider; invalidate every decorations
         // consumer before the final Configuration event.
-        self.emit_view_event(
-          ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
-        )
+        self.emit_view_event(ViewDecorationsChanged)
       }
     }
     _ => self.sync_content_width()
@@ -494,9 +484,7 @@ fn Viewer::on_line_mapping_changed(
   if notify_view {
     self.emit_view_event(ViewFlushed)
     self.emit_view_event(ViewLineMappingChanged)
-    self.emit_view_event(
-      ViewDecorationsChanged(@view.ViewDecorationsChangedEvent::all()),
-    )
+    self.emit_view_event(ViewDecorationsChanged)
     match previous_view_selection {
       Some(previous) => self.emit_view_cursor_reprojection(view_model, previous)
       None => ()

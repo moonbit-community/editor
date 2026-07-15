@@ -87,21 +87,6 @@ fn view_configuration_changed_event(
 }
 
 ///|
-/// Builds Monaco's exact four-flag decoration payload from the model event.
-/// The separate `all` constructor is used for configuration/mapping resets,
-/// matching the source null-event branch.
-fn view_decorations_changed_event(
-  event : @model.ModelDecorationsChangedEvent,
-) -> @view.ViewDecorationsChangedEvent {
-  ViewDecorationsChangedEvent(
-    event.affects_minimap,
-    event.affects_overview_ruler,
-    event.affects_glyph_margin,
-    event.affects_line_number,
-  )
-}
-
-///|
 /// Preserves every inclusive grammar-token range in producer order. Semantic
 /// token application is outside this readonly grammar-token child; the View
 /// event's source payload intentionally carries only the line ranges consumed
@@ -118,32 +103,22 @@ fn view_tokens_changed_event(
 }
 
 ///|
-/// Emits the committed single-cursor state in both coordinate systems. View
-/// delivery precedes the public outgoing cursor pair, as in Monaco.
+/// Emits the committed view-space cursor state before the public outgoing
+/// cursor pair, as in Monaco.
 fn Viewer::emit_view_cursor_state_changed(
   self : Viewer,
   view_model : @view_model.ViewModel,
-  model_selections : Array[@core.Selection],
-  reason : @editor_api.CursorChangeReason,
 ) -> Unit {
   self.emit_view_event(
-    ViewCursorStateChanged(
-      view_cursor_state_changed_event(view_model, model_selections, reason),
-    ),
+    ViewCursorStateChanged(view_cursor_state_changed_event(view_model)),
   )
 }
 
 ///|
 fn view_cursor_state_changed_event(
   view_model : @view_model.ViewModel,
-  model_selections : Array[@core.Selection],
-  reason : @editor_api.CursorChangeReason,
 ) -> @view.ViewCursorStateChangedEvent {
-  ViewCursorStateChangedEvent(
-    [view_model.cursor.get_view_selection()],
-    model_selections,
-    reason,
-  )
+  ViewCursorStateChangedEvent([view_model.cursor.get_view_selection()])
 }
 
 ///|
@@ -161,17 +136,13 @@ fn Viewer::emit_view_cursor_reprojection(
   }
   self.emit_view_event(
     ViewCursorStateChanged(
-      ViewCursorStateChangedEvent(
-        [current_view_selection],
-        [view_model.cursor.get_model_selection()],
-        NotSet,
-      ),
+      ViewCursorStateChangedEvent([current_view_selection]),
     ),
   )
 }
 
 ///|
-/// Preserves all four exact new scroll values and their independent changed
+/// Preserves the width needed by ViewLines and all four independent changed
 /// flags from ViewLayout's source event.
 fn Viewer::emit_view_scroll_changed(
   self : Viewer,
@@ -186,9 +157,6 @@ fn view_scroll_changed_event(
 ) -> @view.ViewScrollChangedEvent {
   ViewScrollChangedEvent(
     change.scroll_width,
-    change.scroll_left,
-    change.scroll_height,
-    change.scroll_top,
     change.scroll_width_changed,
     change.scroll_left_changed,
     change.scroll_height_changed,

@@ -2,11 +2,38 @@
 package "moonbit-community/editor/base/browser"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/rabbita/dom",
 }
 
 // Values
+pub fn device_pixel_ratio() -> Double
+
+pub fn element_contains(@dom.Element, @dom.Element) -> Bool
+
+pub fn element_contains_active_element(@dom.Element) -> Bool
+
+pub fn element_has_focus(@dom.Element) -> Bool
+
+pub fn element_offset_height(@dom.Element) -> Double
+
+pub fn element_offset_width(@dom.Element) -> Double
+
+pub fn focus_prevent_scroll(@dom.Element) -> Unit
+
+pub fn monotonic_now_ms() -> Double
+
 pub fn mouse_event_pointer_id(@dom.MouseEvent) -> Int
+
+pub fn queue_microtask(() -> Unit) -> Unit
+
+pub fn remove_element(@dom.Element) -> Unit
+
+pub fn schedule_timeout(() -> Unit, Int) -> @common.Disposable
+
+pub fn set_style_property(@dom.Element, String, String) -> Unit
+
+pub fn wall_clock_now_ms() -> Double
 
 // Errors
 

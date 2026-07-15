@@ -33,7 +33,7 @@ fn FastViewZoneDomNode::set_position(
     return
   }
   self.position = value
-  set_view_zone_style_property(self.element, "position", value)
+  @base_browser.set_style_property(self.element, "position", value)
 }
 
 ///|
@@ -45,7 +45,7 @@ fn FastViewZoneDomNode::set_top(
     return
   }
   self.top = value
-  set_view_zone_style_property(self.element, "top", value)
+  @base_browser.set_style_property(self.element, "top", value)
 }
 
 ///|
@@ -57,7 +57,7 @@ fn FastViewZoneDomNode::set_height(
     return
   }
   self.height = value
-  set_view_zone_style_property(self.element, "height", value)
+  @base_browser.set_style_property(self.element, "height", value)
 }
 
 ///|
@@ -69,7 +69,7 @@ fn FastViewZoneDomNode::set_display(
     return
   }
   self.display = value
-  set_view_zone_style_property(self.element, "display", value)
+  @base_browser.set_style_property(self.element, "display", value)
 }
 
 ///|
@@ -81,7 +81,7 @@ fn FastViewZoneDomNode::set_width(
     return
   }
   self.width = value
-  set_view_zone_style_property(self.element, "width", value)
+  @base_browser.set_style_property(self.element, "width", value)
 }
 
 ///|
@@ -260,11 +260,6 @@ fn ViewZones::on_line_mapping_changed(self : ViewZones) -> Bool {
 }
 
 ///|
-fn ViewZones::on_lines_deleted(_self : ViewZones) -> Bool {
-  true
-}
-
-///|
 fn ViewZones::on_scroll_changed(
   _self : ViewZones,
   scroll_top_changed : Bool,
@@ -275,11 +270,6 @@ fn ViewZones::on_scroll_changed(
 
 ///|
 fn ViewZones::on_zones_changed(_self : ViewZones) -> Bool {
-  true
-}
-
-///|
-fn ViewZones::on_lines_inserted(_self : ViewZones) -> Bool {
   true
 }
 
@@ -493,14 +483,14 @@ fn ViewZones::add_zone(
   registered.dom_node.set_position("absolute")
   // Source intentionally bypasses FastDomNode's width cache for this one
   // add-time caller-node write.
-  set_view_zone_style_property(registered.dom_node.element, "width", "100%")
+  @base_browser.set_style_property(registered.dom_node.element, "width", "100%")
   registered.dom_node.set_display("none")
   registered.dom_node.element.set_attribute("monaco-view-zone", whitespace_id)
   self.dom_node.append_child(registered.dom_node.element.as_node())
   match registered.margin_dom_node {
     Some(margin_dom_node) => {
       margin_dom_node.set_position("absolute")
-      set_view_zone_style_property(margin_dom_node.element, "width", "100%")
+      @base_browser.set_style_property(margin_dom_node.element, "width", "100%")
       margin_dom_node.set_display("none")
       margin_dom_node.element.set_attribute("monaco-view-zone", whitespace_id)
       self.margin_dom_node.append_child(margin_dom_node.element.as_node())
@@ -524,12 +514,12 @@ fn ViewZones::remove_zone(
 
   zone.dom_node.element.remove_attribute("monaco-visible-view-zone")
   zone.dom_node.element.remove_attribute("monaco-view-zone")
-  remove_element(zone.dom_node.element)
+  @base_browser.remove_element(zone.dom_node.element)
   match zone.margin_dom_node {
     Some(margin_dom_node) => {
       margin_dom_node.element.remove_attribute("monaco-visible-view-zone")
       margin_dom_node.element.remove_attribute("monaco-view-zone")
-      remove_element(margin_dom_node.element)
+      @base_browser.remove_element(margin_dom_node.element)
     }
     None => ()
   }
@@ -744,20 +734,3 @@ fn css_pixels(value : Int) -> String {
 fn css_pixels_double(value : Double) -> String {
   value.to_string() + "px"
 }
-
-///|
-extern "js" fn set_view_zone_style_property(
-  element : @rdom.Element,
-  name : String,
-  value : String,
-) -> Unit =
-  #| (element, name, value) => { element.style.setProperty(name, value); }
-
-///|
-/// Source `HTMLElement.remove()`: idempotent when a host callback has already
-/// detached or reparented the caller-owned node.
-extern "js" fn remove_element(element : @rdom.Element) -> Unit =
-  #| (element) => {
-  #|   if (typeof element.remove === "function") element.remove();
-  #|   else element.parentNode?.removeChild(element);
-  #| }

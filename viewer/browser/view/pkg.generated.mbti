@@ -35,7 +35,7 @@ pub(all) struct ContentWidgetDimension {
 pub struct ContentWidgetHandle {
   // private fields
 }
-pub fn ContentWidgetHandle::ContentWidgetHandle(() -> String, () -> @dom.Element, () -> ContentWidgetPosition?, allow_editor_overflow? : Bool, use_display_none? : Bool, suppress_mouse_down? : Bool, before_render? : () -> ContentWidgetDimension? raise, after_render? : (ContentWidgetPositionPreference?, ContentWidgetRenderedCoordinate?) -> Unit raise) -> Self
+pub fn ContentWidgetHandle::ContentWidgetHandle(() -> String, () -> @dom.Element, () -> ContentWidgetPosition?, allow_editor_overflow? : Bool, use_display_none? : Bool, before_render? : () -> ContentWidgetDimension? raise, after_render? : (ContentWidgetPositionPreference?, ContentWidgetRenderedCoordinate?) -> Unit raise) -> Self
 
 pub(all) struct ContentWidgetPosition {
   position : @common.Position?
@@ -90,9 +90,7 @@ pub fn EditorScrollbar::content(Self) -> @dom.Element
 pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
 
 pub(all) struct HorizontalPosition {
-  outside_rendered_line : Bool
   left : Int
-  original_left : Double
 } derive(Eq, @debug.Debug)
 
 pub struct OverlayWidgets {
@@ -114,12 +112,9 @@ pub(all) enum PartFingerprint {
   Minimap
   ViewLinesGpu
 } derive(Eq, @debug.Debug)
+pub fn PartFingerprint::collect(@dom.Element?, @dom.Element) -> Bytes
 pub fn PartFingerprint::from_int(Int) -> Self
 pub fn PartFingerprint::to_int(Self) -> Int
-
-pub struct PartFingerprints {
-}
-pub fn PartFingerprints::collect(@dom.Element?, @dom.Element) -> Bytes
 
 pub(all) struct View {
   root : @dom.Element
@@ -196,33 +191,21 @@ pub(all) struct ViewCursorRenderData {
 pub struct ViewCursorStateChangedEvent {
   // private fields
 }
-pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(Array[@core.Selection], Array[@core.Selection], @editor_api.CursorChangeReason) -> Self
+pub fn ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(Array[@core.Selection]) -> Self
 
 pub struct ViewCursors {
   // private fields
 }
 pub fn ViewCursors::get_last_render_data(Self) -> Array[ViewCursorRenderData]
 
-pub struct ViewDecorationsChangedEvent {
-  // private fields
-}
-pub fn ViewDecorationsChangedEvent::ViewDecorationsChangedEvent(Bool, Bool, Bool, Bool) -> Self
-pub fn ViewDecorationsChangedEvent::all() -> Self
-
 pub(all) enum ViewEvent {
-  ViewCompositionStart
-  ViewCompositionEnd
   ViewConfigurationChanged(ViewConfigurationChangedEvent)
   ViewCursorStateChanged(ViewCursorStateChangedEvent)
-  ViewDecorationsChanged(ViewDecorationsChangedEvent)
+  ViewDecorationsChanged
   ViewFlushed
   ViewFocusChanged(ViewFocusChangedEvent)
   ViewLineMappingChanged
-  ViewLinesChanged(ViewLinesChangedEvent)
-  ViewLinesDeleted(ViewLinesDeletedEvent)
-  ViewLinesInserted(ViewLinesInsertedEvent)
   ViewScrollChanged(ViewScrollChangedEvent)
-  ViewThemeChanged(ViewThemeChangedEvent)
   ViewTokensChanged(ViewTokensChangedEvent)
   ViewZonesChanged
 }
@@ -231,7 +214,6 @@ pub struct ViewEventCollector {
   // private fields
 }
 pub fn ViewEventCollector::emit(Self, ViewEvent) -> Unit
-pub fn ViewEventCollector::emit_many(Self, Array[ViewEvent]) -> Unit
 
 pub struct ViewFocusChangedEvent {
   // private fields
@@ -262,10 +244,6 @@ pub fn ViewLines::get_position_from_dom_info(Self, @view_model.ViewModel, @dom.E
 pub fn ViewLines::install_geometry_readers(Self, (Int) -> Int, (Int) -> @view_layout.TextDirection) -> Unit
 pub fn ViewLines::install_live_configuration_reader(Self, () -> ViewLinesConfiguration) -> Unit
 
-pub struct ViewLinesChangedEvent {
-  // private fields
-}
-
 pub(all) struct ViewLinesConfiguration {
   line_height : Int
   typical_halfwidth_character_width : Double
@@ -274,14 +252,6 @@ pub(all) struct ViewLinesConfiguration {
   view_line_options : ViewLineOptions
 } derive(Eq, @debug.Debug)
 pub fn ViewLinesConfiguration::ViewLinesConfiguration(line_height? : Int, typical_halfwidth_character_width? : Double, is_viewport_wrapping? : Bool, can_use_layer_hinting? : Bool, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
-
-pub struct ViewLinesDeletedEvent {
-  // private fields
-}
-
-pub struct ViewLinesInsertedEvent {
-  // private fields
-}
 
 pub(all) struct ViewRenderInput {
   window : @view_layout.LineWindow
@@ -304,11 +274,7 @@ pub(all) struct ViewRenderInput {
 pub struct ViewScrollChangedEvent {
   // private fields
 }
-pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(Double, Double, Double, Double, Bool, Bool, Bool, Bool) -> Self
-
-pub struct ViewThemeChangedEvent {
-  // private fields
-}
+pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(Double, Bool, Bool, Bool, Bool) -> Self
 
 pub struct ViewTokenChangeRange {
   // private fields

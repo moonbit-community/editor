@@ -24,7 +24,7 @@ pub(all) struct ScrollableElementDom {
   mut mouse_is_over : Bool
   mut is_dragging : Bool
   mut hide_generation : Int
-  mut hide_timeout : Double?
+  mut hide_timeout : @base_common.Disposable?
   mut disposed : Bool
 }
 
@@ -129,7 +129,7 @@ fn ScrollableElementDom::cancel_hide_timeout(
   self : ScrollableElementDom,
 ) -> Unit {
   match self.hide_timeout {
-    Some(handle) => clear_timeout(handle)
+    Some(timeout) => timeout.dispose()
     None => ()
   }
   self.hide_timeout = None
@@ -406,7 +406,7 @@ fn ScrollableElementDom::schedule_hide_scrollbars(
   self.cancel_hide_timeout()
   let generation = self.hide_generation
   self.hide_timeout = Some(
-    set_timeout(
+    @base_browser.schedule_timeout(
       () => {
         if !self.disposed && self.hide_generation == generation {
           self.hide_timeout = None

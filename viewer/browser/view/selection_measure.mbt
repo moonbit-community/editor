@@ -21,7 +21,7 @@ pub fn View::offset_for_column(
     self.view_lines.raw_visible_range_for_position(
       view_line_number, view_column,
     ) {
-    Some((_outside_rendered_line, left)) => left
+    Some(left) => left
     None => -1.0
   }
 }
@@ -70,8 +70,7 @@ pub fn View::measure_line_selection(
 /// `ViewLines.visibleRangeForPosition` (viewLines.ts:502-508) in the shape
 /// the mouse hit test consumes: the measured caret x of a view position as a
 /// `HorizontalPosition`, `None` when the line is outside the rendered window
-/// (the source's `null`). The source truncation branch now propagates its real
-/// `outside_rendered_line` result.
+/// (the source's `null`).
 pub fn View::visible_range_for_position(
   self : View,
   view_line_number : Int,
@@ -81,8 +80,7 @@ pub fn View::visible_range_for_position(
     self.view_lines.raw_visible_range_for_position(
       view_line_number, view_column,
     ) {
-    Some((outside_rendered_line, left)) =>
-      Some(HorizontalPosition(outside_rendered_line, left))
+    Some(left) => Some(HorizontalPosition(left))
     None => None
   }
 }

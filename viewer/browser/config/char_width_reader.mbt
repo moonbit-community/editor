@@ -49,11 +49,11 @@ pub fn read_char_widths(
   container.append_child(regular_dom_node.as_node())
   let bold_dom_node = document.create_element("div")
   apply_font_info(bold_dom_node, bare_font_info)
-  set_style_property(bold_dom_node, "font-weight", "bold")
+  @base_browser.set_style_property(bold_dom_node, "font-weight", "bold")
   container.append_child(bold_dom_node.as_node())
   let italic_dom_node = document.create_element("div")
   apply_font_info(italic_dom_node, bare_font_info)
-  set_style_property(italic_dom_node, "font-style", "italic")
+  @base_browser.set_style_property(italic_dom_node, "font-style", "italic")
   container.append_child(italic_dom_node.as_node())
   let test_elements : Array[@rdom.Element] = []
   for request in requests {
@@ -77,21 +77,15 @@ pub fn read_char_widths(
   }
   append_to_body(container)
   for index, request in requests {
-    request.fulfill(element_offset_width(test_elements[index]) / 256.0)
+    request.fulfill(
+      @base_browser.element_offset_width(test_elements[index]) / 256.0,
+    )
   }
-  remove_element(container)
+  @base_browser.remove_element(container)
 }
 
 ///|
-/// FFI gap-fills (no `document.body` / `offsetWidth` / `remove` bindings on
-/// the vendored `@rdom`).
+/// FFI gap-fill for the current document body, which is not exposed by the
+/// vendored `@rdom` document wrapper.
 extern "js" fn append_to_body(el : @rdom.Element) -> Unit =
   #| (el) => document.body.appendChild(el)
-
-///|
-extern "js" fn element_offset_width(el : @rdom.Element) -> Double =
-  #| (el) => el.offsetWidth
-
-///|
-extern "js" fn remove_element(el : @rdom.Element) -> Unit =
-  #| (el) => el.remove()

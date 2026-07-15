@@ -81,7 +81,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   }
   // Write phase.
   self.sync_hover_decorations()
-  let write_started = now_ms()
+  let write_started = @base_browser.monotonic_now_ms()
   let window = self.synced_window(view_model)
   let view_context = self.build_view_context(view)
   view.render(view_context, {
@@ -104,7 +104,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   // The lines are now in the DOM: a deferred horizontal reveal can measure its
   // target line's client rects and apply the horizontal scroll.
   self.flush_horizontal_reveal(view)
-  let patch_ms = now_ms() - write_started
+  let patch_ms = @base_browser.monotonic_now_ms() - write_started
   match (self.pending_rendered, self.rendered_window) {
     (Some(pending), Some(window)) => {
       self.pending_rendered = None

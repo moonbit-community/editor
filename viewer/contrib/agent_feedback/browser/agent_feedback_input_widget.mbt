@@ -136,7 +136,7 @@ fn AgentFeedbackInputWidget::hook_events(
     if !input_event_targets(event, self.textarea) &&
       !input_event_targets(event, self.action) {
       event.prevent_default()
-      input_focus_element(self.textarea)
+      @base_browser.focus_prevent_scroll(self.textarea)
     }
   })
   self.action.add_event_listener("click", event => {
@@ -214,12 +214,12 @@ fn AgentFeedbackInputWidget::handle_keydown(
 
 ///|
 pub fn AgentFeedbackInputWidget::show(self : AgentFeedbackInputWidget) -> Unit {
-  input_set_style(self.root, "display", "")
+  @base_browser.set_style_property(self.root, "display", "")
 }
 
 ///|
 pub fn AgentFeedbackInputWidget::hide(self : AgentFeedbackInputWidget) -> Unit {
-  input_set_style(self.root, "display", "none")
+  @base_browser.set_style_property(self.root, "display", "none")
 }
 
 ///|
@@ -230,8 +230,8 @@ pub fn AgentFeedbackInputWidget::set_position(
   top : Double,
   left : Double,
 ) -> Unit {
-  input_set_style(self.root, "top", top.to_string() + "px")
-  input_set_style(self.root, "left", left.to_string() + "px")
+  @base_browser.set_style_property(self.root, "top", top.to_string() + "px")
+  @base_browser.set_style_property(self.root, "left", left.to_string() + "px")
 }
 
 ///|
@@ -256,7 +256,7 @@ pub fn AgentFeedbackInputWidget::set_placeholder(
 pub fn AgentFeedbackInputWidget::focus_input(
   self : AgentFeedbackInputWidget,
 ) -> Unit {
-  input_focus_element(self.textarea)
+  @base_browser.focus_prevent_scroll(self.textarea)
 }
 
 ///|
@@ -281,7 +281,7 @@ pub fn AgentFeedbackInputWidget::has_text(
 pub fn AgentFeedbackInputWidget::measured_height(
   self : AgentFeedbackInputWidget,
 ) -> Double {
-  let height = input_offset_height(self.root)
+  let height = @base_browser.element_offset_height(self.root)
   if height > 0.0 {
     height
   } else {
@@ -293,7 +293,7 @@ pub fn AgentFeedbackInputWidget::measured_height(
 pub fn AgentFeedbackInputWidget::measured_width(
   self : AgentFeedbackInputWidget,
 ) -> Double {
-  let width = input_offset_width(self.root)
+  let width = @base_browser.element_offset_width(self.root)
   if width > 0.0 {
     width
   } else {
@@ -345,15 +345,27 @@ pub fn AgentFeedbackInputWidget::auto_size(
     min_width
   }
   let width = if desired < max_width { desired } else { max_width }
-  input_set_style(self.textarea, "min-width", min_width.to_string() + "px")
-  input_set_style(self.textarea, "width", width.to_string() + "px")
+  @base_browser.set_style_property(
+    self.textarea,
+    "min-width",
+    min_width.to_string() + "px",
+  )
+  @base_browser.set_style_property(
+    self.textarea,
+    "width",
+    width.to_string() + "px",
+  )
   let height = input_textarea_grown_height(self.textarea)
   let clamped_height = if height > input_line_height_px {
     height
   } else {
     input_line_height_px
   }
-  input_set_style(self.textarea, "height", clamped_height.to_string() + "px")
+  @base_browser.set_style_property(
+    self.textarea,
+    "height",
+    clamped_height.to_string() + "px",
+  )
 }
 
 // --- helpers / FFI ---------------------------------------------------------------
@@ -394,17 +406,6 @@ extern "js" fn input_set_textarea_value(
 ) -> Unit = "(el, v) => { el.value = v }"
 
 ///|
-extern "js" fn input_focus_element(element : @rdom.Element) -> Unit =
-  #| (el) => el.focus?.({ preventScroll: true })
-
-///|
-extern "js" fn input_set_style(
-  element : @rdom.Element,
-  property : String,
-  value : String,
-) -> Unit = "(el, p, v) => { el.style.setProperty(p, v) }"
-
-///|
 extern "js" fn input_scroll_width(element : @rdom.Element) -> Double = "(el) => el.scrollWidth ?? 0"
 
 ///|
@@ -412,12 +413,6 @@ extern "js" fn input_scroll_width(element : @rdom.Element) -> Double = "(el) => 
 /// upstream's two-step `height = 'auto'; height = scrollHeight`.
 extern "js" fn input_textarea_grown_height(element : @rdom.Element) -> Double =
   #| (el) => { el.style.height = 'auto'; return el.scrollHeight ?? 0 }
-
-///|
-extern "js" fn input_offset_height(element : @rdom.Element) -> Double = "(el) => el.offsetHeight ?? 0"
-
-///|
-extern "js" fn input_offset_width(element : @rdom.Element) -> Double = "(el) => el.offsetWidth ?? 0"
 
 ///|
 /// Whether the event's target is (inside) the given element.

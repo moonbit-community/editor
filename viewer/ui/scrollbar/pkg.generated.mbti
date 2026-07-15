@@ -2,6 +2,7 @@
 package "moonbit-community/editor/viewer/ui/scrollbar"
 
 import {
+  "moonbit-community/editor/base/common",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/rabbita/dom",
   "moonbitlang/core/debug",
@@ -74,7 +75,7 @@ pub(all) struct ScrollableElementDom {
   mut mouse_is_over : Bool
   mut is_dragging : Bool
   mut hide_generation : Int
-  mut hide_timeout : Double?
+  mut hide_timeout : @common.Disposable?
   mut disposed : Bool
 }
 pub fn ScrollableElementDom::desired_position_from_track(Self, vertical~ : Bool, @dom.MouseEvent) -> Double

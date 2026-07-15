@@ -417,7 +417,11 @@ fn AgentFeedbackEditorWidget::start_editing(
   text_container.append_child(textarea.as_node())
   let auto_size = () => {
     let height = input_textarea_grown_height(textarea)
-    input_set_style(textarea, "height", height.to_string() + "px")
+    @base_browser.set_style_property(
+      textarea,
+      "height",
+      height.to_string() + "px",
+    )
     (self.host.on_layout)(self.id)
   }
   auto_size()
@@ -451,7 +455,7 @@ fn AgentFeedbackEditorWidget::start_editing(
     event.stop_propagation()
   })
   textarea.add_event_listener("blur", _ => if !self.disposed { stop() })
-  input_focus_element(textarea)
+  @base_browser.focus_prevent_scroll(textarea)
 }
 
 ///|
@@ -463,7 +467,7 @@ fn AgentFeedbackEditorWidget::start_reply(
 ) -> Unit {
   match self.reply_textareas.get(comment.id) {
     Some(existing) => {
-      input_focus_element(existing)
+      @base_browser.focus_prevent_scroll(existing)
       return
     }
     None => ()
@@ -496,14 +500,18 @@ fn AgentFeedbackEditorWidget::open_reply_composer(
   self.reply_textareas.set(comment.id, textarea)
   let auto_size = () => {
     let height = input_textarea_grown_height(textarea)
-    input_set_style(textarea, "height", height.to_string() + "px")
+    @base_browser.set_style_property(
+      textarea,
+      "height",
+      height.to_string() + "px",
+    )
     (self.host.on_layout)(self.id)
   }
   auto_size()
   let clear_draft = () => self.drafts.remove(comment.id)
   let cleanup = () => {
     self.reply_textareas.remove(comment.id)
-    widget_remove_element(composer)
+    @base_browser.remove_element(composer)
     clear_draft()
     (self.host.on_layout)(self.id)
   }
@@ -548,7 +556,7 @@ fn AgentFeedbackEditorWidget::open_reply_composer(
     }
   })
   if focus {
-    input_focus_element(textarea)
+    @base_browser.focus_prevent_scroll(textarea)
     input_move_caret_to_end(textarea)
   }
 }
@@ -650,7 +658,7 @@ pub fn AgentFeedbackEditorWidget::focused_reply_comment_id(
   self : AgentFeedbackEditorWidget,
 ) -> String? {
   for comment_id, textarea in self.reply_textareas {
-    if widget_element_has_focus(textarea) {
+    if @base_browser.element_has_focus(textarea) {
       return Some(comment_id)
     }
   }
@@ -665,8 +673,8 @@ pub fn AgentFeedbackEditorWidget::set_position(
   top : Double,
   left : Double,
 ) -> Unit {
-  input_set_style(self.root, "top", top.to_string() + "px")
-  input_set_style(self.root, "left", left.to_string() + "px")
+  @base_browser.set_style_property(self.root, "top", top.to_string() + "px")
+  @base_browser.set_style_property(self.root, "left", left.to_string() + "px")
 }
 
 ///|
@@ -674,7 +682,7 @@ pub fn AgentFeedbackEditorWidget::set_position(
 pub fn AgentFeedbackEditorWidget::measured_width(
   self : AgentFeedbackEditorWidget,
 ) -> Double {
-  let width = input_offset_width(self.root)
+  let width = @base_browser.element_offset_width(self.root)
   if width > 0.0 {
     width
   } else {
@@ -686,14 +694,14 @@ pub fn AgentFeedbackEditorWidget::measured_width(
 pub fn AgentFeedbackEditorWidget::measured_height(
   self : AgentFeedbackEditorWidget,
 ) -> Double {
-  input_offset_height(self.root)
+  @base_browser.element_offset_height(self.root)
 }
 
 ///|
 pub fn AgentFeedbackEditorWidget::measured_header_height(
   self : AgentFeedbackEditorWidget,
 ) -> Double {
-  input_offset_height(self.header)
+  @base_browser.element_offset_height(self.header)
 }
 
 // --- helpers / FFI ----------------------------------------------------------------
@@ -750,14 +758,6 @@ extern "js" fn widget_has_selection_inside(element : @rdom.Element) -> Bool =
   #|   const selection = el.ownerDocument.defaultView?.getSelection?.();
   #|   return !!(selection && !selection.isCollapsed && el.contains(selection.anchorNode));
   #| }
-
-///|
-extern "js" fn widget_remove_element(element : @rdom.Element) -> Unit =
-  #| (el) => el.remove()
-
-///|
-extern "js" fn widget_element_has_focus(element : @rdom.Element) -> Bool =
-  #| (el) => el.ownerDocument.activeElement === el
 
 ///|
 extern "js" fn input_move_caret_to_end(element : @rdom.Element) -> Unit =

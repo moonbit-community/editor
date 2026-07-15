@@ -17,13 +17,6 @@ extern "js" fn computed_style_property(
   #| (el, property) => getComputedStyle(el).getPropertyValue(property).trim()
 
 ///|
-/// One-shot timer, local to this package (mirrors the viewer core's
-/// `set_timeout`; `viewer/browser/view` can't import the top-level `viewer`
-/// package, which itself imports `@view`).
-extern "js" fn defer_call(callback : () -> Unit) -> Unit =
-  #| (callback) => globalThis.setTimeout(callback, 0)
-
-///|
 /// Mirrors `theme.getColor(...)` returning `undefined` for an unset token.
 fn optional_color(value : String) -> String? {
   if value == "" {
@@ -59,7 +52,7 @@ fn read_squiggly_theme_colors(
 /// live element to resolve cascaded custom properties) and again whenever the
 /// host pushes a new theme.
 ///
-/// The read is defer_callred one macrotask (`defer_call`), not run inline: the host
+/// The read is deferred one macrotask, not run inline: the host
 /// that owns the ancestor element carrying the theme's CSS custom properties
 /// (e.g. this project's `.editor-shell`) may update its own `data-theme`
 /// attribute through its own async render cycle (this project's `rabbita`
@@ -71,8 +64,12 @@ fn read_squiggly_theme_colors(
 /// `registerThemingParticipant` has no such race, since VS Code's own theme
 /// service updates colors and the CSS variables it drives synchronously).
 pub fn View::apply_squiggly_theme(self : View) -> Unit {
-  defer_call(() => {
-    let colors = read_squiggly_theme_colors(self.root)
-    self.squiggly_style.set_inner_html(@markers.squiggly_theme_css(colors))
-  })
+  @base_browser.schedule_timeout(
+    () => {
+      let colors = read_squiggly_theme_colors(self.root)
+      self.squiggly_style.set_inner_html(@markers.squiggly_theme_css(colors))
+    },
+    0,
+  )
+  |> ignore
 }

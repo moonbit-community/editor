@@ -81,16 +81,13 @@ fn LastRenderedData::set_current_visible_range(
 ///|
 priv struct RunOnceScheduler {
   delay_ms : Int
-  mut handle : Double?
-  set_timeout : (() -> Unit, Int) -> Double
-  clear_timeout : (Double) -> Unit
+  mut handle : @base_common.Disposable?
+  schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable
 }
 
 ///|
 fn RunOnceScheduler::RunOnceScheduler(delay_ms : Int) -> RunOnceScheduler {
-  RunOnceScheduler::new_with_timer(
-    delay_ms, view_lines_set_timeout, view_lines_clear_timeout,
-  )
+  RunOnceScheduler::new_with_timer(delay_ms, @base_browser.schedule_timeout)
 }
 
 ///|
@@ -99,10 +96,9 @@ fn RunOnceScheduler::RunOnceScheduler(delay_ms : Int) -> RunOnceScheduler {
 /// without sleeping in white-box tests.
 fn RunOnceScheduler::new_with_timer(
   delay_ms : Int,
-  set_timeout : (() -> Unit, Int) -> Double,
-  clear_timeout : (Double) -> Unit,
+  schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable,
 ) -> RunOnceScheduler {
-  { delay_ms, handle: None, set_timeout, clear_timeout }
+  { delay_ms, handle: None, schedule_timeout }
 }
 
 ///|
@@ -119,7 +115,7 @@ fn RunOnceScheduler::schedule(
   // starts a fresh delay window.
   self.cancel()
   self.handle = Some(
-    (self.set_timeout)(
+    (self.schedule_timeout)(
       () => {
         self.handle = None
         callback()
@@ -133,7 +129,7 @@ fn RunOnceScheduler::schedule(
 fn RunOnceScheduler::cancel(self : RunOnceScheduler) -> Unit {
   match self.handle {
     Some(handle) => {
-      (self.clear_timeout)(handle)
+      handle.dispose()
       self.handle = None
     }
     None => ()
@@ -156,7 +152,6 @@ pub struct ViewLines {
   priv text_range_resting_spot : @rdom.Element
   priv mut window : @view_layout.LineWindow
   priv mut lines : Array[ViewLine]
-  priv mut line_height : Int
   priv mut typical_halfwidth_character_width : Double
   priv mut is_viewport_wrapping : Bool
   priv mut can_use_layer_hinting : Bool
@@ -196,7 +191,6 @@ fn ViewLines::ViewLines(
     // `RenderedLinesCollection` constructs through `_set(1, [])`.
     window: { start: 1, end: 1 },
     lines: [],
-    line_height: initial_configuration.line_height,
     typical_halfwidth_character_width: initial_configuration.typical_halfwidth_character_width,
     is_viewport_wrapping: initial_configuration.is_viewport_wrapping,
     can_use_layer_hinting: initial_configuration.can_use_layer_hinting,
@@ -246,7 +240,6 @@ fn ViewLines::seed_configuration(
   self : ViewLines,
   configuration : ViewLinesConfiguration,
 ) -> Unit {
-  self.line_height = configuration.line_height
   self.typical_halfwidth_character_width = configuration.typical_halfwidth_character_width
   self.is_viewport_wrapping = configuration.is_viewport_wrapping
   self.can_use_layer_hinting = configuration.can_use_layer_hinting
@@ -274,7 +267,6 @@ fn ViewLines::on_configuration_changed(
   let configuration = (self.read_configuration)()
   let wrapping_value_changed = self.is_viewport_wrapping !=
     configuration.is_viewport_wrapping
-  self.line_height = configuration.line_height
   self.typical_halfwidth_character_width = configuration.typical_halfwidth_character_width
   self.is_viewport_wrapping = configuration.is_viewport_wrapping
   self.can_use_layer_hinting = configuration.can_use_layer_hinting
@@ -403,135 +395,6 @@ fn ViewLines::on_visible_zones_changed(self : ViewLines) -> Bool {
 }
 
 ///|
-/// `RenderedLinesCollection.onLinesChanged` (`viewLayer.ts:156-177`). Notify
-/// every retained line in the inclusive changed interval, and report whether
-/// at least one line was notified.
-fn ViewLines::on_lines_changed(
-  self : ViewLines,
-  change_from_line_number : Int,
-  change_count : Int,
-) -> Bool {
-  let change_to_line_number = change_from_line_number + change_count - 1
-  if self.lines.length() == 0 {
-    return false
-  }
-  let start_line_number = self.window.start
-  let end_line_number = self.window.start + self.lines.length() - 1
-  let mut someone_notified = false
-  for changed_line_number in change_from_line_number..<=change_to_line_number {
-    if changed_line_number >= start_line_number &&
-      changed_line_number <= end_line_number {
-      self.lines[changed_line_number - self.window.start].on_content_changed()
-      someone_notified = true
-    }
-  }
-  someone_notified
-}
-
-///|
-/// `RenderedLinesCollection.onLinesDeleted` (`viewLayer.ts:98-154`) plus
-/// `VisibleLinesCollection.onLinesDeleted`'s ordered optional-DOM removal
-/// (`:305-316`). Control flow and inclusive bounds match the pinned source.
-fn ViewLines::on_lines_deleted(
-  self : ViewLines,
-  delete_from_line_number : Int,
-  delete_to_line_number : Int,
-) -> Unit {
-  if self.lines.length() == 0 {
-    return
-  }
-  let start_line_number = self.window.start
-  let end_line_number = self.window.start + self.lines.length() - 1
-  if delete_to_line_number < start_line_number {
-    let delete_count = delete_to_line_number - delete_from_line_number + 1
-    self.set_retained_start(start_line_number - delete_count)
-    return
-  }
-  if delete_from_line_number > end_line_number {
-    return
-  }
-  let mut delete_start_index = 0
-  let mut delete_count = 0
-  for line_number in start_line_number..<=end_line_number {
-    let line_index = line_number - self.window.start
-    if delete_from_line_number <= line_number &&
-      line_number <= delete_to_line_number {
-      if delete_count == 0 {
-        delete_start_index = line_index
-        delete_count = 1
-      } else {
-        delete_count += 1
-      }
-    }
-  }
-  if delete_from_line_number < start_line_number {
-    let delete_above_count = if delete_to_line_number < start_line_number {
-      // Source-unreachable after the disjoint-above early return, retained to
-      // keep the pinned branch shape literal.
-      delete_to_line_number - delete_from_line_number + 1
-    } else {
-      start_line_number - delete_from_line_number
-    }
-    self.set_retained_start(self.window.start - delete_above_count)
-  }
-  let deleted = self.remove_retained_slice(delete_start_index, delete_count)
-  remove_retained_line_dom_nodes(deleted)
-  self.sync_retained_end()
-}
-
-///|
-/// `RenderedLinesCollection.onLinesInserted` (`viewLayer.ts:179-219`) plus
-/// `VisibleLinesCollection.onLinesInserted`'s ordered removal of displaced
-/// tail DOM (`:318-329`).
-fn ViewLines::on_lines_inserted(
-  self : ViewLines,
-  insert_from_line_number : Int,
-  insert_to_line_number : Int,
-) -> Unit {
-  if self.lines.length() == 0 {
-    return
-  }
-  let insert_count = insert_to_line_number - insert_from_line_number + 1
-  let start_line_number = self.window.start
-  let end_line_number = self.window.start + self.lines.length() - 1
-  if insert_from_line_number <= start_line_number {
-    self.set_retained_start(start_line_number + insert_count)
-    return
-  }
-  if insert_from_line_number > end_line_number {
-    return
-  }
-  if insert_count + insert_from_line_number > end_line_number {
-    let deleted = self.remove_retained_slice(
-      insert_from_line_number - self.window.start,
-      end_line_number - insert_from_line_number + 1,
-    )
-    remove_retained_line_dom_nodes(deleted)
-    self.sync_retained_end()
-    return
-  }
-  let insert_index = insert_from_line_number - self.window.start
-  let original_length = self.lines.length()
-  let new_lines : Array[ViewLine] = []
-  for index in 0..<insert_index {
-    new_lines.push(self.lines[index])
-  }
-  for _ in 0..<insert_count {
-    new_lines.push((self.line_factory)())
-  }
-  for index in insert_index..<(original_length - insert_count) {
-    new_lines.push(self.lines[index])
-  }
-  let deleted_lines : Array[ViewLine] = []
-  for index in (original_length - insert_count)..<original_length {
-    deleted_lines.push(self.lines[index])
-  }
-  self.lines = new_lines
-  remove_retained_line_dom_nodes(deleted_lines)
-  self.sync_retained_end()
-}
-
-///|
 /// `RenderedLinesCollection.onTokensChanged` (`viewLayer.ts:221-250`). Local
 /// callers convert the source's inclusive token payloads to one-based
 /// half-open `LineRange`s, then this method clips and notifies line by line.
@@ -580,49 +443,6 @@ fn ViewLines::on_decorations_changed(self : ViewLines) -> Unit {
     line.on_decorations_changed()
   }
 }
-
-///|
-fn ViewLines::set_retained_start(self : ViewLines, start : Int) -> Unit {
-  self.window = { start, end: start + self.lines.length() }
-}
-
-///|
-fn ViewLines::sync_retained_end(self : ViewLines) -> Unit {
-  self.window = {
-    start: self.window.start,
-    end: self.window.start + self.lines.length(),
-  }
-}
-
-///|
-fn ViewLines::remove_retained_slice(
-  self : ViewLines,
-  start : Int,
-  count : Int,
-) -> Array[ViewLine] {
-  let removed : Array[ViewLine] = []
-  for _ in 0..<count {
-    removed.push(self.lines.remove(start))
-  }
-  removed
-}
-
-///|
-fn remove_retained_line_dom_nodes(lines : Array[ViewLine]) -> Unit {
-  for line in lines {
-    match line.get_dom_node() {
-      Some(node) => remove_retained_line_dom_node(node)
-      None => ()
-    }
-  }
-}
-
-///|
-extern "js" fn remove_retained_line_dom_node(node : @rdom.Element) -> Unit =
-  #| (node) => {
-  #|   if (typeof node.remove === "function") node.remove();
-  #|   else if (node.parentNode) node.parentNode.removeChild(node);
-  #| }
 
 ///|
 /// Monaco `ViewLines.renderText` (`viewLines.ts:613-677`): reconcile the
@@ -870,13 +690,6 @@ pub fn ViewLines::get_line_width(self : ViewLines, line_number : Int) -> Double 
 }
 
 ///|
-fn ViewLines::reset_line_width_caches(self : ViewLines) -> Unit {
-  for line in self.lines {
-    line.reset_cached_width()
-  }
-}
-
-///|
 /// Raw, unrounded visible ranges for one rendered view line.
 fn ViewLines::visible_ranges_for_line_range(
   self : ViewLines,
@@ -907,7 +720,7 @@ fn ViewLines::raw_lines_visible_ranges_for_range(
   self : ViewLines,
   requested_range : @base_common.Range,
   include_new_lines : Bool,
-) -> Array[(Bool, Int, Array[(Int, Int)], Bool)]? {
+) -> Array[(Int, Array[(Int, Int)])]? {
   let original_end_line_number = requested_range.end_line_number
   guard requested_range.intersect_ranges(
       self.last_rendered_data.get_current_visible_range(),
@@ -915,7 +728,7 @@ fn ViewLines::raw_lines_visible_ranges_for_range(
     is Some(visible_range) else {
     return None
   }
-  let result : Array[(Bool, Int, Array[(Int, Int)], Bool)] = []
+  let result : Array[(Int, Array[(Int, Int)])] = []
   let context = DomReadingContext::DomReadingContext(
     self.dom_node.element(),
     self.text_range_resting_spot,
@@ -949,7 +762,7 @@ fn ViewLines::raw_lines_visible_ranges_for_range(
     guard self.lines[index].get_visible_ranges_for_range(
         line_number, start_column, end_column, context,
       )
-      is Some((outside_rendered_line, float_ranges)) else {
+      is Some((_outside_rendered_line, float_ranges)) else {
       continue
     }
     if include_new_lines && line_number < original_end_line_number {
@@ -980,11 +793,7 @@ fn ViewLines::raw_lines_visible_ranges_for_range(
         ),
       )
     }
-    result.push(
-      (
-        outside_rendered_line, line_number, rounded_ranges, continues_on_next_line,
-      ),
-    )
+    result.push((line_number, rounded_ranges))
   }
   self.update_line_widths_slow_if_dom_did_layout(context)
   if result.is_empty() {
@@ -998,18 +807,13 @@ fn ViewLines::raw_visible_range_for_position(
   self : ViewLines,
   line_number : Int,
   column : Int,
-) -> (Bool, Double)? {
+) -> Double? {
   guard self.visible_ranges_for_line_range(line_number, column, column)
-    is Some((outside_rendered_line, ranges)) &&
+    is Some((_outside_rendered_line, ranges)) &&
     !ranges.is_empty() else {
     return None
   }
-  Some((outside_rendered_line, ranges[0].0))
-}
-
-///|
-fn ViewLines::update_line_widths(self : ViewLines) -> Unit {
-  ignore(self.update_line_widths_internal(false))
+  Some(ranges[0].0)
 }
 
 ///|
@@ -1108,15 +912,6 @@ fn view_lines_parent_element(el : @rdom.Element) -> @rdom.Element? {
     None
   }
 }
-
-///|
-extern "js" fn view_lines_set_timeout(
-  callback : () -> Unit,
-  delay_ms : Int,
-) -> Double = "(callback, delayMs) => globalThis.setTimeout(callback, delayMs)"
-
-///|
-extern "js" fn view_lines_clear_timeout(handle : Double) -> Unit = "(handle) => globalThis.clearTimeout(handle)"
 
 ///|
 /// JavaScript `Math.round` for finite DOM geometry. In particular, negative

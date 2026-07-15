@@ -1,19 +1,13 @@
 ///|
 fn view_event_test_name(event : ViewEvent) -> String {
   match event {
-    ViewCompositionStart => "composition-start"
-    ViewCompositionEnd => "composition-end"
     ViewConfigurationChanged(_) => "configuration"
     ViewCursorStateChanged(_) => "cursor"
-    ViewDecorationsChanged(_) => "decorations"
+    ViewDecorationsChanged => "decorations"
     ViewFlushed => "flushed"
     ViewFocusChanged(_) => "focus"
     ViewLineMappingChanged => "line-mapping"
-    ViewLinesChanged(_) => "lines-changed"
-    ViewLinesDeleted(_) => "lines-deleted"
-    ViewLinesInserted(_) => "lines-inserted"
     ViewScrollChanged(_) => "scroll"
-    ViewThemeChanged(_) => "theme"
     ViewTokensChanged(_) => "tokens"
     ViewZonesChanged => "zones"
   }
@@ -32,7 +26,19 @@ fn view_event_test_batch_name(events : Array[ViewEvent]) -> String {
 }
 
 ///|
-test "source-shaped payloads retain independent fields and array identity" {
+fn emit_dispatcher_test_batch(
+  dispatcher : ViewEventDispatcher,
+  events : Array[ViewEvent],
+) -> Unit {
+  let collector = dispatcher.begin()
+  for event in events {
+    collector.emit(event)
+  }
+  dispatcher.end()
+}
+
+///|
+test "consumed payloads retain independent flags and array identity" {
   let configuration = ViewConfigurationChangedEvent::from_changed_options([
     LayoutInfo,
     FontInfo,
@@ -43,19 +49,10 @@ test "source-shaped payloads retain independent fields and array identity" {
   assert_true(configuration.has_changed(FontInfo))
   assert_false(configuration.has_changed(RenderWhitespace))
 
-  let decorations = ViewDecorationsChangedEvent::all()
-  assert_true(decorations.affects_minimap)
-  assert_true(decorations.affects_overview_ruler)
-  assert_true(decorations.affects_glyph_margin)
-  assert_true(decorations.affects_line_number)
-
   let scroll = ViewScrollChangedEvent::ViewScrollChangedEvent(
-    700.0, 11.0, 900.0, 23.0, true, false, false, true,
+    700.0, true, false, false, true,
   )
   assert_true(scroll.scroll_width == 700.0)
-  assert_true(scroll.scroll_left == 11.0)
-  assert_true(scroll.scroll_height == 900.0)
-  assert_true(scroll.scroll_top == 23.0)
   assert_true(scroll.scroll_width_changed)
   assert_false(scroll.scroll_left_changed)
   assert_false(scroll.scroll_height_changed)
@@ -70,16 +67,11 @@ test "source-shaped payloads retain independent fields and array identity" {
 
   let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
   let selections = [selection]
-  let model_selections = [selection]
   let cursor = ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
     selections,
-    model_selections,
-    NotSet,
   )
   selections.push(@core.Selection::new(Position(2, 1), Position(2, 1)))
-  model_selections.clear()
   assert_eq(cursor.selections.length(), 2)
-  assert_eq(cursor.model_selections.length(), 0)
 }
 
 ///|
@@ -94,8 +86,8 @@ test "dispatcher gives every handler a whole batch before reentrant FIFO batch" 
       did_reenter.val = true
       match holder.val {
         Some(dispatcher) =>
-          dispatcher.emit_view_events([
-            ViewCompositionEnd,
+          emit_dispatcher_test_batch(dispatcher, [
+            ViewFocusChanged(ViewFocusChangedEvent(false)),
             ViewLineMappingChanged,
           ])
         None => abort("dispatcher test holder missing")
@@ -104,12 +96,12 @@ test "dispatcher gives every handler a whole batch before reentrant FIFO batch" 
     deliveries.push("h2:" + batch)
   })
   holder.val = Some(dispatcher)
-  dispatcher.emit_view_events([ViewFlushed, ViewZonesChanged])
+  emit_dispatcher_test_batch(dispatcher, [ViewFlushed, ViewZonesChanged])
   assert_eq(deliveries.length(), 4)
   assert_eq(deliveries[0], "h1:flushed|zones")
   assert_eq(deliveries[1], "h2:flushed|zones")
-  assert_eq(deliveries[2], "h1:composition-end|line-mapping")
-  assert_eq(deliveries[3], "h2:composition-end|line-mapping")
+  assert_eq(deliveries[2], "h1:focus|line-mapping")
+  assert_eq(deliveries[3], "h2:focus|line-mapping")
   assert_false(dispatcher.consuming)
   assert_true(dispatcher.pending_view_events is None)
 }
@@ -149,15 +141,15 @@ test "nested begin shares one collector and only outer end flushes" {
     deliveries.push(view_event_test_batch_name(events))
   })
   let outer = dispatcher.begin()
-  outer.emit(ViewCompositionStart)
+  outer.emit(ViewFocusChanged(ViewFocusChangedEvent(true)))
   let inner = dispatcher.begin()
-  inner.emit(ViewCompositionEnd)
+  inner.emit(ViewFocusChanged(ViewFocusChangedEvent(false)))
   dispatcher.end()
   assert_eq(deliveries.length(), 0)
   outer.emit(ViewZonesChanged)
   dispatcher.end()
   assert_eq(deliveries.length(), 1)
-  assert_eq(deliveries[0], "composition-start|composition-end|zones")
+  assert_eq(deliveries[0], "focus|focus|zones")
   assert_eq(dispatcher.collector_depth, 0)
   assert_true(dispatcher.collector is None)
 }
@@ -171,15 +163,11 @@ test "hidden-area batch delivers mapping events before recovery scroll" {
   let collector = dispatcher.begin()
   collector.emit(ViewFlushed)
   collector.emit(ViewLineMappingChanged)
-  collector.emit(ViewDecorationsChanged(ViewDecorationsChangedEvent::all()))
+  collector.emit(ViewDecorationsChanged)
   // The layout's synchronous recovery listener enters through the ordinary
   // dispatcher API while the ViewModel-owned outer collector is still open.
   dispatcher.emit_view_event(
-    ViewScrollChanged(
-      ViewScrollChangedEvent(
-        400.0, 0.0, 1000.0, 25.0, false, false, false, true,
-      ),
-    ),
+    ViewScrollChanged(ViewScrollChangedEvent(400.0, false, false, false, true)),
   )
   assert_eq(deliveries.length(), 0)
   dispatcher.end()
@@ -251,17 +239,30 @@ test "View dispatcher retains eight handlers in source order and gives each the 
     part.on_did_render()
     assert_false(part.should_render())
   }
-  view.emit_view_events([
-    ViewFocusChanged(ViewFocusChangedEvent(true)),
+  view.view_cursors.render_data = Some({
+    top: 0.0,
+    left: 0.0,
+    padding_left: 0.0,
+    width: 2.0,
+    height: 20,
+  })
+  let collector = view.begin_view_event_batch()
+  collector.emit(ViewFocusChanged(ViewFocusChangedEvent(true)))
+  collector.emit(
     ViewConfigurationChanged(
       ViewConfigurationChangedEvent::from_changed_options([]),
     ),
-  ])
+  )
+  view.end_view_event_batch()
   for handler in view.view_event_handlers {
     assert_true(view_event_handler_test_dirty(handler))
   }
-  // The first event is not lost after a later event dirties every handler.
-  assert_true(view.view_cursors.editor_has_focus)
+  // The first event is not lost after a later event dirties every handler:
+  // focus writes the prepared cursor's visible style immediately.
+  assert_true(
+    view_event_test_attribute(view.view_cursors.cursor, "style") !=
+    "display:none",
+  )
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -301,7 +302,11 @@ test "view-event batch visits every event and accumulates sticky dirty once" {
     seen: [],
   }
   handle_view_event_batch(
-    [ViewCompositionStart, ViewFlushed, ViewZonesChanged],
+    [
+      ViewFocusChanged(ViewFocusChangedEvent(true)),
+      ViewFlushed,
+      ViewZonesChanged,
+    ],
     event => handler.on_view_event(event),
     () => handler.force_should_render(),
   )
@@ -310,7 +315,10 @@ test "view-event batch visits every event and accumulates sticky dirty once" {
   assert_eq(handler.force_count, 1)
   handler.dirty = false
   handle_view_event_batch(
-    [ViewCompositionStart, ViewCompositionEnd],
+    [
+      ViewFocusChanged(ViewFocusChangedEvent(true)),
+      ViewFocusChanged(ViewFocusChangedEvent(false)),
+    ],
     event => handler.on_view_event(event),
     () => handler.force_should_render(),
   )
@@ -333,6 +341,21 @@ fn dynamic_overlay_handle_test_name(
 }
 
 ///|
+fn DynamicViewOverlayHandle::set_test_render_result(
+  self : DynamicViewOverlayHandle,
+  result : Array[String],
+) -> Unit {
+  match self {
+    CurrentLine(overlay) => overlay.render_result = result
+    Selections(overlay) => overlay.render_result = result
+    Decorations(overlay) => overlay.render_result = result
+    CurrentLineMargin(overlay) => overlay.render_result = result
+    LinesDecorations(overlay) => overlay.render_result = result
+    LineNumbers(overlay) => overlay.render_result = result
+  }
+}
+
+///|
 test "dynamic overlay subsets preserve registration order and line slicing" {
   install_view_lifecycle_test_browser()
   let view = View::View()
@@ -346,12 +369,12 @@ test "dynamic overlay subsets preserve registration order and line slicing" {
     margin.overlays.dynamic_overlays.map(dynamic_overlay_handle_test_name) ==
     ["current-line-margin", "lines-decorations", "line-numbers"],
   )
-  content.current_line.render_result = ["c10", "c11"]
-  content.selections.render_result = ["s10", "s11"]
-  content.decorations.render_result = ["d10", "d11"]
-  margin.current_line_margin.render_result = ["m10", "m11"]
-  margin.lines_decorations.render_result = ["g10", "g11"]
-  margin.line_numbers.render_result = ["n10", "n11"]
+  content.overlays.dynamic_overlays[0].set_test_render_result(["c10", "c11"])
+  content.overlays.dynamic_overlays[1].set_test_render_result(["s10", "s11"])
+  content.overlays.dynamic_overlays[2].set_test_render_result(["d10", "d11"])
+  margin.overlays.dynamic_overlays[0].set_test_render_result(["m10", "m11"])
+  margin.overlays.dynamic_overlays[1].set_test_render_result(["g10", "g11"])
+  margin.overlays.dynamic_overlays[2].set_test_render_result(["n10", "n11"])
   assert_eq(
     [
       for overlay in content.overlays.dynamic_overlays => overlay.render(10, 11)
@@ -368,38 +391,6 @@ test "dynamic overlay subsets preserve registration order and line slicing" {
     assert_eq(overlay.render(10, 9), "")
     assert_eq(overlay.render(10, 12), "")
   }
-  view.dispose()
-  restore_view_lifecycle_test_browser()
-}
-
-///|
-suberror ViewEventBatchTestError {
-  ViewEventBatchTestError(String)
-}
-
-///|
-fn fail_view_event_batch(collector : ViewEventCollector) -> Int raise {
-  collector.emit(ViewCompositionStart)
-  raise ViewEventBatchTestError("expected")
-}
-
-///|
-test "generic View batch returns a value and always closes on error" {
-  install_view_lifecycle_test_browser()
-  let view = View::View()
-  let result = view.with_view_event_batch(collector => {
-    collector.emit(ViewCompositionStart)
-    collector.emit(ViewCompositionEnd)
-    42
-  })
-  assert_eq(result, 42)
-  assert_eq(view.event_dispatcher.collector_depth, 0)
-  let failed = Some(view.with_view_event_batch(fail_view_event_batch)) catch {
-    _ => None
-  }
-  assert_true(failed is None)
-  assert_eq(view.event_dispatcher.collector_depth, 0)
-  assert_true(view.event_dispatcher.collector is None)
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -533,32 +524,6 @@ test "ViewLines propagates changed token decoration option and selection invalid
   assert_true(lines.on_visible_scroll_changed(true))
   assert_true(lines.on_visible_zones_changed())
 
-  // Changed lines notify each intersecting retained row, not just the outer
-  // part. An unnotified row ignores even a different candidate input.
-  assert_false(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesChanged(ViewLinesChangedEvent(13, 1)),
-    ),
-  )
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesChanged(ViewLinesChangedEvent(11, 1)),
-    ),
-  )
-  let input_b2 = view_event_test_line_input("bravo changed", Selection)
-  assert_true(line_b.render_line(11, input_b2, 20, 20, StringBuilder()))
-  assert_false(
-    line_a.render_line(
-      10,
-      view_event_test_line_input("alpha ignored", None),
-      0,
-      20,
-      StringBuilder(),
-    ),
-  )
-
   // Token ranges clip inclusively and invalidate only retained endpoints.
   assert_false(
     view_lines_on_view_event(
@@ -586,14 +551,9 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Decorations visit every retained row. Consume the sticky bits with the
   // unchanged normalized inputs, proving DOM replacement is still gated.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
-    ),
-  )
+  assert_true(view_lines_on_view_event(lines, ViewDecorationsChanged))
   assert_false(line_a.render_line(10, input_a2, 0, 20, StringBuilder()))
-  assert_false(line_b.render_line(11, input_b2, 20, 20, StringBuilder()))
+  assert_false(line_b.render_line(11, input_b, 20, 20, StringBuilder()))
   assert_false(line_c.render_line(12, input_c, 40, 20, StringBuilder()))
 
   // Unrelated configuration still dirties the outer ViewPart, but exact
@@ -618,7 +578,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
     ),
   )
   assert_true(line_a.render_line(10, input_a3, 0, 20, StringBuilder()))
-  assert_false(line_b.render_line(11, input_b2, 20, 20, StringBuilder()))
+  assert_false(line_b.render_line(11, input_b, 20, 20, StringBuilder()))
   assert_false(line_c.render_line(12, input_c, 40, 20, StringBuilder()))
 
   // Cache-only changes are reread in source order but do not masquerade as a
@@ -670,10 +630,10 @@ test "ViewLines propagates changed token decoration option and selection invalid
       ),
     ),
   )
-  assert_eq(lines.line_height, 21)
+  assert_eq(lines.view_line_options.line_height, 21)
   let line_height_input = view_event_test_line_input("line-height", None)
   assert_true(line_a.render_line(10, line_height_input, 0, 21, StringBuilder()))
-  assert_false(line_b.render_line(11, input_b2, 21, 21, StringBuilder()))
+  assert_false(line_b.render_line(11, input_b, 21, 21, StringBuilder()))
   assert_false(line_c.render_line(12, input_c, 42, 21, StringBuilder()))
 
   // Selection walks all rows but returns true only from a row whose own last
@@ -699,59 +659,10 @@ test "ViewLines propagates changed token decoration option and selection invalid
   )
 
   let width_only = ViewScrollChangedEvent::ViewScrollChangedEvent(
-    420.0, 0.0, 800.0, 0.0, true, false, false, false,
+    420.0, true, false, false, false,
   )
   assert_false(view_lines_on_view_event(lines, ViewScrollChanged(width_only)))
   assert_eq(view_event_test_style_width(parent), "420px")
-  view.dispose()
-  restore_view_lifecycle_test_browser()
-}
-
-///|
-test "ViewLines changed range notifies every retained row through the inclusive endpoint" {
-  install_view_lifecycle_test_browser()
-  let view = View::View()
-  let lines = view.view_lines
-  let parent = lines.get_dom_node()
-  let input = view_event_test_line_input("retained", None)
-  let (line_a, _) = view_event_test_retained_line(parent, input)
-  let (line_b, _) = view_event_test_retained_line(parent, input)
-  let (line_c, _) = view_event_test_retained_line(parent, input)
-  lines.window = { start: 10, end: 13 }
-  lines.lines = [line_a, line_b, line_c]
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesChanged(ViewLinesChangedEvent(10, 3)),
-    ),
-  )
-  assert_true(
-    line_a.render_line(
-      10,
-      view_event_test_line_input("changed-a", None),
-      0,
-      20,
-      StringBuilder(),
-    ),
-  )
-  assert_true(
-    line_b.render_line(
-      11,
-      view_event_test_line_input("changed-b", None),
-      20,
-      20,
-      StringBuilder(),
-    ),
-  )
-  assert_true(
-    line_c.render_line(
-      12,
-      view_event_test_line_input("changed-c", None),
-      40,
-      20,
-      StringBuilder(),
-    ),
-  )
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -805,157 +716,6 @@ test "ViewLines option equality catches same-space font render axes" {
 }
 
 ///|
-test "ViewLines deletion reconciles start rows and removes only evicted DOM nodes" {
-  install_view_lifecycle_test_browser()
-  let view = View::View()
-  let lines = view.view_lines
-  let parent = lines.get_dom_node()
-  let input = view_event_test_line_input("retained", None)
-  let (line_a, node_a) = view_event_test_retained_line(parent, input)
-  let (line_b, node_b) = view_event_test_retained_line(parent, input)
-  let (line_c, node_c) = view_event_test_retained_line(parent, input)
-  let (line_d, node_d) = view_event_test_retained_line(parent, input)
-  lines.window = { start: 10, end: 14 }
-  lines.lines = [line_a, line_b, line_c, line_d]
-
-  // Inside deletion records the first index and increments the covered count;
-  // unaffected row objects keep identity while both deleted rows detach.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent(11, 12)),
-    ),
-  )
-  assert_eq(lines.window.start, 10)
-  assert_eq(lines.window.end, 12)
-  assert_eq(lines.lines.length(), 2)
-  assert_true(
-    view_event_test_same_node(lines.lines[0].get_dom_node().unwrap(), node_a),
-  )
-  assert_true(
-    view_event_test_same_node(lines.lines[1].get_dom_node().unwrap(), node_d),
-  )
-  assert_true(view_event_test_has_parent(node_a, parent))
-  assert_false(view_event_test_has_parent(node_b, parent))
-  assert_false(view_event_test_has_parent(node_c, parent))
-  assert_true(view_event_test_has_parent(node_d, parent))
-
-  // Disjoint-above shifts only the one-based start; disjoint-below is a no-op.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent(1, 2)),
-    ),
-  )
-  assert_eq(lines.window.start, 8)
-  assert_eq(lines.window.end, 10)
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent(20, 21)),
-    ),
-  )
-  assert_eq(lines.window.start, 8)
-  assert_eq(lines.lines.length(), 2)
-
-  // A deletion beginning above and ending inside adjusts start and splices the
-  // first retained row in one source-ordered reconciliation.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent(7, 8)),
-    ),
-  )
-  assert_eq(lines.window.start, 7)
-  assert_eq(lines.window.end, 8)
-  assert_eq(lines.lines.length(), 1)
-  assert_false(view_event_test_has_parent(node_a, parent))
-  assert_true(view_event_test_has_parent(node_d, parent))
-  view.dispose()
-  restore_view_lifecycle_test_browser()
-}
-
-///|
-test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM" {
-  install_view_lifecycle_test_browser()
-  let view = View::View()
-  let lines = view.view_lines
-  let parent = lines.get_dom_node()
-  let input = view_event_test_line_input("retained", None)
-  let (line_a, node_a) = view_event_test_retained_line(parent, input)
-  let (line_b, node_b) = view_event_test_retained_line(parent, input)
-  let (line_c, node_c) = view_event_test_retained_line(parent, input)
-  lines.window = { start: 20, end: 23 }
-  lines.lines = [line_a, line_b, line_c]
-
-  // Equality belongs to the source's `insertFrom <= start` branch.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(20, 20)),
-    ),
-  )
-  assert_eq(lines.window.start, 21)
-  assert_eq(lines.window.end, 24)
-  lines.window = { start: 20, end: 23 }
-
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(18, 19)),
-    ),
-  )
-  assert_eq(lines.window.start, 22)
-  assert_eq(lines.window.end, 25)
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(30, 30)),
-    ),
-  )
-  assert_eq(lines.window.start, 22)
-  assert_eq(lines.lines.length(), 3)
-
-  // Restore the same retained logical window and exercise partial insertion:
-  // A stays, a fresh row occupies the insertion slot, B stays, C is evicted.
-  lines.window = { start: 20, end: 23 }
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(21, 21)),
-    ),
-  )
-  assert_eq(lines.window.start, 20)
-  assert_eq(lines.window.end, 23)
-  assert_eq(lines.lines.length(), 3)
-  assert_true(
-    view_event_test_same_node(lines.lines[0].get_dom_node().unwrap(), node_a),
-  )
-  assert_true(lines.lines[1].get_dom_node() is None)
-  assert_true(
-    view_event_test_same_node(lines.lines[2].get_dom_node().unwrap(), node_b),
-  )
-  assert_true(view_event_test_has_parent(node_a, parent))
-  assert_true(view_event_test_has_parent(node_b, parent))
-  assert_false(view_event_test_has_parent(node_c, parent))
-
-  // A larger inside insertion pushes all remaining rows outside the window.
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(21, 24)),
-    ),
-  )
-  assert_eq(lines.window.start, 20)
-  assert_eq(lines.window.end, 21)
-  assert_eq(lines.lines.length(), 1)
-  assert_true(view_event_test_has_parent(node_a, parent))
-  assert_false(view_event_test_has_parent(node_b, parent))
-  view.dispose()
-  restore_view_lifecycle_test_browser()
-}
-
-///|
 test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
   install_view_lifecycle_test_browser()
   let view = View::View()
@@ -974,24 +734,6 @@ test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
   assert_eq(lines.window.start, 1)
   assert_eq(lines.window.end, 1)
   assert_true(view_event_test_has_parent(stale_node, parent))
-  assert_false(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
-    ),
-  )
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
-    ),
-  )
-  assert_true(
-    view_lines_on_view_event(
-      lines,
-      ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
-    ),
-  )
   assert_false(
     view_lines_on_view_event(
       lines,
@@ -1015,9 +757,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   assert_true(
     view_cursors_on_view_event(
       cursors,
-      ViewCursorStateChanged(
-        ViewCursorStateChangedEvent([selection], [selection], NotSet),
-      ),
+      ViewCursorStateChanged(ViewCursorStateChangedEvent([selection])),
     ),
   )
   assert_false(cursors.selection_is_empty)
@@ -1037,13 +777,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   assert_true(
     view_cursors_on_view_event(
       cursors,
-      ViewCursorStateChanged(
-        ViewCursorStateChangedEvent(
-          [moved_selection],
-          [moved_selection],
-          NotSet,
-        ),
-      ),
+      ViewCursorStateChanged(ViewCursorStateChangedEvent([moved_selection])),
     ),
   )
   assert_eq(
@@ -1092,16 +826,12 @@ fn view_event_test_scroll(
   height : Bool,
   top : Bool,
 ) -> ViewEvent {
-  ViewScrollChanged(
-    ViewScrollChangedEvent(700.0, 11.0, 900.0, 23.0, width, left, height, top),
-  )
+  ViewScrollChanged(ViewScrollChangedEvent(700.0, width, left, height, top))
 }
 
 ///|
 fn view_event_test_cursor(selections : Array[@core.Selection]) -> ViewEvent {
-  ViewCursorStateChanged(
-    ViewCursorStateChangedEvent(selections, selections, NotSet),
-  )
+  ViewCursorStateChanged(ViewCursorStateChangedEvent(selections))
 }
 
 ///|
@@ -1170,16 +900,8 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
   assert_eq(layout_reads.val, 2)
 
   projections.val = 0
-  for
-    event in [
-      ViewLineMappingChanged,
-      ViewLinesChanged(ViewLinesChangedEvent(2, 1)),
-      ViewLinesDeleted(ViewLinesDeletedEvent(2, 2)),
-      ViewLinesInserted(ViewLinesInsertedEvent(2, 2)),
-    ] {
-    assert_true(content_widgets_on_view_event(widgets, event))
-  }
-  assert_eq(projections.val, 4)
+  assert_true(content_widgets_on_view_event(widgets, ViewLineMappingChanged))
+  assert_eq(projections.val, 1)
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -1193,31 +915,8 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_true(
     content_widgets_on_view_event(widgets, view_event_test_configuration()),
   )
-  assert_true(
-    content_widgets_on_view_event(
-      widgets,
-      ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
-    ),
-  )
+  assert_true(content_widgets_on_view_event(widgets, ViewDecorationsChanged))
   assert_true(content_widgets_on_view_event(widgets, ViewLineMappingChanged))
-  assert_true(
-    content_widgets_on_view_event(
-      widgets,
-      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
-    ),
-  )
-  assert_true(
-    content_widgets_on_view_event(
-      widgets,
-      ViewLinesDeleted(ViewLinesDeletedEvent(1, 2)),
-    ),
-  )
-  assert_true(
-    content_widgets_on_view_event(
-      widgets,
-      ViewLinesInserted(ViewLinesInsertedEvent(1, 2)),
-    ),
-  )
   assert_true(
     content_widgets_on_view_event(
       widgets,
@@ -1250,18 +949,6 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_true(
     view_zones_on_view_event(
       zones,
-      ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
-    ),
-  )
-  assert_true(
-    view_zones_on_view_event(
-      zones,
-      ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
-    ),
-  )
-  assert_true(
-    view_zones_on_view_event(
-      zones,
       view_event_test_scroll(true, false, false, false),
     ),
   )
@@ -1285,12 +972,6 @@ test "ContentWidgets and ViewZones source handler matrices" {
   )
   assert_true(view_zones_on_view_event(zones, ViewZonesChanged))
   assert_false(view_zones_on_view_event(zones, ViewFlushed))
-  assert_false(
-    view_zones_on_view_event(
-      zones,
-      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
-    ),
-  )
   view.dispose()
   restore_view_lifecycle_test_browser()
 }
@@ -1314,31 +995,10 @@ test "overlay aggregates, OverlayWidgets, and EditorScrollbar handler matrix" {
       ),
     )
     assert_true(
-      ViewEventHandlerHandle::on_view_event(
-        overlays,
-        ViewDecorationsChanged(ViewDecorationsChangedEvent::all()),
-      ),
+      ViewEventHandlerHandle::on_view_event(overlays, ViewDecorationsChanged),
     )
     assert_true(
       ViewEventHandlerHandle::on_view_event(overlays, ViewLineMappingChanged),
-    )
-    assert_true(
-      ViewEventHandlerHandle::on_view_event(
-        overlays,
-        ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
-      ),
-    )
-    assert_true(
-      ViewEventHandlerHandle::on_view_event(
-        overlays,
-        ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
-      ),
-    )
-    assert_true(
-      ViewEventHandlerHandle::on_view_event(
-        overlays,
-        ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
-      ),
     )
     assert_true(
       ViewEventHandlerHandle::on_view_event(
@@ -1674,7 +1334,6 @@ fn view_event_test_overlay_render_context(
     RenderingContext::viewport_from_input(input),
   )
   let restricted : RestrictedRenderingContext = {
-    view_context: rendering.view_context,
     input: rendering.input,
     viewport: rendering.viewport,
     gutter_width: rendering.gutter_width,
@@ -1686,9 +1345,7 @@ fn view_event_test_overlay_render_context(
       // Exercise MarginViewOverlays' exact `Math.min(..., 1000000)` cap.
       scroll_height: 2000000.0,
     },
-    translate_y: rendering.translate_y,
     margin_transform: rendering.margin_transform(),
-    line_height: rendering.viewport.line_height,
   }
   (rendering, restricted)
 }

@@ -46,9 +46,6 @@ pub struct ViewCursors {
   /// `render`, so an incoming cursor event must not combine its new logical
   /// position with the previous frame's rectangle.
   priv mut last_rendered_position : @base_common.Position?
-  /// `ViewCursors._editorHasFocus`, updated directly by the focus event
-  /// handler even when no render is scheduled.
-  priv mut editor_has_focus : Bool
   /// The last cursor-state selection shape used by `_getClassName`.
   priv mut selection_is_empty : Bool
 }
@@ -75,7 +72,6 @@ fn ViewCursors::ViewCursors(document : @rdom.Document) -> ViewCursors {
     render_data: None,
     last_position: None,
     last_rendered_position: None,
-    editor_has_focus: false,
     selection_is_empty: true,
   }
 }
@@ -108,11 +104,6 @@ fn compute_screen_aware_size(
   let snapped = screen_px.floor()
   (if snapped < 1.0 { 1.0 } else { snapped }) / device_pixel_ratio
 }
-
-///|
-/// FFI gap-fill (no `devicePixelRatio` binding in the vendored `@rdom`).
-extern "js" fn device_pixel_ratio() -> Double =
-  #| () => globalThis.devicePixelRatio || 1
 
 ///|
 /// The Line-style arm of `ViewCursor._prepareRender` (`viewCursor.ts:175-203`)
@@ -149,7 +140,6 @@ fn ViewCursors::render_cursor(
   has_selection~ : Bool,
   editor_has_focus~ : Bool,
 ) -> Unit {
-  self.editor_has_focus = editor_has_focus
   self.selection_is_empty = !has_selection
   self.dom_node.set_attribute("class", cursors_layer_class(has_selection))
   match self.render_data {
@@ -168,7 +158,6 @@ fn ViewCursors::render_cursor(
 /// side effect: the source handler returns `false`, so no render follows from
 /// focus alone.
 fn ViewCursors::on_focus_changed(self : ViewCursors, is_focused : Bool) -> Unit {
-  self.editor_has_focus = is_focused
   self.dom_node.set_attribute(
     "class",
     cursors_layer_class(!self.selection_is_empty),

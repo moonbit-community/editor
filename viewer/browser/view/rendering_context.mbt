@@ -62,15 +62,12 @@ priv struct RenderingContext {
 /// ride along as `input` (its stand-in for Monaco parts reading
 /// `this._context` and event-tracked fields during render).
 priv struct RestrictedRenderingContext {
-  view_context : ViewContext
   input : ViewRenderInput
   viewport : @view_layout.ViewportData
   gutter_width : Double
   position : @view_layout.ScrollPosition
   dimensions : @view_layout.ScrollDimensions
-  translate_y : Double
   margin_transform : String
-  line_height : Int
 }
 
 ///|
@@ -131,15 +128,12 @@ fn RenderingContext::restricted(
   self : RenderingContext,
 ) -> RestrictedRenderingContext {
   {
-    view_context: self.view_context,
     input: self.input,
     viewport: self.viewport,
     gutter_width: self.gutter_width,
     position: self.position,
     dimensions: self.dimensions,
-    translate_y: self.translate_y,
     margin_transform: self.margin_transform(),
-    line_height: self.viewport.line_height,
   }
 }
 
@@ -183,8 +177,7 @@ fn RenderingContext::visible_range_for_position(
       position.line_number,
       position.column,
     ) {
-    Some((outside_rendered_line, left)) =>
-      Some(HorizontalPosition(outside_rendered_line, left))
+    Some(left) => Some(HorizontalPosition(left))
     None => None
   }
 }
@@ -210,15 +203,15 @@ fn RenderingContext::lines_visible_ranges_for_range(
 /// Internal tuple-carrier conversion at the ViewLines/RenderingContext
 /// handoff. Input and per-line range order are preserved exactly.
 fn line_visible_ranges_from_raw(
-  raw_lines : Array[(Bool, Int, Array[(Int, Int)], Bool)],
+  raw_lines : Array[(Int, Array[(Int, Int)])],
 ) -> Array[LineVisibleRanges] {
   let result : Array[LineVisibleRanges] = []
   for raw in raw_lines {
     let horizontal_ranges : Array[HorizontalRange] = []
-    for range in raw.2 {
+    for range in raw.1 {
       horizontal_ranges.push({ left: range.0, width: range.1 })
     }
-    result.push(LineVisibleRanges(raw.0, raw.1, horizontal_ranges, raw.3))
+    result.push(LineVisibleRanges(raw.0, horizontal_ranges))
   }
   result
 }
@@ -250,83 +243,33 @@ fn RenderingContext::content_widgets_render_context(
 ///|
 /// `HorizontalPosition` (`vscode/src/vs/editor/browser/view/renderingContext.ts:196-209`,
 /// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): a
-/// measured caret x on a rendered line. `left` is `Math.round(original_left)`.
+/// measured caret x on a rendered line. The readonly consumers only use the
+/// rounded `left`; Monaco's additional source carrier fields are intentionally
+/// omitted because no current producer/consumer boundary observes them.
 pub(all) struct HorizontalPosition {
-  outside_rendered_line : Bool
   left : Int
-  original_left : Double
 } derive(Eq, Debug)
 
 ///|
-fn HorizontalPosition::HorizontalPosition(
-  outside_rendered_line : Bool,
-  left : Double,
-) -> HorizontalPosition {
-  {
-    outside_rendered_line,
-    original_left: left,
-    left: (left + 0.5).floor().to_int(),
-  }
+fn HorizontalPosition::HorizontalPosition(left : Double) -> HorizontalPosition {
+  { left: (left + 0.5).floor().to_int() }
 }
 
 ///|
-/// Monaco `LineVisibleRanges`: the measured horizontal ranges owned by one
-/// view line plus continuation/outside-rendered facts.
+/// Measured horizontal ranges owned by one view line. The source's
+/// continuation/outside-rendered facts are not carried because the readonly
+/// selection renderer has no consumer for them.
 priv struct LineVisibleRanges {
-  outside_rendered_line : Bool
   line_number : Int
   ranges : Array[HorizontalRange]
-  continues_on_next_line : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 fn LineVisibleRanges::LineVisibleRanges(
-  outside_rendered_line : Bool,
   line_number : Int,
   ranges : Array[HorizontalRange],
-  continues_on_next_line : Bool,
 ) -> LineVisibleRanges {
-  { outside_rendered_line, line_number, ranges, continues_on_next_line }
-}
-
-///|
-/// Smallest line number independent of input order. Ties retain the first
-/// carrier, and null/empty inputs return `None`.
-fn LineVisibleRanges::first_line(
-  ranges : Array[LineVisibleRanges]?,
-) -> LineVisibleRanges? {
-  guard ranges is Some(ranges) else { return None }
-  let mut result : LineVisibleRanges? = None
-  for range in ranges {
-    match result {
-      Some(current) =>
-        if range.line_number < current.line_number {
-          result = Some(range)
-        }
-      None => result = Some(range)
-    }
-  }
-  result
-}
-
-///|
-/// Largest line number independent of input order. Ties retain the first
-/// carrier, and null/empty inputs return `None`.
-fn LineVisibleRanges::last_line(
-  ranges : Array[LineVisibleRanges]?,
-) -> LineVisibleRanges? {
-  guard ranges is Some(ranges) else { return None }
-  let mut result : LineVisibleRanges? = None
-  for range in ranges {
-    match result {
-      Some(current) =>
-        if range.line_number > current.line_number {
-          result = Some(range)
-        }
-      None => result = Some(range)
-    }
-  }
-  result
+  { line_number, ranges }
 }
 
 ///|
@@ -334,78 +277,4 @@ fn LineVisibleRanges::last_line(
 priv struct HorizontalRange {
   left : Int
   width : Int
-} derive(Eq, Debug)
-
-///|
-fn HorizontalRange::HorizontalRange(
-  left : Double,
-  width : Double,
-) -> HorizontalRange {
-  { left: js_math_round_to_int(left), width: js_math_round_to_int(width) }
-}
-
-///|
-fn HorizontalRange::from(
-  ranges : Array[FloatHorizontalRange],
-) -> Array[HorizontalRange] {
-  let len = ranges.length()
-  let result = Array::make(len, HorizontalRange::HorizontalRange(0.0, 0.0))
-  for index in 0..<len {
-    let range = ranges[index]
-    result[index] = HorizontalRange(range.left, range.width)
-  }
-  result
-}
-
-///|
-fn HorizontalRange::to_string(self : HorizontalRange) -> String {
-  "[\{self.left},\{self.width}]"
-}
-
-///|
-/// Monaco `FloatHorizontalRange`: preserve fractional DOM geometry.
-priv struct FloatHorizontalRange {
-  left : Double
-  width : Double
-} derive(Eq, Debug)
-
-///|
-fn FloatHorizontalRange::FloatHorizontalRange(
-  left : Double,
-  width : Double,
-) -> FloatHorizontalRange {
-  { left, width }
-}
-
-///|
-fn FloatHorizontalRange::to_string(self : FloatHorizontalRange) -> String {
-  "[\{self.left},\{self.width}]"
-}
-
-///|
-fn FloatHorizontalRange::compare(
-  left : FloatHorizontalRange,
-  right : FloatHorizontalRange,
-) -> Double {
-  left.left - right.left
-}
-
-///|
-/// Monaco `VisibleRanges`: unrounded ranges plus their aggregate outside bit.
-priv struct VisibleRanges {
-  outside_rendered_line : Bool
-  ranges : Array[FloatHorizontalRange]
-} derive(Eq, Debug)
-
-///|
-fn VisibleRanges::VisibleRanges(
-  outside_rendered_line : Bool,
-  ranges : Array[FloatHorizontalRange],
-) -> VisibleRanges {
-  { outside_rendered_line, ranges }
-}
-
-///|
-fn js_math_round_to_int(value : Double) -> Int {
-  (value + 0.5).floor().to_int()
 }

@@ -60,46 +60,6 @@ fn new_styled_range(left : Double, width : Double) -> StyledRange {
 }
 
 ///|
-/// `SelectionsOverlay.prepareRender` (`selections.ts:361-390`) for the
-/// viewer's single selection: collect the per-line horizontal ranges
-/// (`linesVisibleRangesForRange` over the DOM caret-measurement seam), enrich
-/// them with rounded-corner styles (`_enrichVisibleRangesWithStyle`), then
-/// build each line's HTML with the inner-corner pieces placed before the
-/// selection rectangles (`_actualRenderOneSelection`'s two buckets — issue
-/// #77777's ordering). The previous-frame corner cache (a repaint
-/// optimization) is intentionally omitted.
-fn prepare_selections_render(
-  viewport : @view_layout.ViewportData,
-  selection_view_range : @base_common.Range?,
-  view_model : @view_model.ViewModel?,
-  space_width : Double,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
-) -> Array[String] {
-  let range = match selection_view_range {
-    Some(range) => range
-    None =>
-      // An empty selection renders nothing (`selection.isEmpty()` skip).
-      return Array::make(viewport.lines.length(), "")
-  }
-  let lines : Array[LineSelectionRanges] = []
-  for index in 0..<viewport.lines.length() {
-    match
-      collect_line_selection_ranges(
-        viewport.start_line_number + index,
-        viewport.lines[index].max_column,
-        range,
-        view_model,
-        space_width,
-        measure,
-      ) {
-      Some(line_ranges) => lines.push(line_ranges)
-      None => ()
-    }
-  }
-  render_selection_lines(viewport, lines, space_width)
-}
-
-///|
 /// Production entrypoint for the pinned `SelectionsOverlay` query shape:
 /// `RenderingContext.linesVisibleRangesForRange(selection, true)` has already
 /// aggregated, rounded, and newline-extended the measured DOM ranges. The
@@ -152,63 +112,6 @@ fn render_selection_lines(
     result.push(inner_corners[index] + rest_of_selection[index])
   }
   result
-}
-
-///|
-/// The styled horizontal ranges for one rendered view line, transcribing the
-/// per-line body of `viewLines.linesVisibleRangesForRange`. The start column
-/// applies only on the first selected line and the end column only on the last;
-/// lines in between span their whole rendered width. A view line that ends a
-/// model line inside the selection (a real newline, not a soft-wrap
-/// continuation) has the trailing newline folded into the last range's width,
-/// matching Monaco's end-of-line extension.
-fn collect_line_selection_ranges(
-  view_line_number : Int,
-  max_column : Int,
-  range : @base_common.Range,
-  view_model : @view_model.ViewModel?,
-  space_width : Double,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
-) -> LineSelectionRanges? {
-  if view_line_number < range.start_line_number ||
-    view_line_number > range.end_line_number {
-    return None
-  }
-  let start_column = if view_line_number == range.start_line_number {
-    range.start_column
-  } else {
-    1
-  }
-  let continues_in_next_line = view_line_number != range.end_line_number
-  let end_column = if continues_in_next_line {
-    max_column
-  } else {
-    range.end_column
-  }
-  let start_column0 = start_column - 1
-  let end_column0 = end_column - 1
-  let includes_newline = continues_in_next_line &&
-    ends_model_line(view_model, view_line_number)
-  let ranges : Array[StyledRange] = []
-  if start_column0 < end_column0 {
-    for rect in measure(view_line_number, start_column0, end_column0) {
-      let (left, width) = rect
-      ranges.push(new_styled_range(left, width))
-    }
-  }
-  if includes_newline {
-    if ranges.length() > 0 {
-      let last = ranges[ranges.length() - 1]
-      ranges[ranges.length() - 1] = { ..last, width: last.width + space_width }
-    } else {
-      let left = eol_anchor_x(view_line_number, start_column0, measure)
-      ranges.push(new_styled_range(left, space_width))
-    }
-  }
-  if ranges.length() == 0 {
-    return None
-  }
-  Some({ line_number: view_line_number, ranges })
 }
 
 ///|
@@ -338,54 +241,6 @@ fn render_styled_line_html(
       selection_piece_html(class_name, range.left, range.width)
   }
   (inner_corner_output, rest_of_selection_output)
-}
-
-///|
-/// Whether `view_line_number` ends the model line it belongs to (i.e. the next
-/// view line maps to a different model line). A soft-wrap continuation returns
-/// `false`; a real line break returns `true`. Mirrors the model-line-boundary
-/// check in `linesVisibleRangesForRange`. Without a view model, falls back to
-/// the identity assumption that every view line is its own model line.
-fn ends_model_line(
-  view_model : @view_model.ViewModel?,
-  view_line_number : Int,
-) -> Bool {
-  match view_model {
-    Some(view_model) => {
-      let lines = view_model.lines()
-      if view_line_number >= lines.get_view_line_count() {
-        true
-      } else {
-        lines.model_line_number_of_view_line(view_line_number) !=
-        lines.model_line_number_of_view_line(view_line_number + 1)
-      }
-    }
-    None => true
-  }
-}
-
-///|
-/// The pixel x where a selection that begins at `start_column0` (with no
-/// selected text on the line) should anchor its end-of-line marker: the right
-/// edge of the line's text up to that column, or `0` at the line start.
-/// Columns are zero-based local view columns.
-fn eol_anchor_x(
-  view_line_number : Int,
-  start_column0 : Int,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
-) -> Double {
-  if start_column0 <= 0 {
-    return 0.0
-  }
-  let mut edge = 0.0
-  for rect in measure(view_line_number, 0, start_column0) {
-    let (left, width) = rect
-    let candidate = left + width
-    if candidate > edge {
-      edge = candidate
-    }
-  }
-  edge
 }
 
 ///|

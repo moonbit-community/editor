@@ -55,13 +55,10 @@ pub fn PartFingerprint::from_int(value : Int) -> PartFingerprint {
 }
 
 ///|
-/// `PartFingerprints` (viewPart.ts:48-82). Monaco stamps inside each part's
-/// constructor; the merged View stamps every part root right after
+/// `PartFingerprints.write` (viewPart.ts:48-60). Monaco stamps inside each
+/// part's constructor; the merged View stamps every part root right after
 /// construction (view.mbt).
-pub struct PartFingerprints {}
-
-///|
-fn PartFingerprints::write(
+fn PartFingerprint::write(
   target : @rdom.Element,
   part_id : PartFingerprint,
 ) -> Unit {
@@ -69,7 +66,7 @@ fn PartFingerprints::write(
 }
 
 ///|
-fn PartFingerprints::read(target : @rdom.Element) -> PartFingerprint {
+fn PartFingerprint::read(target : @rdom.Element) -> PartFingerprint {
   PartFingerprint::from_int(read_data_mprt(target))
 }
 
@@ -78,7 +75,7 @@ fn PartFingerprints::read(target : @rdom.Element) -> PartFingerprint {
 /// `child` up to (excluding) `stop_at`, as bytes mirroring the source's
 /// `Uint8Array`. The walk visits elements only (`parentElement`), stopping at
 /// the document body like the source.
-pub fn PartFingerprints::collect(
+pub fn PartFingerprint::collect(
   child : @rdom.Element?,
   stop_at : @rdom.Element,
 ) -> Bytes {
@@ -88,7 +85,7 @@ pub fn PartFingerprints::collect(
     if el.is_same_node(stop_at.as_node()) {
       break
     }
-    result.push(PartFingerprints::read(el).to_int().to_byte())
+    result.push(PartFingerprint::read(el).to_int().to_byte())
     node = parent_element(el)
   }
   Bytes::makei(result.length(), i => result[result.length() - i - 1])

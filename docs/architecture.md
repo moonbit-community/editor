@@ -40,7 +40,8 @@ widgets, language-feature presentation, and editor events.
 ### Shared foundations
 
 - `base/common`: URI/path, positions/ranges, events, and disposables.
-- `base/browser`: browser mouse and global pointer-move primitives.
+- `base/browser`: canonical browser runtime and DOM primitives, mouse events,
+  and global pointer-move monitoring.
 - `language`: backend-neutral diagnostic, hover, location, and symbol provider
   contracts.
 - `syntax` and `syntax/lang_*`: stateful line-tokenization contracts and

@@ -42,7 +42,7 @@ test "retained ViewLine consumes sticky content token decoration and option inva
   builder.reset()
   assert_false(line.render_line(1, input, 0, 20, builder))
 
-  line.on_content_changed()
+  line.on_tokens_changed()
   assert_true(line.is_maybe_invalid)
   assert_false(line.render_line(1, input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
@@ -105,7 +105,7 @@ test "retained ViewLine skips writes for distinct raw whitespace widths with equ
   let builder = StringBuilder()
   assert_true(line.render_line(1, first, 0, 20, builder))
   builder.reset()
-  line.on_content_changed()
+  line.on_tokens_changed()
   assert_false(line.render_line(1, same_normalized, 0, 20, builder))
   assert_eq(builder.to_string(), "")
 }

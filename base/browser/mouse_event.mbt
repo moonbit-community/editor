@@ -60,7 +60,7 @@ pub fn StandardMouseEvent::new(e : @rdom.MouseEvent) -> StandardMouseEvent {
     shift_key: e.get_shift_key(),
     alt_key: e.get_alt_key(),
     meta_key: e.get_meta_key(),
-    timestamp: date_now(),
+    timestamp: wall_clock_now_ms(),
     default_prevented: event_default_prevented(e),
   }
 }
@@ -89,7 +89,3 @@ extern "js" fn event_type(e : @rdom.MouseEvent) -> String =
 /// FFI gap-fill: no `Event.defaultPrevented` binding in the vendored `@rdom`.
 extern "js" fn event_default_prevented(e : @rdom.MouseEvent) -> Bool =
   #| (e) => !!e.defaultPrevented
-
-///|
-/// Monaco reads `Date.now()` (mouseEvent.ts:51).
-extern "js" fn date_now() -> Double = "() => Date.now()"

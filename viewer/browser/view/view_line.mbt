@@ -81,7 +81,7 @@ priv struct ViewLine {
 
 ///|
 fn ViewLine::ViewLine(
-  options? : ViewLineOptions = ViewLineOptions::ViewLineOptions(),
+  options? : ViewLineOptions = ViewLineOptions(),
 ) -> ViewLine {
   { options, rendered_view_line: None, is_maybe_invalid: true }
 }
@@ -363,9 +363,7 @@ fn create_normal_rendered_line(
   character_mapping : @view_layout.CharacterMapping,
   foreign_elements : ForeignElementFacts,
 ) -> RenderedViewLine {
-  RenderedViewLine::RenderedViewLine(
-    dom_node, input, character_mapping, foreign_elements,
-  )
+  RenderedViewLine(dom_node, input, character_mapping, foreign_elements)
 }
 
 ///|

@@ -164,10 +164,7 @@ priv struct CurrentLineHighlightOverlay {
 
 ///|
 fn CurrentLineHighlightOverlay::CurrentLineHighlightOverlay() -> CurrentLineHighlightOverlay {
-  {
-    state: CurrentLineHighlightState::CurrentLineHighlightState(),
-    render_result: [],
-  }
+  { state: CurrentLineHighlightState(), render_result: [] }
 }
 
 ///|

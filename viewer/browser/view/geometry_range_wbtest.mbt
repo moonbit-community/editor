@@ -269,7 +269,7 @@ test "RangeUtil endpoint branches preserve empty span and prior-span repairs" {
       0,
       0,
       0,
-      DomReadingContext::DomReadingContext(
+      DomReadingContext(
         range_fixture_context(no_children),
         range_fixture_end_node(no_children),
       ),

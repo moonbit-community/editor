@@ -64,7 +64,7 @@ fn mapped_fixture_line(
   let line = ViewLine::ViewLine()
   let output = @view_layout.render_view_line2(input)
   line.rendered_view_line = Some(
-    RenderedViewLine::RenderedViewLine(
+    RenderedViewLine(
       None,
       input,
       mapping,

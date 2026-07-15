@@ -18,7 +18,7 @@ fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
 
 ///|
 fn retained_line_options_of(viewer : Viewer) -> @view.ViewLineOptions {
-  @view.ViewLineOptions::ViewLineOptions(
+  ViewLineOptions(
     line_height=viewer.font_info.line_height,
     space_width=viewer.font_info.space_width,
     middot_width=viewer.font_info.middot_width,

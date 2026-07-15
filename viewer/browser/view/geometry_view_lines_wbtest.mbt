@@ -8,7 +8,7 @@ fn geometry_view_lines(
   visible_range : @base_common.Range,
   layout : @view_layout.ViewLayout,
   fixture : ViewLineFixture,
-  scheduler? : RunOnceScheduler = RunOnceScheduler::RunOnceScheduler(200),
+  scheduler? : RunOnceScheduler = RunOnceScheduler(200),
 ) -> ViewLines {
   let configuration = ViewLinesConfiguration::ViewLinesConfiguration()
   let options_ref = Ref(configuration.view_line_options)
@@ -31,7 +31,7 @@ fn geometry_view_lines(
     read_configuration: () => configuration,
     view_line_to_model_line: line_number => line_number,
     model_line_text_direction: _line_number => LTR,
-    line_factory: () => ViewLine::ViewLine(options=options_ref.val),
+    line_factory: () => ViewLine(options=options_ref.val),
     async_update_line_widths: scheduler,
     last_rendered_data,
     max_line_width: 0.0,

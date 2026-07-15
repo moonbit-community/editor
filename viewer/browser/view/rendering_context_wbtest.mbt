@@ -2,8 +2,8 @@
 test "rendering geometry carriers preserve source rounding and order" {
   let floats = [
     FloatHorizontalRange::FloatHorizontalRange(1.49, 2.5),
-    FloatHorizontalRange::FloatHorizontalRange(-1.5, -1.6),
-    FloatHorizontalRange::FloatHorizontalRange(8.51, 0.49),
+    FloatHorizontalRange(-1.5, -1.6),
+    FloatHorizontalRange(8.51, 0.49),
   ]
   let rounded = HorizontalRange::from(floats)
   assert_eq(rounded.length(), 3)
@@ -25,9 +25,9 @@ test "rendering geometry carriers preserve source rounding and order" {
   assert_eq(visible.ranges.length(), 3)
 
   let boundaries = HorizontalRange::from([
-    FloatHorizontalRange::FloatHorizontalRange(4.0, -4.0),
-    FloatHorizontalRange::FloatHorizontalRange(1.5, -2.5),
-    FloatHorizontalRange::FloatHorizontalRange(-2.5, 3.49),
+    FloatHorizontalRange(4.0, -4.0),
+    FloatHorizontalRange(1.5, -2.5),
+    FloatHorizontalRange(-2.5, 3.49),
   ])
   assert_true(boundaries[0] == { left: 4, width: -4 })
   assert_true(boundaries[1] == { left: 2, width: -2 })
@@ -56,13 +56,13 @@ test "LineVisibleRanges first and last are order independent with strict ties" {
   let first_tie = LineVisibleRanges::LineVisibleRanges(
     false,
     2,
-    [HorizontalRange::HorizontalRange(10.0, 1.0)],
+    [HorizontalRange(10.0, 1.0)],
     false,
   )
   let second_tie = LineVisibleRanges::LineVisibleRanges(
     true,
     2,
-    [HorizontalRange::HorizontalRange(20.0, 2.0)],
+    [HorizontalRange(20.0, 2.0)],
     true,
   )
   let low = LineVisibleRanges::LineVisibleRanges(false, 1, [], true)

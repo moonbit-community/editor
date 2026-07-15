@@ -57,9 +57,7 @@ test "retained ViewLine consumes sticky content token decoration and option inva
   assert_false(line.render_line(1, input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
 
-  line.on_options_changed(
-    ViewLineOptions::ViewLineOptions(render_whitespace=All),
-  )
+  line.on_options_changed(ViewLineOptions(render_whitespace=All))
   assert_true(line.is_maybe_invalid)
   assert_false(line.render_line(1, input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
@@ -75,9 +73,7 @@ test "retained ViewLine selection invalidates only last-rendered Selection white
   assert_false(line.on_selection_changed())
   assert_false(line.is_maybe_invalid)
 
-  line.on_options_changed(
-    ViewLineOptions::ViewLineOptions(render_whitespace=Selection),
-  )
+  line.on_options_changed(ViewLineOptions(render_whitespace=Selection))
   builder.reset()
   assert_true(line.render_line(1, selection_input, 0, 20, builder))
   assert_false(line.is_maybe_invalid)
@@ -120,7 +116,7 @@ test "retained line factory reads the current option snapshot on every creation"
   let factory = retained_view_line_factory(options)
   let first = factory()
   assert_true(first.option_snapshot().render_whitespace == None)
-  options.val = ViewLineOptions::ViewLineOptions(render_whitespace=All)
+  options.val = ViewLineOptions(render_whitespace=All)
   let second = factory()
   assert_true(second.option_snapshot().render_whitespace == All)
   assert_true(first.option_snapshot().render_whitespace == None)

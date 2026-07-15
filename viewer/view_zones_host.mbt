@@ -22,7 +22,7 @@ pub fn view_zone(
   on_dom_node_top? : (Double) -> Unit raise,
   on_computed_height? : (Double) -> Unit raise,
 ) -> @editor_browser.ViewZone {
-  @editor_browser.ViewZone::ViewZone(
+  ViewZone(
     after_line_number,
     dom_node,
     after_column?,

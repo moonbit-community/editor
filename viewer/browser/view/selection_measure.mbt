@@ -82,7 +82,7 @@ pub fn View::visible_range_for_position(
       view_line_number, view_column,
     ) {
     Some((outside_rendered_line, left)) =>
-      Some(HorizontalPosition::HorizontalPosition(outside_rendered_line, left))
+      Some(HorizontalPosition(outside_rendered_line, left))
     None => None
   }
 }

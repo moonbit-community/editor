@@ -184,7 +184,7 @@ fn RenderingContext::visible_range_for_position(
       position.column,
     ) {
     Some((outside_rendered_line, left)) =>
-      Some(HorizontalPosition::HorizontalPosition(outside_rendered_line, left))
+      Some(HorizontalPosition(outside_rendered_line, left))
     None => None
   }
 }
@@ -218,14 +218,7 @@ fn line_visible_ranges_from_raw(
     for range in raw.2 {
       horizontal_ranges.push({ left: range.0, width: range.1 })
     }
-    result.push(
-      LineVisibleRanges::LineVisibleRanges(
-        raw.0,
-        raw.1,
-        horizontal_ranges,
-        raw.3,
-      ),
-    )
+    result.push(LineVisibleRanges(raw.0, raw.1, horizontal_ranges, raw.3))
   }
   result
 }
@@ -359,7 +352,7 @@ fn HorizontalRange::from(
   let result = Array::make(len, HorizontalRange::HorizontalRange(0.0, 0.0))
   for index in 0..<len {
     let range = ranges[index]
-    result[index] = HorizontalRange::HorizontalRange(range.left, range.width)
+    result[index] = HorizontalRange(range.left, range.width)
   }
   result
 }

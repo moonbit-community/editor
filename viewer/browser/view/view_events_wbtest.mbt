@@ -63,7 +63,7 @@ test "source-shaped payloads retain independent fields and array identity" {
 
   let ranges = [ViewTokenChangeRange::ViewTokenChangeRange(4, 6)]
   let tokens = ViewTokensChangedEvent::ViewTokensChangedEvent(ranges)
-  ranges.push(ViewTokenChangeRange::ViewTokenChangeRange(9, 10))
+  ranges.push(ViewTokenChangeRange(9, 10))
   assert_eq(tokens.ranges.length(), 2)
   assert_eq(tokens.ranges[0].from_line_number, 4)
   assert_eq(tokens.ranges[0].to_line_number, 6)
@@ -176,7 +176,7 @@ test "hidden-area batch delivers mapping events before recovery scroll" {
   // dispatcher API while the ViewModel-owned outer collector is still open.
   dispatcher.emit_view_event(
     ViewScrollChanged(
-      ViewScrollChangedEvent::ViewScrollChangedEvent(
+      ViewScrollChangedEvent(
         400.0, 0.0, 1000.0, 25.0, false, false, false, true,
       ),
     ),
@@ -252,7 +252,7 @@ test "View dispatcher retains eight handlers in source order and gives each the 
     assert_false(part.should_render())
   }
   view.emit_view_events([
-    ViewFocusChanged(ViewFocusChangedEvent::ViewFocusChangedEvent(true)),
+    ViewFocusChanged(ViewFocusChangedEvent(true)),
     ViewConfigurationChanged(
       ViewConfigurationChangedEvent::from_changed_options([]),
     ),
@@ -538,13 +538,13 @@ test "ViewLines propagates changed token decoration option and selection invalid
   assert_false(
     view_lines_on_view_event(
       lines,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(13, 1)),
+      ViewLinesChanged(ViewLinesChangedEvent(13, 1)),
     ),
   )
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(11, 1)),
+      ViewLinesChanged(ViewLinesChangedEvent(11, 1)),
     ),
   )
   let input_b2 = view_event_test_line_input("bravo changed", Selection)
@@ -563,21 +563,13 @@ test "ViewLines propagates changed token decoration option and selection invalid
   assert_false(
     view_lines_on_view_event(
       lines,
-      ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 9),
-        ]),
-      ),
+      ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(1, 9)])),
     ),
   )
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(9, 10),
-        ]),
-      ),
+      ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(9, 10)])),
     ),
   )
   let input_a2 = view_event_test_line_input("alpha tokenized", None)
@@ -616,9 +608,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   )
   let input_a3 = view_event_test_line_input("alpha option", None)
   assert_false(line_a.render_line(10, input_a3, 0, 20, StringBuilder()))
-  live_configuration.val = ViewLinesConfiguration::ViewLinesConfiguration(
-    render_whitespace=All,
-  )
+  live_configuration.val = ViewLinesConfiguration(render_whitespace=All)
   assert_true(
     view_lines_on_view_event(
       lines,
@@ -633,7 +623,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Cache-only changes are reread in source order but do not masquerade as a
   // `ViewLineOptions.equals` change.
-  live_configuration.val = ViewLinesConfiguration::ViewLinesConfiguration(
+  live_configuration.val = ViewLinesConfiguration(
     typical_halfwidth_character_width=8.0,
     is_viewport_wrapping=true,
     can_use_layer_hinting=false,
@@ -665,7 +655,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
 
   // Line height belongs to the retained option identity and therefore latches
   // every row even when the event payload is otherwise minimal.
-  live_configuration.val = ViewLinesConfiguration::ViewLinesConfiguration(
+  live_configuration.val = ViewLinesConfiguration(
     line_height=21,
     typical_halfwidth_character_width=8.0,
     is_viewport_wrapping=true,
@@ -732,7 +722,7 @@ test "ViewLines changed range notifies every retained row through the inclusive 
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(10, 3)),
+      ViewLinesChanged(ViewLinesChangedEvent(10, 3)),
     ),
   )
   assert_true(
@@ -780,7 +770,7 @@ test "ViewLines option equality catches same-space font render axes" {
   )
   lines.window = { start: 1, end: 2 }
   lines.lines = [line]
-  live_configuration.val = ViewLinesConfiguration::ViewLinesConfiguration(
+  live_configuration.val = ViewLinesConfiguration(
     space_width=7.2,
     middot_width=8.0,
     wsmiddot_width=9.0,
@@ -833,7 +823,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(11, 12)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(11, 12)),
     ),
   )
   assert_eq(lines.window.start, 10)
@@ -854,7 +844,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(1, 2)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(1, 2)),
     ),
   )
   assert_eq(lines.window.start, 8)
@@ -862,7 +852,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(20, 21)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(20, 21)),
     ),
   )
   assert_eq(lines.window.start, 8)
@@ -873,7 +863,7 @@ test "ViewLines deletion reconciles start rows and removes only evicted DOM node
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(7, 8)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(7, 8)),
     ),
   )
   assert_eq(lines.window.start, 7)
@@ -902,7 +892,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(20, 20)),
+      ViewLinesInserted(ViewLinesInsertedEvent(20, 20)),
     ),
   )
   assert_eq(lines.window.start, 21)
@@ -912,7 +902,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(18, 19)),
+      ViewLinesInserted(ViewLinesInsertedEvent(18, 19)),
     ),
   )
   assert_eq(lines.window.start, 22)
@@ -920,7 +910,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(30, 30)),
+      ViewLinesInserted(ViewLinesInsertedEvent(30, 30)),
     ),
   )
   assert_eq(lines.window.start, 22)
@@ -932,7 +922,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(21, 21)),
+      ViewLinesInserted(ViewLinesInsertedEvent(21, 21)),
     ),
   )
   assert_eq(lines.window.start, 20)
@@ -953,7 +943,7 @@ test "ViewLines insertion shifts or recycles rows and removes displaced tail DOM
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(21, 24)),
+      ViewLinesInserted(ViewLinesInsertedEvent(21, 24)),
     ),
   )
   assert_eq(lines.window.start, 20)
@@ -987,29 +977,25 @@ test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
   assert_false(
     view_lines_on_view_event(
       lines,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(1, 1)),
+      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
     ),
   )
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(1, 1)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
     ),
   )
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(1, 1)),
+      ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
     ),
   )
   assert_false(
     view_lines_on_view_event(
       lines,
-      ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 1),
-        ]),
-      ),
+      ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(1, 1)])),
     ),
   )
   assert_eq(lines.window.start, 1)
@@ -1030,11 +1016,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
     view_cursors_on_view_event(
       cursors,
       ViewCursorStateChanged(
-        ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
-          [selection],
-          [selection],
-          NotSet,
-        ),
+        ViewCursorStateChangedEvent([selection], [selection], NotSet),
       ),
     ),
   )
@@ -1056,7 +1038,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
     view_cursors_on_view_event(
       cursors,
       ViewCursorStateChanged(
-        ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
+        ViewCursorStateChangedEvent(
           [moved_selection],
           [moved_selection],
           NotSet,
@@ -1071,7 +1053,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   assert_false(
     view_cursors_on_view_event(
       cursors,
-      ViewFocusChanged(ViewFocusChangedEvent::ViewFocusChangedEvent(true)),
+      ViewFocusChanged(ViewFocusChangedEvent(true)),
     ),
   )
   assert_eq(
@@ -1085,7 +1067,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   )
   cursors.should_render = false
   ViewEventHandlerHandle::handle_view_events(ViewCursorsHandler(cursors), [
-    ViewFocusChanged(ViewFocusChangedEvent::ViewFocusChangedEvent(false)),
+    ViewFocusChanged(ViewFocusChangedEvent(false)),
   ])
   assert_false(cursors.should_render)
   assert_true(
@@ -1111,20 +1093,14 @@ fn view_event_test_scroll(
   top : Bool,
 ) -> ViewEvent {
   ViewScrollChanged(
-    ViewScrollChangedEvent::ViewScrollChangedEvent(
-      700.0, 11.0, 900.0, 23.0, width, left, height, top,
-    ),
+    ViewScrollChangedEvent(700.0, 11.0, 900.0, 23.0, width, left, height, top),
   )
 }
 
 ///|
 fn view_event_test_cursor(selections : Array[@core.Selection]) -> ViewEvent {
   ViewCursorStateChanged(
-    ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
-      selections,
-      selections,
-      NotSet,
-    ),
+    ViewCursorStateChangedEvent(selections, selections, NotSet),
   )
 }
 
@@ -1197,9 +1173,9 @@ test "ContentWidgets handlers refresh layout and reproject every mapping event" 
   for
     event in [
       ViewLineMappingChanged,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(2, 1)),
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(2, 2)),
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(2, 2)),
+      ViewLinesChanged(ViewLinesChangedEvent(2, 1)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(2, 2)),
+      ViewLinesInserted(ViewLinesInsertedEvent(2, 2)),
     ] {
     assert_true(content_widgets_on_view_event(widgets, event))
   }
@@ -1227,19 +1203,19 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_true(
     content_widgets_on_view_event(
       widgets,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(1, 1)),
+      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
     ),
   )
   assert_true(
     content_widgets_on_view_event(
       widgets,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(1, 2)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(1, 2)),
     ),
   )
   assert_true(
     content_widgets_on_view_event(
       widgets,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(1, 2)),
+      ViewLinesInserted(ViewLinesInsertedEvent(1, 2)),
     ),
   )
   assert_true(
@@ -1255,13 +1231,13 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_false(
     content_widgets_on_view_event(
       widgets,
-      ViewTokensChanged(ViewTokensChangedEvent::ViewTokensChangedEvent([])),
+      ViewTokensChanged(ViewTokensChangedEvent([])),
     ),
   )
   assert_false(
     content_widgets_on_view_event(
       widgets,
-      ViewFocusChanged(ViewFocusChangedEvent::ViewFocusChangedEvent(true)),
+      ViewFocusChanged(ViewFocusChangedEvent(true)),
     ),
   )
 
@@ -1274,13 +1250,13 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_true(
     view_zones_on_view_event(
       zones,
-      ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(1, 1)),
+      ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
     ),
   )
   assert_true(
     view_zones_on_view_event(
       zones,
-      ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(1, 1)),
+      ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
     ),
   )
   assert_true(
@@ -1312,7 +1288,7 @@ test "ContentWidgets and ViewZones source handler matrices" {
   assert_false(
     view_zones_on_view_event(
       zones,
-      ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(1, 1)),
+      ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
     ),
   )
   view.dispose()
@@ -1349,29 +1325,25 @@ test "overlay aggregates, OverlayWidgets, and EditorScrollbar handler matrix" {
     assert_true(
       ViewEventHandlerHandle::on_view_event(
         overlays,
-        ViewLinesChanged(ViewLinesChangedEvent::ViewLinesChangedEvent(1, 1)),
+        ViewLinesChanged(ViewLinesChangedEvent(1, 1)),
       ),
     )
     assert_true(
       ViewEventHandlerHandle::on_view_event(
         overlays,
-        ViewLinesDeleted(ViewLinesDeletedEvent::ViewLinesDeletedEvent(1, 1)),
+        ViewLinesDeleted(ViewLinesDeletedEvent(1, 1)),
       ),
     )
     assert_true(
       ViewEventHandlerHandle::on_view_event(
         overlays,
-        ViewLinesInserted(ViewLinesInsertedEvent::ViewLinesInsertedEvent(1, 1)),
+        ViewLinesInserted(ViewLinesInsertedEvent(1, 1)),
       ),
     )
     assert_true(
       ViewEventHandlerHandle::on_view_event(
         overlays,
-        ViewTokensChanged(
-          ViewTokensChangedEvent::ViewTokensChangedEvent([
-            ViewTokenChangeRange::ViewTokenChangeRange(1, 1),
-          ]),
-        ),
+        ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(1, 1)])),
       ),
     )
     assert_true(
@@ -1383,7 +1355,7 @@ test "overlay aggregates, OverlayWidgets, and EditorScrollbar handler matrix" {
     assert_true(
       ViewEventHandlerHandle::on_view_event(
         overlays,
-        ViewFocusChanged(ViewFocusChangedEvent::ViewFocusChangedEvent(true)),
+        ViewFocusChanged(ViewFocusChangedEvent(true)),
       ),
     )
     assert_true(
@@ -1472,11 +1444,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   let view = View::View()
   let lines = view.view_lines
   lines.window = { start: 10, end: 13 }
-  lines.lines = [
-    ViewLine::ViewLine(),
-    ViewLine::ViewLine(),
-    ViewLine::ViewLine(),
-  ]
+  lines.lines = [ViewLine(), ViewLine(), ViewLine()]
   assert_false(
     view_lines_on_view_event(
       lines,
@@ -1505,9 +1473,9 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     view_lines_on_view_event(
       lines,
       ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 9),
-          ViewTokenChangeRange::ViewTokenChangeRange(13, 20),
+        ViewTokensChangedEvent([
+          ViewTokenChangeRange(1, 9),
+          ViewTokenChangeRange(13, 20),
         ]),
       ),
     ),
@@ -1516,9 +1484,9 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     view_lines_on_view_event(
       lines,
       ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 9),
-          ViewTokenChangeRange::ViewTokenChangeRange(12, 20),
+        ViewTokensChangedEvent([
+          ViewTokenChangeRange(1, 9),
+          ViewTokenChangeRange(12, 20),
         ]),
       ),
     ),
@@ -1526,11 +1494,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   assert_true(
     view_lines_on_view_event(
       lines,
-      ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(10, 10),
-        ]),
-      ),
+      ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(10, 10)])),
     ),
   )
 
@@ -1540,9 +1504,9 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     view_cursors_on_view_event(
       cursors,
       ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 4),
-          ViewTokenChangeRange::ViewTokenChangeRange(6, 9),
+        ViewTokensChangedEvent([
+          ViewTokenChangeRange(1, 4),
+          ViewTokenChangeRange(6, 9),
         ]),
       ),
     ),
@@ -1551,9 +1515,9 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
     view_cursors_on_view_event(
       cursors,
       ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(1, 4),
-          ViewTokenChangeRange::ViewTokenChangeRange(5, 5),
+        ViewTokensChangedEvent([
+          ViewTokenChangeRange(1, 4),
+          ViewTokenChangeRange(5, 5),
         ]),
       ),
     ),
@@ -1561,11 +1525,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   assert_true(
     view_cursors_on_view_event(
       cursors,
-      ViewTokensChanged(
-        ViewTokensChangedEvent::ViewTokensChangedEvent([
-          ViewTokenChangeRange::ViewTokenChangeRange(5, 8),
-        ]),
-      ),
+      ViewTokensChanged(ViewTokensChangedEvent([ViewTokenChangeRange(5, 8)])),
     ),
   )
   assert_true(
@@ -1897,9 +1857,7 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
 
   // Base ViewOverlays retains focus even though CurrentLineHighlight's
   // focus-only early return deliberately leaves its own `_focused` unchanged.
-  let focus_event = ViewFocusChanged(
-    ViewFocusChangedEvent::ViewFocusChangedEvent(true),
-  )
+  let focus_event = ViewFocusChanged(ViewFocusChangedEvent(true))
   assert_true(content_view_overlays_on_view_event(content, focus_event))
   assert_true(margin_view_overlays_on_view_event(margin, focus_event))
   assert_true(content.overlays.is_focused)

@@ -18,22 +18,14 @@ fn Viewer::hook_view_input(self : Viewer, view : @view.View) -> Unit {
   add_view_event_listener(view, view.root, "focus", _ => {
     if !self.editor_has_focus {
       self.editor_has_focus = true
-      self.emit_view_event(
-        ViewFocusChanged(
-          @view.ViewFocusChangedEvent::ViewFocusChangedEvent(true),
-        ),
-      )
+      self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(true)))
       self.schedule_render()
     }
   })
   add_view_event_listener(view, view.root, "blur", _ => {
     if self.editor_has_focus {
       self.editor_has_focus = false
-      self.emit_view_event(
-        ViewFocusChanged(
-          @view.ViewFocusChangedEvent::ViewFocusChangedEvent(false),
-        ),
-      )
+      self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(false)))
       self.schedule_render()
     }
   })

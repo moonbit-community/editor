@@ -37,7 +37,7 @@ pub fn ViewLinesConfiguration::ViewLinesConfiguration(
     typical_halfwidth_character_width,
     is_viewport_wrapping,
     can_use_layer_hinting,
-    view_line_options: ViewLineOptions::ViewLineOptions(
+    view_line_options: ViewLineOptions(
       line_height~,
       space_width~,
       middot_width~,
@@ -175,7 +175,7 @@ pub struct ViewLines {
 
 ///|
 fn retained_view_line_factory(options : Ref[ViewLineOptions]) -> () -> ViewLine {
-  () => ViewLine::ViewLine(options=options.val)
+  () => ViewLine(options=options.val)
 }
 
 ///|
@@ -206,8 +206,8 @@ fn ViewLines::ViewLines(
     view_line_to_model_line: line_number => line_number,
     model_line_text_direction: _line_number => LTR,
     line_factory,
-    async_update_line_widths: RunOnceScheduler::RunOnceScheduler(200),
-    last_rendered_data: LastRenderedData::LastRenderedData(),
+    async_update_line_widths: RunOnceScheduler(200),
+    last_rendered_data: LastRenderedData(),
     max_line_width: 0.0,
     last_layout: None,
     should_render: true,

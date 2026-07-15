@@ -479,9 +479,9 @@ fn ViewZones::add_zone(
     delegate: zone,
     is_in_hidden_area: props.is_in_hidden_area,
     is_visible: false,
-    dom_node: FastViewZoneDomNode::FastViewZoneDomNode(zone.dom_node),
+    dom_node: FastViewZoneDomNode(zone.dom_node),
     margin_dom_node: match zone.margin_dom_node {
-      Some(node) => Some(FastViewZoneDomNode::FastViewZoneDomNode(node))
+      Some(node) => Some(FastViewZoneDomNode(node))
       None => None
     },
   }

@@ -1,8 +1,10 @@
-///| White-box coverage for the retained `RangePriorityQueueImpl` operations.
+///| Conformance slice for the retained `RangePriorityQueueImpl` operations.
 ///
 /// Source: `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`. The readonly model retains only
-/// the queue operations consumed by tokenization state tracking.
+/// `b18492a288de038fbc7643aae6de8247029d11bd`. The applicable upstream test
+/// keeps its original name; the incremental-resize case is explicitly skipped
+/// below. Branch-derived cases cover the queue operations retained by current
+/// tokenization state tracking.
 
 ///|
 fn or_strings(ranges : Array[@base_common.OffsetRange]) -> Array[String] {
@@ -40,6 +42,9 @@ test "addRange" {
   @base_common.OffsetRange::add_range(OffsetRange(-10, -5), ranges)
   assert_str_array_eq(or_strings(ranges), ["[-10, -5)", "[-1, 29)"])
 }
+
+// SKIPPED: addRangeAndResize — readonly Viewer has no incremental edit producer,
+// and the corresponding queue operation has no current production consumer.
 
 ///|
 test "RangePriorityQueueImpl min delete and addRange" {

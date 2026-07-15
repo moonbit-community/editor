@@ -1,11 +1,13 @@
 # Viewer Lifecycle-Domain Internal Aggregates
 
-Status: proposed — documentation-only plan written 2026-07-15; no product
-implementation has started.
+Status: inventory ready — STOP FOR REVIEW; Gate A refreshed 2026-07-15 and no
+product implementation has started.
 
 Date: 2026-07-15
 
 Local baseline: `87467b1be9a7b143434cc64e772e15d2780ca7a0`
+
+Gate A evidence: `viewer-lifecycle-domain-aggregates-gate-a.md`.
 
 Monaco oracle: checked-in `vscode` commit
 `b18492a288de038fbc7643aae6de8247029d11bd`.
@@ -589,12 +591,17 @@ Keep the root disposal sequence explicit and behaviorally equivalent:
 6. fire `did_dispose` while contributions and lifetime resources are live;
 7. begin ordered contribution behavior disposal;
 8. dispose Viewer-lifetime subscriptions;
-9. clear mounted focus/placeholder state and direct render-publication state;
-10. finish contribution-owned retained browser-resource disposal at the current
-    hover-widget cleanup position, then clear contribution storage;
-11. dispose all emitters;
-12. dispose testing registration;
-13. dispose only default-owned services.
+9. clear mounted placeholder/focus state and the direct `last_scroll_event`
+   baseline;
+10. finish contribution-owned retained browser-resource disposal at the
+    current hover-widget cleanup position, clear the widget/view cache, then
+    clear the contribution storage that has remained allocated but
+    non-lookuppable in `Disposing` since step 7;
+11. clear the remaining direct render-publication state and the configuration
+    measure request;
+12. dispose all emitters;
+13. dispose testing registration;
+14. dispose only default-owned services.
 
 Any implementation simplification that changes this sequence requires a
 separate reviewed behavior change and is not authorized by this plan.

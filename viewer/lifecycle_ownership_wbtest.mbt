@@ -333,9 +333,12 @@ test "omitted services are owned and Viewer disposal is idempotent" {
   assert_true(lifetime_store_alive_in_event.val)
   assert_true(model_detached_in_event.val)
   assert_eq(viewer.lifetime_disposables.length(), 0)
-  assert_true(viewer.render_frame is None)
-  assert_true(viewer.container is None)
-  assert_true(viewer.placeholder_element is None)
+  // A never-attached Viewer remains semantically headless through disposal:
+  // it has no browser frame, focus, host, or placeholder capability to tear
+  // down.
+  assert_true(viewer.mount is Headless)
+  assert_false(viewer.mount.has_pending_render())
+  assert_false(viewer.has_text_focus())
   assert_false(model.is_disposed())
   // The owning Viewer released all three bundle-owned default backings. Their
   // captured concrete references remain safe but have no live ingress.
@@ -377,7 +380,8 @@ test "disposed headless Viewer ignores later model and callback work" {
   assert_eq(content_events, 0)
   assert_false(viewer.configuration.consume_measure_request())
   assert_true(viewer.get_model() is None)
-  assert_true(viewer.render_frame is None)
+  assert_true(viewer.mount is Headless)
+  assert_false(viewer.mount.has_pending_render())
   model.dispose()
   backings.dispose()
 }

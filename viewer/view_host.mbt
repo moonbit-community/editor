@@ -97,7 +97,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     line_decorations_width: configuration.layout_decorations_width(),
     space_width: configuration.font_info.space_width,
     typical_fullwidth_character_width: configuration.font_info.typical_fullwidth_character_width,
-    editor_has_focus: self.editor_has_focus,
+    editor_has_focus: self.has_text_focus(),
     word_wrap: configuration.word_wrap(),
     render_line_highlight: configuration.options.render_line_highlight,
     render_line_highlight_only_when_focus: configuration.options.render_line_highlight_only_when_focus,
@@ -158,18 +158,16 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
 /// message text.
 fn Viewer::render_placeholder(self : Viewer) -> Unit {
   let options = self.configuration.snapshot().options
-  match (self.placeholder_element, self.placeholder_text) {
-    (Some(placeholder), Some(text)) => {
-      placeholder.set_attribute(
-        "class",
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) =>
+      mounted.render_placeholder(
         @view.empty_editor_class_name(
           show_unused=options.show_unused,
           show_deprecated=options.show_deprecated,
         ),
+        options.placeholder,
       )
-      text.set_node_value(@js.Nullable::from_option(Some(options.placeholder)))
-    }
-    _ => ()
   }
 }
 
@@ -177,15 +175,12 @@ fn Viewer::render_placeholder(self : Viewer) -> Unit {
 fn Viewer::schedule_render(self : Viewer) -> Unit {
   // Headless (never attached) → no rAF loop; with a container the flush
   // paints either the per-model view or the no-model placeholder.
-  if self.disposed || self.render_frame is Some(_) || self.container is None {
+  if self.disposed {
     return
   }
-  self.render_frame = Some(
-    run_at_this_or_schedule_at_next_animation_frame(() => {
-      self.render_frame = None
-      if !self.disposed {
-        self.flush_render()
-      }
-    }),
-  )
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) =>
+      mounted.schedule_render(() => if !self.disposed { self.flush_render() })
+  }
 }

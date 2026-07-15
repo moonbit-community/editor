@@ -20,17 +20,23 @@ fn Viewer::hook_view_input(
   // itself. `focus`/`blur` do not bubble, so these observe only the root's own
   // focus and emit only on the actual Bool transition.
   add_view_event_listener(view, view.root, "focus", _ => {
-    if !self.editor_has_focus {
-      self.editor_has_focus = true
-      self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(true)))
-      self.schedule_render()
+    match self.mount {
+      Headless => ()
+      Mounted(mounted) =>
+        if mounted.set_editor_focus(true) {
+          self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(true)))
+          self.schedule_render()
+        }
     }
   })
   add_view_event_listener(view, view.root, "blur", _ => {
-    if self.editor_has_focus {
-      self.editor_has_focus = false
-      self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(false)))
-      self.schedule_render()
+    match self.mount {
+      Headless => ()
+      Mounted(mounted) =>
+        if mounted.set_editor_focus(false) {
+          self.emit_view_event(ViewFocusChanged(ViewFocusChangedEvent(false)))
+          self.schedule_render()
+        }
     }
   })
   add_view_event_listener(view, view.root, "copy", event => {

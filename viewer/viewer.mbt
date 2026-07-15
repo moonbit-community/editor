@@ -78,33 +78,18 @@ pub struct Viewer {
   /// Viewer-lifetime generation/current-model owner. Browser-only state lives
   /// under the current ModelData rather than beside it on the root Viewer.
   priv model_slot : ViewerModelSlot
-  /// The host element handed to `attach` — Monaco's `_containerDomElement`.
-  priv mut container : @rdom.Element?
-  /// The Viewer-owned no-model placeholder (deviation: Monaco has no
-  /// no-model view at all — its `placeholder` option is the empty-*model*
-  /// `PlaceholderTextContribution`; the viewer's placeholder is an existing
-  /// option whose DOM now lives here, in the container, instead of on the
-  /// per-model `View`).
-  priv mut placeholder_element : @rdom.Element?
-  priv mut placeholder_text : @rdom.Element?
+  /// One-way browser attachment aggregate. It owns the caller host, the
+  /// atomic no-model placeholder, render publication, and DOM focus state.
+  priv mut mount : ViewerMount
   /// Registered overlay widgets by id (Monaco's `_overlayWidgets`), re-added
   /// to every per-model view (`cew:1901-1905`).
   priv overlay_widgets : Map[String, @editor_browser.OverlayWidget]
-  /// The cancellable root render request. `None` is both the idle state and
-  /// the disposed state; callbacks clear the slot before flushing.
-  priv mut render_frame : @base_common.Disposable?
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
   /// This editor's decoration `ownerId` (Monaco's per-widget editor id): the
   /// filter handed to `ViewModelDecorations` and the ownerId of the public
   /// `delta_decorations` API.
   priv editor_id : Int
-  /// Whether the editor root currently has DOM focus — the viewer's stand-in
-  /// for Monaco's edit-context focus (`view.ts` `_getEditorClassName` /
-  /// `ViewFocusChangedEvent`). Sourced by `focus`/`blur` listeners on the root
-  /// (`input.mbt`), which dispatch the exact Bool payload before scheduling
-  /// the next render.
-  priv mut editor_has_focus : Bool
   /// The per-editor contribution owner around the registry's sole concrete
   /// instance map, including its two-phase disposal lifecycle.
   priv contributions : EditorContributions
@@ -184,15 +169,11 @@ fn Viewer::Viewer(
     did_mouse_leave: @base_common.Emitter::new(),
     last_scroll_event: None,
     model_slot: ViewerModelSlot(),
-    container: None,
-    placeholder_element: None,
-    placeholder_text: None,
+    mount: Headless,
     overlay_widgets: Map([]),
-    render_frame: None,
     pending_rendered: None,
     scroll_dirty: false,
     editor_id: next_editor_id(),
-    editor_has_focus: false,
     contributions: EditorContributions(),
   }
   // Marker decoration changes reach the render through the model's
@@ -271,12 +252,9 @@ fn Viewer::dispose_lifetime_disposables(self : Viewer) -> Unit {
 
 ///|
 fn Viewer::cancel_render_frame(self : Viewer) -> Unit {
-  match self.render_frame {
-    Some(frame) => {
-      self.render_frame = None
-      frame.dispose()
-    }
-    None => ()
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) => mounted.cancel_render_frame()
   }
 }
 
@@ -442,9 +420,9 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
 /// and scroll position.
 fn Viewer::apply_theme(self : Viewer) -> Unit {
   let theme = self.configuration.snapshot().options.theme
-  match self.placeholder_element {
-    Some(placeholder) => placeholder.set_attribute("data-theme", theme)
-    None => ()
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) => mounted.apply_placeholder_theme(theme)
   }
   match self.get_view() {
     Some(view) => {
@@ -462,25 +440,19 @@ fn Viewer::apply_theme(self : Viewer) -> Unit {
 /// → `_createView` / `_detachModel`). The host element must stay mounted
 /// and must never receive host-rendered children.
 fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
-  if self.disposed || self.container is Some(_) {
+  if self.disposed {
     return
   }
-  self.container = Some(host)
-  let document = @rdom.document()
-  let placeholder = document.create_element("section")
-  placeholder.set_attribute("class", @view.empty_editor_class_name())
-  placeholder.set_attribute(
-    "data-theme",
-    self.configuration.snapshot().options.theme,
-  )
-  let message = document.create_element("div")
-  message.set_attribute("class", "source-message")
-  let message_text = document.create_text_node("")
-  message.append_child(message_text.as_node())
-  placeholder.append_child(message.as_node())
-  host.append_child(placeholder.as_node())
-  self.placeholder_element = Some(placeholder)
-  self.placeholder_text = Some(message_text)
+  match self.mount {
+    Mounted(_) => return
+    Headless => ()
+  }
+  // Construct the complete placeholder capability locally and publish the
+  // mounted aggregate only after its DOM is installed. No callback can
+  // observe a host, root, and text node in partially initialized states.
+  let placeholder = PlaceholderDom(self.configuration.snapshot().options.theme)
+  host.append_child(placeholder.root.as_node())
+  self.mount = Mounted(MountedViewer(host, placeholder))
   // Untrusted readings re-measure after 5s (`FontMeasurements.onDidChange`,
   // e.g. once a web font finished loading) — Monaco's
   // `_recomputeOptions` subscription in `editorConfiguration.ts`. Viewer-
@@ -560,7 +532,10 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
     }
   } else {
     // "make sure the outside world knows we are not focused" (`cew:536`).
-    self.editor_has_focus = false
+    match self.mount {
+      Headless => ()
+      Mounted(mounted) => mounted.set_editor_focus(false) |> ignore
+    }
   }
   self.did_change_model.fire({ old_model_url, new_model_url })
   // `_postDetachModelCleanup` (`cew:2008-2010`): sweep this editor's
@@ -612,28 +587,21 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   model_data.dispose()
   self.model_slot.clear_current_after_dispose()
   self.configuration.reset_model_line_counts()
-  match self.container {
-    Some(host) => {
-      host.remove_attribute("data-mode-id")
+  match self.mount {
+    Mounted(mounted) => {
+      mounted.container.remove_attribute("data-mode-id")
       match model_data.browser {
-        Some(browser) => {
-          remove_element_if_contained(host, browser.view.root)
+        Some(browser) =>
           // The no-model placeholder returns on an ordinary detach. Viewer
           // disposal removes it instead and never re-appends owned DOM.
-          if !self.disposed {
-            match self.placeholder_element {
-              Some(placeholder) =>
-                if !@base_browser.element_contains(host, placeholder) {
-                  host.append_child(placeholder.as_node())
-                }
-              None => ()
-            }
-          }
-        }
+          mounted.remove_view(
+            browser.view.root,
+            restore_placeholder=!self.disposed,
+          )
         None => ()
       }
     }
-    None => ()
+    Headless => ()
   }
   Some(model)
 }
@@ -710,7 +678,10 @@ pub fn Viewer::get_dom_node(self : Viewer) -> @rdom.Element? {
 /// Viewers are created with `Viewer::create`, so the host is always present
 /// and remains queryable after Viewer disposal.
 pub fn Viewer::get_container_dom_node(self : Viewer) -> @rdom.Element {
-  self.container.unwrap()
+  match self.mount {
+    Mounted(mounted) => mounted.container
+    Headless => abort("Viewer is not attached")
+  }
 }
 
 ///|
@@ -727,7 +698,10 @@ pub fn Viewer::focus(self : Viewer) -> Unit {
 ///|
 /// Whether the editor's text surface has DOM focus — `hasTextFocus()`.
 pub fn Viewer::has_text_focus(self : Viewer) -> Bool {
-  self.editor_has_focus
+  match self.mount {
+    Headless => false
+    Mounted(mounted) => mounted.editor_has_focus
+  }
 }
 
 ///|
@@ -736,7 +710,7 @@ pub fn Viewer::has_text_focus(self : Viewer) -> Bool {
 pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
   match self.get_view() {
     Some(view) =>
-      self.editor_has_focus ||
+      self.has_text_focus() ||
       @base_browser.element_contains_active_element(view.root)
     None => false
   }
@@ -796,19 +770,19 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   }
   // Viewer-owned attach DOM is removed before the dispose event. The caller's
   // original host remains mounted and retained for `get_container_dom_node`.
-  match (self.container, self.placeholder_element) {
-    (Some(host), Some(placeholder)) =>
-      remove_element_if_contained(host, placeholder)
-    _ => ()
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) => mounted.remove_owned_placeholder_dom()
   }
   self.did_dispose.fire(())
   // Contributions dispose with the editor (`codeEditorWidget.dispose` →
   // `_onDidDispose.fire()` → `super.dispose()` → contributions/base store).
   self.contributions.dispose_behavior(self)
   self.dispose_lifetime_disposables()
-  self.placeholder_element = None
-  self.placeholder_text = None
-  self.editor_has_focus = false
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) => mounted.clear_disposed_state()
+  }
   self.last_scroll_event = None
   self.overlay_widgets.clear()
   self.contributions.dispose_retained_browser_resources()

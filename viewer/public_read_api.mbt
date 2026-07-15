@@ -455,7 +455,7 @@ fn Viewer::read_api_content_left(self : Viewer) -> Double {
 /// Monaco's `_flushAccumulatedAndRenderNow`. A no-op when nothing is pending (the
 /// DOM already reflects the latest content) or when there is no view.
 fn Viewer::flush_accumulated_and_render_now(self : Viewer) -> Unit {
-  if self.render_frame is Some(_) && !self.disposed {
+  if self.mount.has_pending_render() && !self.disposed {
     self.cancel_render_frame()
     self.flush_render()
   }

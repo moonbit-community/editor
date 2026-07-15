@@ -101,6 +101,8 @@ extern "js" fn install_mounted_test_browser() -> Unit =
   #|     remove() {
   #|       if (this.parentNode) this.parentNode.removeChild(this);
   #|     }
+  #|     focus() { this.dispatchEvent(new Event("focus")); }
+  #|     blur() { this.dispatchEvent(new Event("blur")); }
   #|     getBoundingClientRect() {
   #|       return {
   #|         x: 0, y: 0, left: 0, top: 0,
@@ -202,6 +204,35 @@ extern "js" fn restore_mounted_test_browser() -> Unit =
   #|   delete globalThis.__mountedTestTimerNextId;
   #|   delete globalThis.__mountedTestTimers;
   #| }
+
+///|
+extern "js" fn flush_mounted_test_frames() -> Unit =
+  #| () => {
+  #|   while (globalThis.__mountedTestFrames.size > 0) {
+  #|     const pending = Array.from(globalThis.__mountedTestFrames.values());
+  #|     globalThis.__mountedTestFrames.clear();
+  #|     for (const callback of pending) callback(0);
+  #|   }
+  #| }
+
+///|
+extern "js" fn mounted_test_frame_count() -> Int =
+  #| () => globalThis.__mountedTestFrames.size
+
+///|
+extern "js" fn mounted_test_child_count(element : @rdom.Element) -> Int =
+  #| (element) => element.childNodes.length
+
+///|
+extern "js" fn same_mounted_test_element(
+  left : @rdom.Element,
+  right : @rdom.Element,
+) -> Bool =
+  #| (left, right) => left === right
+
+///|
+extern "js" fn mounted_test_node_value(node : @rdom.Element) -> String =
+  #| (node) => node.nodeValue ?? ""
 
 ///|
 /// Attached counterpart of `with_test_viewer`. The native frame queue is held,

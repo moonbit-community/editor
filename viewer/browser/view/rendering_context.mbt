@@ -26,7 +26,7 @@ pub(all) struct ViewRenderInput {
   /// `_reduceAnchorCoordinates` clamp unit.
   typical_fullwidth_character_width : Double
   /// Whether the editor root has DOM focus (Monaco `ViewFocusChangedEvent`
-  /// state; see `Viewer.editor_has_focus`).
+  /// state; the root viewer sources it from its mounted focus owner).
   editor_has_focus : Bool
   /// Whether soft wrapping is in effect (Monaco `layoutInfo.isViewportWrapping`)
   /// — gates the current-line highlight's wrapped-line pass.

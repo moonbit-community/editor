@@ -11,9 +11,10 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   let model_data_generation = self.model_slot.begin_attach_generation()
   let listeners_to_remove : Array[@base_common.Disposable] = []
   // `data-mode-id` on the container (`cew:1758`), removed at detach.
-  match self.container {
-    Some(host) => host.set_attribute("data-mode-id", model.language_id)
-    None => ()
+  match self.mount {
+    Headless => ()
+    Mounted(mounted) =>
+      mounted.container.set_attribute("data-mode-id", model.language_id)
   }
   // The decoration-change subscription attaches before the marker service
   // seeds the model so the seeding delta is observed too.
@@ -114,10 +115,10 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   // Decorations live in the model's interval-tree storage; the view
   // model queries them lazily per viewport (no per-frame bake). The render
   // pass pulls its viewport data from the view model at flush time.
-  let attached_view = match self.container {
-    Some(_) =>
+  let attached_view = match self.mount {
+    Mounted(_) =>
       model.on_before_attached(scheduler=browser_tokenization_scheduler)
-    None => model.on_before_attached()
+    Headless => model.on_before_attached()
   }
   let build_started = @base_browser.monotonic_now_ms()
   let view_model = self.build_view_model(model, attached_view)
@@ -215,7 +216,10 @@ fn Viewer::create_view(
   model : @model.TextModel,
   view_model : @view_model.ViewModel,
 ) -> ModelBrowserData? {
-  guard self.container is Some(host) else { return None }
+  let mounted = match self.mount {
+    Headless => return None
+    Mounted(mounted) => mounted
+  }
   let read_view_zones_configuration = () => {
     self.configuration
     .snapshot()
@@ -285,7 +289,7 @@ fn Viewer::create_view(
     "data-theme",
     self.configuration.snapshot().options.theme,
   )
-  host.append_child(view.root.as_node())
+  mounted.container.append_child(view.root.as_node())
   view.apply_squiggly_theme()
   // The editor root carries the configured font — Monaco's
   // `applyFontInfo(this.domNode, fontInfo)` in `view.ts`.
@@ -318,10 +322,7 @@ fn Viewer::create_view(
   // `data-uri` (`cew:1912`).
   view.root.set_attribute("data-uri", model.uri.to_string())
   // The no-model placeholder yields to the per-model view.
-  match self.placeholder_element {
-    Some(placeholder) => remove_element_if_contained(host, placeholder)
-    None => ()
-  }
+  mounted.hide_placeholder()
   Some(ModelBrowserData(view, mouse_handler))
 }
 

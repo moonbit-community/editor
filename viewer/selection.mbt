@@ -139,7 +139,7 @@ fn Viewer::get_rich_text_to_copy(
           selection.end().line_number,
           selection.end().column,
         ),
-        self.font_info,
+        self.configuration.snapshot().font_info,
       )
     None => selection_rich_text_to_copy(selection, snapshot)
   }

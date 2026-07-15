@@ -10,7 +10,7 @@ fn Viewer::editor_context(self : Viewer) -> @hover_browser.EditorContext {
     // participants are stateless captures of the services, so a per-dispatch
     // build matches Monaco's per-editor set observably.
     participants: self.make_hover_computer().participants,
-    typical_halfwidth_character_width: self.font_info.typical_halfwidth_character_width,
+    typical_halfwidth_character_width: self.configuration.snapshot().font_info.typical_halfwidth_character_width,
     mouse_posx,
     mouse_posy,
     show_at_position: match self.content_hover_contribution() {

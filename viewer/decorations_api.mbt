@@ -59,7 +59,7 @@ pub fn Viewer::get_line_decorations(
     line_number,
     owner_id=self.editor_id,
     filter_out_validation=@view_model.filter_validation_decorations(
-      self.options.render_validation_decorations,
+      self.get_options().render_validation_decorations,
     ),
   )
 }
@@ -75,7 +75,7 @@ pub fn Viewer::get_decorations_in_range(
     range,
     owner_id=self.editor_id,
     filter_out_validation=@view_model.filter_validation_decorations(
-      self.options.render_validation_decorations,
+      self.get_options().render_validation_decorations,
     ),
   )
 }

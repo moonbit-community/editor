@@ -122,8 +122,10 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   }
   let build_started = @base_browser.monotonic_now_ms()
   let view_model = self.build_view_model(model, attached_view)
-  self.layout_model_line_count = model.snapshot.line_count()
-  self.layout_line_count = view_model.line_count()
+  self.configuration.set_line_counts(
+    model.snapshot.line_count(),
+    view_model.line_count(),
+  )
   // The cursor outgoing alias is model-scoped. The ViewModel has already
   // committed both cursor coordinate states before this fires; the Viewer
   // adds the public content barrier and position-before-selection relay.
@@ -191,7 +193,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     build_ms: build_finished - build_started,
   })
   self.pending_rendered = Some({ model, fresh: true })
-  self.measure_requested = true
+  self.configuration.request_measure()
   self.schedule_render()
 }
 
@@ -216,11 +218,9 @@ fn Viewer::create_view(
 ) -> @view.View? {
   guard self.container is Some(host) else { return None }
   let read_view_zones_configuration = () => {
-    (
-      self.font_info.line_height,
-      self.measured_content_width,
-      self.gutter_width(model.snapshot.line_count()),
-    )
+    self.configuration
+    .snapshot()
+    .view_zones_configuration(model.snapshot.line_count())
   }
   let view = @view.View::View(
     view_zones_configuration_reader=read_view_zones_configuration,
@@ -242,23 +242,7 @@ fn Viewer::create_view(
   // `onConfigurationChanged` handler, and its one retained-line factory
   // dynamically captures the equality-gated `ViewLineOptions` identity.
   view.view_lines.install_live_configuration_reader(() => {
-    ViewLinesConfiguration(
-      line_height=self.font_info.line_height,
-      typical_halfwidth_character_width=self.font_info.typical_halfwidth_character_width,
-      is_viewport_wrapping=self.options.soft_wrap && self.soft_wrap_column > 0,
-      can_use_layer_hinting=true,
-      space_width=self.font_info.space_width,
-      middot_width=self.font_info.middot_width,
-      wsmiddot_width=self.font_info.wsmiddot_width,
-      use_monospace_optimizations=self.font_info.is_monospace,
-      can_use_halfwidth_rightwards_arrow=self.font_info.can_use_halfwidth_rightwards_arrow,
-      stop_rendering_line_after=-1,
-      render_whitespace=self.options.render_whitespace,
-      render_control_characters=self.options.render_control_characters,
-      font_ligatures=self.font_info.font_feature_settings !=
-        @config.editor_font_ligatures_off,
-      vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
-    )
+    self.configuration.snapshot().view_lines_configuration()
   })
   view.view_lines.install_geometry_readers(
     view_line_number => {
@@ -276,10 +260,9 @@ fn Viewer::create_view(
   // before any persistent widget is re-added to this fresh View.
   view.content_widgets.install_live_view_context_with_affinity(
     () => {
-      (
-        self.gutter_width(model.snapshot.line_count()),
-        self.measured_content_width,
-      )
+      self.configuration
+      .snapshot()
+      .content_widget_configuration(model.snapshot.line_count())
     },
     (position, affinity) => {
       let valid_position = model.validate_position(position)
@@ -295,15 +278,14 @@ fn Viewer::create_view(
     },
   )
   view.install_current_line_configuration_reader(() => {
-    (
-      self.options.render_line_highlight,
-      self.options.render_line_highlight_only_when_focus,
-      self.options.soft_wrap && self.soft_wrap_column > 0,
-      self.gutter_width(model.snapshot.line_count()),
-      self.measured_content_width,
-    )
+    self.configuration
+    .snapshot()
+    .current_line_configuration(model.snapshot.line_count())
   })
-  view.root.set_attribute("data-theme", self.options.theme)
+  view.root.set_attribute(
+    "data-theme",
+    self.configuration.snapshot().options.theme,
+  )
   host.append_child(view.root.as_node())
   view.apply_squiggly_theme()
   // The editor root carries the configured font — Monaco's
@@ -354,17 +336,14 @@ fn Viewer::build_view_model(
   model : @model.TextModel,
   attached_view : @model.AttachedViewImpl,
 ) -> @view_model.ViewModel {
-  let options = self.options.view_model_options(
-    self.soft_wrap_column,
-    font_info=self.font_info,
-    editor_id=self.editor_id,
-  )
+  let configuration = self.configuration.snapshot()
+  let options = configuration.view_model_options(self.editor_id)
   // Injected text reaches the projection through the model's decoration
   // storage, not through construction arguments.
   let view_model = @view_model.ViewModel::with_options(
     model,
     options,
-    smooth_scrolling=self.options.smooth_scrolling,
+    smooth_scrolling=configuration.options.smooth_scrolling,
     schedule_at_next_animation_frame~,
     now=@base_browser.wall_clock_now_ms,
     attached_view~,
@@ -382,8 +361,8 @@ fn Viewer::build_view_model(
   // dimensions — Monaco's `ViewLayout` reads `EditorOption.layoutInfo` from
   // the configuration at construction.
   view_model.view_layout.set_viewport_size(
-    width=self.measured_content_width,
-    height=self.measured_height,
+    width=configuration.content_width,
+    height=configuration.height,
   )
   |> ignore
   view_model
@@ -421,17 +400,14 @@ fn Viewer::handle_model_tokens_changed(
 /// else only re-syncs the content width.
 fn Viewer::on_configuration_changed(
   self : Viewer,
-  previous_options? : ViewerOptions = self.options,
+  previous_options? : ViewerOptions = self.configuration.snapshot().options,
 ) -> Unit {
   let event_batch = self.begin_view_event_batch()
   match (self.get_view_model(), self.get_model()) {
     (Some(view_model), Some(model)) => {
       let previous_view_selection = view_model.cursor.get_view_selection()
-      let options = self.options.view_model_options(
-        self.soft_wrap_column,
-        font_info=self.font_info,
-        editor_id=self.editor_id,
-      )
+      let configuration = self.configuration.snapshot()
+      let options = configuration.view_model_options(self.editor_id)
       if view_model.on_configuration_changed(options) {
         // Source order: Flushed → LineMapping → Decorations(null) →
         // cursor reprojection, followed by the layout flush.
@@ -449,7 +425,7 @@ fn Viewer::on_configuration_changed(
         self.sync_content_width()
       }
       if previous_options.render_validation_decorations !=
-        self.options.render_validation_decorations {
+        configuration.options.render_validation_decorations {
         // `ViewModel::on_configuration_changed` has already rotated the
         // filtered decoration provider; invalidate every decorations
         // consumer before the final Configuration event.
@@ -476,10 +452,7 @@ fn Viewer::on_line_mapping_changed(
   layout_already_applied? : Bool = false,
   previous_view_selection? : @core.Selection,
 ) -> Unit {
-  let previous_layout_identity = self.layout_identity(
-    self.layout_model_line_count,
-    self.layout_line_count,
-  )
+  let previous_layout_identity = self.configuration.event_snapshot().layout
   let event_batch = if notify_view || notify_configuration {
     self.begin_view_event_batch()
   } else {
@@ -503,16 +476,14 @@ fn Viewer::on_line_mapping_changed(
   let current_model_line_count = model.snapshot.line_count()
   let current_view_line_count = view_model.line_count()
   self.sync_content_box_for_model_line_count(
-    view_model,
-    self.layout_model_line_count,
-    current_model_line_count,
+    view_model, current_model_line_count,
   )
   |> ignore
-  self.layout_model_line_count = current_model_line_count
-  self.layout_line_count = current_view_line_count
+  self.configuration.set_line_counts(
+    current_model_line_count, current_view_line_count,
+  )
   if notify_configuration &&
-    previous_layout_identity !=
-    self.layout_identity(current_model_line_count, current_view_line_count) {
+    previous_layout_identity != self.configuration.event_snapshot().layout {
     self.emit_view_event(
       ViewConfigurationChanged(
         @view.ViewConfigurationChangedEvent::from_changed_options([LayoutInfo]),

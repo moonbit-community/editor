@@ -9,29 +9,17 @@
 /// Builds the viewport a headless viewer projects for its first render, the
 /// input `render_line_input_for_viewport` consumes during `render_text`.
 fn viewport_of(viewer : Viewer) -> @view_layout.ViewportData {
+  let configuration = viewer.configuration.snapshot().view_lines_configuration()
   @view_model.viewport_data_from_view_model(
     viewer.test_view_model(),
     viewer.test_window(),
-    line_height=viewer.font_info.line_height,
+    line_height=configuration.line_height,
   )
 }
 
 ///|
 fn retained_line_options_of(viewer : Viewer) -> @view.ViewLineOptions {
-  ViewLineOptions(
-    line_height=viewer.font_info.line_height,
-    space_width=viewer.font_info.space_width,
-    middot_width=viewer.font_info.middot_width,
-    wsmiddot_width=viewer.font_info.wsmiddot_width,
-    use_monospace_optimizations=viewer.font_info.is_monospace,
-    can_use_halfwidth_rightwards_arrow=viewer.font_info.can_use_halfwidth_rightwards_arrow,
-    stop_rendering_line_after=-1,
-    render_whitespace=viewer.options.render_whitespace,
-    render_control_characters=viewer.options.render_control_characters,
-    font_ligatures=viewer.font_info.font_feature_settings !=
-      @config.editor_font_ligatures_off,
-    vertical_scrollbar_size=@core.editor_vertical_scrollbar_size,
-  )
+  viewer.configuration.snapshot().view_lines_configuration().view_line_options
 }
 
 ///|

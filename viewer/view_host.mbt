@@ -75,8 +75,7 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   guard model_data.view is Some(view) else { return }
   let view_model = model_data.view_model
   // Read phase: measure only when a re-measure was requested.
-  if self.measure_requested {
-    self.measure_requested = false
+  if self.configuration.consume_measure_request() {
     self.measure(view)
   }
   // Write phase.
@@ -84,22 +83,25 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   let write_started = @base_browser.monotonic_now_ms()
   let window = self.synced_window(view_model)
   let view_context = self.build_view_context(view)
+  let configuration = self.configuration.snapshot()
   view.render(view_context, {
     window,
     view_model,
     layout: view_model.view_layout,
     selection_view_range: self.selection_view_range(),
     view_selection: self.view_selection(),
-    gutter_width: self.gutter_width(model_data.model.snapshot.line_count()),
-    line_decorations_width: self.layout_decorations_width(),
-    space_width: self.font_info.space_width,
-    typical_fullwidth_character_width: self.font_info.typical_fullwidth_character_width,
+    gutter_width: configuration.gutter_width(
+      model_data.model.snapshot.line_count(),
+    ),
+    line_decorations_width: configuration.layout_decorations_width(),
+    space_width: configuration.font_info.space_width,
+    typical_fullwidth_character_width: configuration.font_info.typical_fullwidth_character_width,
     editor_has_focus: self.editor_has_focus,
-    word_wrap: self.options.soft_wrap && self.soft_wrap_column > 0,
-    render_line_highlight: self.options.render_line_highlight,
-    render_line_highlight_only_when_focus: self.options.render_line_highlight_only_when_focus,
-    show_unused: self.options.show_unused,
-    show_deprecated: self.options.show_deprecated,
+    word_wrap: configuration.word_wrap(),
+    render_line_highlight: configuration.options.render_line_highlight,
+    render_line_highlight_only_when_focus: configuration.options.render_line_highlight_only_when_focus,
+    show_unused: configuration.options.show_unused,
+    show_deprecated: configuration.options.show_deprecated,
   })
   // The lines are now in the DOM: a deferred horizontal reveal can measure its
   // target line's client rects and apply the horizontal scroll.
@@ -154,18 +156,17 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
 /// no-model arm): the empty-state classes plus the `placeholder` option's
 /// message text.
 fn Viewer::render_placeholder(self : Viewer) -> Unit {
+  let options = self.configuration.snapshot().options
   match (self.placeholder_element, self.placeholder_text) {
     (Some(placeholder), Some(text)) => {
       placeholder.set_attribute(
         "class",
         @view.empty_editor_class_name(
-          show_unused=self.options.show_unused,
-          show_deprecated=self.options.show_deprecated,
+          show_unused=options.show_unused,
+          show_deprecated=options.show_deprecated,
         ),
       )
-      text.set_node_value(
-        @js.Nullable::from_option(Some(self.options.placeholder)),
-      )
+      text.set_node_value(@js.Nullable::from_option(Some(options.placeholder)))
     }
     _ => ()
   }

@@ -82,7 +82,7 @@ fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
 /// from the DOM via `soft_wrap_column_for_content_width`), so a headless wrap
 /// test sets the private column directly. Requires `options.soft_wrap`.
 fn Viewer::test_set_soft_wrap_column(self : Viewer, column : Int) -> Unit {
-  self.soft_wrap_column = column
+  self.configuration.commit_soft_wrap_column(column) |> ignore
   self.on_configuration_changed()
 }
 
@@ -94,11 +94,15 @@ fn Viewer::test_set_viewport(
   width~ : Double,
   height~ : Double,
 ) -> Unit {
-  self.measured_content_width = width
-  self.measured_height = height
+  self.configuration.commit_measured_size(width, height)
+  let configuration = self.configuration.snapshot()
   match self.get_view_model() {
     Some(view_model) =>
-      view_model.view_layout.set_viewport_size(width~, height~) |> ignore
+      view_model.view_layout.set_viewport_size(
+        width=configuration.content_width,
+        height=configuration.height,
+      )
+      |> ignore
     None => ()
   }
 }

@@ -4,6 +4,38 @@ fn estimated_font_info(options : ViewerOptions) -> @config.FontInfo {
 }
 
 ///|
+/// Builds the two immutable owner snapshots while retaining the original
+/// branch tests' explicit LayoutInfo comparison input.
+fn test_configuration_changed_event(
+  previous_options : ViewerOptions,
+  current_options : ViewerOptions,
+  previous_font_info : @config.FontInfo,
+  current_font_info : @config.FontInfo,
+  previous_soft_wrap_column : Int,
+  current_soft_wrap_column : Int,
+  layout_info_changed~ : Bool,
+) -> @view.ViewConfigurationChangedEvent? {
+  let previous = EditorConfigurationState(previous_options, previous_font_info)
+  previous.commit_soft_wrap_column(previous_soft_wrap_column) |> ignore
+  let previous_snapshot = previous.event_snapshot()
+  let current = EditorConfigurationState(current_options, current_font_info)
+  current.commit_soft_wrap_column(current_soft_wrap_column) |> ignore
+  let current_snapshot = current.event_snapshot()
+  let current_snapshot = if layout_info_changed {
+    {
+      ..current_snapshot,
+      layout: {
+        ..previous_snapshot.layout,
+        content_width: previous_snapshot.layout.content_width + 1.0,
+      },
+    }
+  } else {
+    { ..current_snapshot, layout: previous_snapshot.layout }
+  }
+  previous_snapshot.changed_event(current_snapshot)
+}
+
+///|
 /// These white-box adapters keep source-fact assertions precise without
 /// widening the consolidated view package's production API. The event payload
 /// fields remain private; JS white-box tests inspect their emitted runtime
@@ -61,7 +93,7 @@ test "view configuration source preserves independent paint axes and no-op" {
   let previous = ViewerOptions::default()
   let font_info = estimated_font_info(previous)
   assert_true(
-    view_configuration_changed_event(
+    test_configuration_changed_event(
       previous,
       previous,
       font_info,
@@ -80,7 +112,7 @@ test "view configuration source preserves independent paint axes and no-op" {
     render_line_highlight_only_when_focus: true,
     render_validation_decorations: Off,
   }
-  let event = view_configuration_changed_event(
+  let event = test_configuration_changed_event(
     previous,
     current,
     font_info,
@@ -104,7 +136,7 @@ test "view configuration source preserves independent paint axes and no-op" {
   assert_false(test_view_configuration_has_changed(event, LayoutInfo))
   assert_false(test_view_configuration_has_changed(event, FontInfo))
   assert_false(test_view_configuration_has_changed(event, WrappingInfo))
-  let reversed = view_configuration_changed_event(
+  let reversed = test_configuration_changed_event(
     current,
     previous,
     font_info,
@@ -120,9 +152,9 @@ test "view configuration source preserves independent paint axes and no-op" {
 ///|
 test "update_options complete-snapshot no-op skips layout invalidation" {
   let viewer = Viewer::Viewer()
-  assert_false(viewer.measure_requested)
+  assert_false(viewer.configuration.measure_requested)
   viewer.update_options(viewer.get_options())
-  assert_false(viewer.measure_requested)
+  assert_false(viewer.configuration.measure_requested)
   viewer.dispose()
 }
 
@@ -134,7 +166,7 @@ test "view configuration source separates layout font line-height and wrapping" 
     ..font_info,
     letter_spacing: font_info.letter_spacing + 1.0,
   }
-  let font_event = view_configuration_changed_event(
+  let font_event = test_configuration_changed_event(
     previous,
     previous,
     font_info,
@@ -148,7 +180,7 @@ test "view configuration source separates layout font line-height and wrapping" 
   assert_false(test_view_configuration_has_changed(font_event, LineHeight))
 
   let taller = { ..font_info, line_height: font_info.line_height + 1 }
-  let height_event = view_configuration_changed_event(
+  let height_event = test_configuration_changed_event(
     previous,
     previous,
     font_info,
@@ -162,7 +194,7 @@ test "view configuration source separates layout font line-height and wrapping" 
   assert_true(test_view_configuration_has_changed(height_event, LineHeight))
 
   let tabbed = { ..previous, tab_size: previous.tab_size + 1 }
-  let wrapping_event = view_configuration_changed_event(
+  let wrapping_event = test_configuration_changed_event(
     previous,
     tabbed,
     font_info,
@@ -184,25 +216,30 @@ test "decimal digit bands and compensated layout lanes stay independently visibl
   assert_eq(digit_count(99), 2)
   assert_eq(digit_count(100), 3)
 
-  let viewer = Viewer::Viewer()
-  viewer.font_info = { ..viewer.font_info, max_digit_width: 10.0 }
-  viewer.options = ViewerOptions(
+  let initial_options = ViewerOptions(
     line_numbers_min_chars=5,
     line_decorations_width=10,
     folding=false,
   )
-  let before = viewer.layout_identity(3, 3)
-  viewer.options = ViewerOptions(
-    line_numbers_min_chars=4,
-    line_decorations_width=20,
-    folding=false,
+  let initial_font_info = estimated_font_info(initial_options)
+  let configuration = EditorConfigurationState(initial_options, {
+    ..initial_font_info,
+    max_digit_width: 10.0,
+  })
+  let before = configuration.snapshot().layout_identity(3, 3)
+  configuration.replace_options(
+    ViewerOptions(
+      line_numbers_min_chars=4,
+      line_decorations_width=20,
+      folding=false,
+    ),
   )
-  let after = viewer.layout_identity(3, 3)
+  |> ignore
+  let after = configuration.snapshot().layout_identity(3, 3)
   assert_eq(before.content_left, after.content_left)
   assert_true(before.line_numbers_width != after.line_numbers_width)
   assert_true(before.decorations_width != after.decorations_width)
   assert_true(before != after)
-  viewer.dispose()
 }
 
 ///|
@@ -223,21 +260,15 @@ test "set_value synchronizes a decimal line-count band into layout identity" {
     ["1", "2", "3", "4", "5", "6", "7", "8", "9"].join("\n"),
   )
   viewer.set_model(Some(nine))
-  assert_eq(viewer.layout_model_line_count, 9)
-  assert_eq(viewer.layout_line_count, 9)
-  let before = viewer.layout_identity(
-    viewer.layout_model_line_count,
-    viewer.layout_line_count,
-  )
+  assert_eq(viewer.configuration.model_line_count, 9)
+  assert_eq(viewer.configuration.view_line_count, 9)
+  let before = viewer.configuration.event_snapshot().layout
   viewer.set_value(
     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].join("\n"),
   )
-  assert_eq(viewer.layout_model_line_count, 10)
-  assert_eq(viewer.layout_line_count, 10)
-  let after = viewer.layout_identity(
-    viewer.layout_model_line_count,
-    viewer.layout_line_count,
-  )
+  assert_eq(viewer.configuration.model_line_count, 10)
+  assert_eq(viewer.configuration.view_line_count, 10)
+  let after = viewer.configuration.event_snapshot().layout
   assert_true(after.line_numbers_width > before.line_numbers_width)
   assert_true(after != before)
   viewer.dispose()
@@ -253,16 +284,22 @@ test "wrapped view-line growth does not widen the model line-number band" {
   with_test_viewer(
     text,
     viewer => {
-      let before = viewer.gutter_width(viewer.layout_model_line_count)
-      assert_eq(viewer.layout_model_line_count, 9)
-      assert_eq(viewer.layout_line_count, 9)
+      let configuration = viewer.configuration
+      let before = configuration
+        .snapshot()
+        .gutter_width(configuration.model_line_count)
+      assert_eq(configuration.model_line_count, 9)
+      assert_eq(configuration.view_line_count, 9)
       viewer.test_set_soft_wrap_column(4)
-      assert_eq(viewer.layout_model_line_count, 9)
-      assert_true(viewer.layout_line_count >= 18)
-      assert_true(viewer.gutter_width(viewer.layout_model_line_count) == before)
+      assert_eq(configuration.model_line_count, 9)
+      assert_true(configuration.view_line_count >= 18)
+      let snapshot = configuration.snapshot()
       assert_true(
-        viewer.line_numbers_width(viewer.layout_line_count) >
-        viewer.line_numbers_width(viewer.layout_model_line_count),
+        snapshot.gutter_width(configuration.model_line_count) == before,
+      )
+      assert_true(
+        snapshot.line_numbers_width(configuration.view_line_count) >
+        snapshot.line_numbers_width(configuration.model_line_count),
       )
     },
     options=ViewerOptions(
@@ -379,13 +416,16 @@ test "view-zone callback is skipped without a real model view" {
   let viewer = Viewer::Viewer()
   let called = Ref(false)
   viewer.change_view_zones(_ => called.val = true)
-  assert_false(viewer.measure_requested)
+  assert_false(viewer.configuration.measure_requested)
   assert_false(called.val)
   viewer.dispose()
   with_test_viewer("alpha", headless => {
-    let measure_requested_before = headless.measure_requested
+    let measure_requested_before = headless.configuration.measure_requested
     headless.change_view_zones(_ => called.val = true)
     assert_false(called.val)
-    assert_eq(headless.measure_requested, measure_requested_before)
+    assert_eq(
+      headless.configuration.measure_requested,
+      measure_requested_before,
+    )
   })
 }

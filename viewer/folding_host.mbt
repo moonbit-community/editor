@@ -32,14 +32,15 @@ fn Viewer::folding_controller(
 fn Viewer::folding_on_model_changed(self : Viewer) -> Unit {
   guard self.folding_controller() is Some(controller) else { return }
   controller.clear_local()
-  guard self.options.folding && self.get_model() is Some(model) else { return }
+  let options = self.get_options()
+  guard options.folding && self.get_model() is Some(model) else { return }
   let decoration_provider = @folding_browser.FoldingDecorationProvider::new(
     model,
     owner_id=self.editor_id,
   )
   decoration_provider.update_options(
-    show_folding_controls=self.options.show_folding_controls,
-    show_folding_highlights=self.options.folding_highlight,
+    show_folding_controls=options.show_folding_controls,
+    show_folding_highlights=options.folding_highlight,
   )
   controller.folding_decoration_provider = Some(decoration_provider)
   let folding_model = @folding_browser.FoldingModel::new(
@@ -64,7 +65,7 @@ fn Viewer::folding_on_configuration_changed(
   self : Viewer,
   previous : ViewerOptions,
 ) -> Unit {
-  let options = self.options
+  let options = self.get_options()
   if previous.folding != options.folding ||
     previous.folding_maximum_regions != options.folding_maximum_regions ||
     previous.tab_size != options.tab_size {
@@ -104,10 +105,10 @@ fn Viewer::folding_range_provider(
         editor_model,
         self.services.languages,
         {
-          limit: () => self.options.folding_maximum_regions,
+          limit: () => self.get_options().folding_maximum_regions,
           update: (_computed, _limited) => (),
         },
-        tab_size=self.options.tab_size,
+        tab_size=self.get_options().tab_size,
       )
       controller.range_provider = Some(indent_range_provider)
       indent_range_provider
@@ -235,7 +236,7 @@ fn Viewer::folding_on_editor_mouse_down(
       icon_clicked = true
     }
     MouseTargetContentEmpty(detail~, ..) =>
-      if self.options.unfold_on_click_after_end_of_line &&
+      if self.get_options().unfold_on_click_after_end_of_line &&
         hidden_range_model.has_ranges() {
         if !detail.is_after_lines {
           // proceed: a click past the end of a real line's text

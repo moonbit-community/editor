@@ -340,7 +340,7 @@ test "disposed headless Viewer ignores later model and callback work" {
   viewer.set_model(Some(model))
   viewer.schedule_render()
   assert_eq(content_events, 0)
-  assert_false(viewer.measure_requested)
+  assert_false(viewer.configuration.consume_measure_request())
   assert_true(viewer.get_model() is None)
   assert_true(viewer.render_frame is None)
   model.dispose()

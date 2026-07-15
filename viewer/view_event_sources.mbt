@@ -32,61 +32,6 @@ fn end_view_event_batch(view : @view.View?) -> Unit {
 }
 
 ///|
-/// Maps the complete typed ViewerOptions snapshots onto the exact semantic
-/// option identities consumed by the scoped ViewParts. The caller supplies
-/// the already-computed layout-info comparison because that identity depends
-/// on the live model's digit count and measured font metrics, not raw options
-/// alone.
-fn view_configuration_changed_event(
-  previous : ViewerOptions,
-  current : ViewerOptions,
-  previous_font_info : @config.FontInfo,
-  current_font_info : @config.FontInfo,
-  previous_soft_wrap_column : Int,
-  current_soft_wrap_column : Int,
-  layout_info_changed~ : Bool,
-) -> @view.ViewConfigurationChangedEvent? {
-  let changed : Array[@view.ViewConfigurationOption] = []
-  if layout_info_changed {
-    changed.push(LayoutInfo)
-  }
-  if !previous_font_info.equals(current_font_info) {
-    changed.push(FontInfo)
-  }
-  if previous_font_info.line_height != current_font_info.line_height {
-    changed.push(LineHeight)
-  }
-  if previous.soft_wrap != current.soft_wrap ||
-    previous.tab_size != current.tab_size ||
-    previous.wrapping_indent != current.wrapping_indent ||
-    previous_soft_wrap_column != current_soft_wrap_column {
-    changed.push(WrappingInfo)
-  }
-  if previous.render_whitespace != current.render_whitespace {
-    changed.push(RenderWhitespace)
-  }
-  if previous.render_control_characters != current.render_control_characters {
-    changed.push(RenderControlCharacters)
-  }
-  if previous.render_line_highlight != current.render_line_highlight {
-    changed.push(RenderLineHighlight)
-  }
-  if previous.render_line_highlight_only_when_focus !=
-    current.render_line_highlight_only_when_focus {
-    changed.push(RenderLineHighlightOnlyWhenFocus)
-  }
-  if previous.render_validation_decorations !=
-    current.render_validation_decorations {
-    changed.push(RenderValidationDecorations)
-  }
-  if changed.length() == 0 {
-    None
-  } else {
-    Some(@view.ViewConfigurationChangedEvent::from_changed_options(changed))
-  }
-}
-
-///|
 /// Preserves every inclusive grammar-token range in producer order. Semantic
 /// token application is outside this readonly grammar-token child; the View
 /// event's source payload intentionally carries only the line ranges consumed

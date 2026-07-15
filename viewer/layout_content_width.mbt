@@ -15,24 +15,17 @@
 fn Viewer::sync_content_box_for_model_line_count(
   self : Viewer,
   view_model : @view_model.ViewModel,
-  previous_model_line_count : Int,
   current_model_line_count : Int,
 ) -> Bool {
-  let previous_content_left = self.gutter_width(previous_model_line_count)
-  let current_content_left = self.gutter_width(current_model_line_count)
-  if previous_content_left == current_content_left {
+  if !self.configuration.adjust_content_width_for_model_line_count(
+      current_model_line_count,
+    ) {
     return false
   }
-  let measured_outer_width = previous_content_left + self.measured_content_width
-  let available_content_width = measured_outer_width - current_content_left
-  self.measured_content_width = if available_content_width > 0.0 {
-    available_content_width
-  } else {
-    0.0
-  }
+  let configuration = self.configuration.snapshot()
   view_model.view_layout.set_viewport_size(
-    width=self.measured_content_width,
-    height=self.measured_height,
+    width=configuration.content_width,
+    height=configuration.height,
   )
   |> ignore
   self.sync_content_width()
@@ -40,7 +33,7 @@ fn Viewer::sync_content_box_for_model_line_count(
   // delay the configuration fact above; it catches an independent host resize
   // and lets wrapping react before the same frame writes.
   if self.get_view() is Some(_) {
-    self.measure_requested = true
+    self.configuration.request_measure()
   }
   true
 }

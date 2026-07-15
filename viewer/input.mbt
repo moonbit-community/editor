@@ -125,17 +125,16 @@ fn remove_element_if_contained(
 /// `_readConfiguration`), the headless estimate otherwise. A changed line
 /// height re-flows the layout; the view root is restyled in place.
 fn Viewer::refresh_font_info(self : Viewer) -> Unit {
-  let bare = self.options.bare_font_info(
+  let bare = self.configuration.snapshot().options.bare_font_info(
     pixel_ratio=@base_browser.device_pixel_ratio(),
   )
   let font_info = match self.get_view() {
     Some(_) => @browser_config.font_measurements().read_font_info(bare)
     None => @config.FontInfo::estimated(bare)
   }
-  if font_info.equals(self.font_info) {
+  if !self.configuration.commit_font_info(font_info) {
     return
   }
-  self.font_info = font_info
   match self.get_view_model() {
     Some(view_model) =>
       view_model.view_layout.set_line_height(font_info.line_height) |> ignore
@@ -153,7 +152,7 @@ fn Viewer::refresh_font_info(self : Viewer) -> Unit {
 /// (`view_lines.css` / `margin.css` / `theme.css`), so those are refreshed
 /// alongside the inline font style.
 fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
-  let bare = self.font_info.bare()
+  let bare = self.configuration.snapshot().font_info.bare()
   @browser_config.apply_font_info(view.root, bare)
   @base_browser.set_style_property(
     view.root,
@@ -179,41 +178,29 @@ fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
 /// `ViewLayout` owns the editor scroll truth.
 fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
   let rect = view.root.get_bounding_client_rect()
-  let previous_font_info = self.font_info
-  let previous_soft_wrap_column = self.soft_wrap_column
-  let previous_layout_identity = self.layout_identity(
-    self.layout_model_line_count,
-    self.layout_line_count,
-  )
+  let previous_configuration = self.configuration.event_snapshot()
   let model_line_count = match self.get_model() {
     Some(model) => model.snapshot.line_count()
     None => 0
   }
   let event_batch = self.begin_view_event_batch()
   self.refresh_font_info()
-  let gutter_width = self.gutter_width(model_line_count)
+  let gutter_width = self.configuration
+    .snapshot()
+    .gutter_width(model_line_count)
   let content_width = rect.get_width() - gutter_width
-  self.measured_content_width = if content_width > 0.0 {
-    content_width
-  } else {
-    0.0
-  }
-  self.measured_height = rect.get_height()
+  self.configuration.commit_measured_size(content_width, rect.get_height())
+  let measured_configuration = self.configuration.snapshot()
   match self.get_view_model() {
     Some(view_model) =>
       view_model.view_layout.set_viewport_size(
-        width=self.measured_content_width,
-        height=self.measured_height,
+        width=measured_configuration.content_width,
+        height=measured_configuration.height,
       )
       |> ignore
     None => ()
   }
-  let next_wrap_column = self.options.soft_wrap_column_for_content_width(
-    content_width,
-    self.measured_char_width(),
-  )
-  if next_wrap_column != self.soft_wrap_column {
-    self.soft_wrap_column = next_wrap_column
+  if self.configuration.recompute_soft_wrap_column() {
     self.on_configuration_changed()
   } else {
     self.sync_content_width()
@@ -226,20 +213,11 @@ fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
     Some(model) => model.snapshot.line_count()
     None => 0
   }
-  self.layout_model_line_count = current_model_line_count
-  self.layout_line_count = current_view_line_count
-  let layout_info_changed = previous_layout_identity !=
-    self.layout_identity(current_model_line_count, current_view_line_count)
+  self.configuration.set_line_counts(
+    current_model_line_count, current_view_line_count,
+  )
   match
-    view_configuration_changed_event(
-      self.options,
-      self.options,
-      previous_font_info,
-      self.font_info,
-      previous_soft_wrap_column,
-      self.soft_wrap_column,
-      layout_info_changed~,
-    ) {
+    previous_configuration.changed_event(self.configuration.event_snapshot()) {
     Some(event) => self.emit_view_event(ViewConfigurationChanged(event))
     None => ()
   }
@@ -253,92 +231,7 @@ fn Viewer::sync_content_width(self : Viewer) -> Unit {
   // ViewLayout. The Viewer only supplies the wrapping policy; logical UTF-16
   // length must never stand in for browser geometry.
   view_model.view_layout.set_is_viewport_wrapping(
-    self.options.soft_wrap && self.soft_wrap_column > 0,
+    self.configuration.snapshot().word_wrap(),
   )
   |> ignore
-}
-
-///|
-/// `fontInfo.typicalHalfwidthCharacterWidth`, retained for wrapping-column and
-/// pointer/drag calculations. Horizontal extent comes from rendered DOM width.
-fn Viewer::measured_char_width(self : Viewer) -> Double {
-  self.font_info.typical_halfwidth_character_width
-}
-
-///|
-/// The line-number band width — Monaco's `layoutInfo.lineNumbersWidth`,
-/// `Math.round(digitCount * maxDigitWidth)` with the digit count at least
-/// `line_numbers_min_chars` (`editorOptions.ts:2914-2917`).
-fn Viewer::line_numbers_width(self : Viewer, model_line_count : Int) -> Double {
-  let digits = digit_count(model_line_count)
-  let slots = digits.max(self.options.line_numbers_min_chars)
-  (slots.to_double() * self.font_info.max_digit_width).round()
-}
-
-///|
-/// `EditorConfiguration._digitCount`: base-10 digits with a minimum of one.
-/// Line counts are nonnegative, but keeping the loop numeric (instead of
-/// stringifying) preserves the source's decimal-band boundary behavior.
-fn digit_count(value : Int) -> Int {
-  let mut value = value
-  let mut result = 0
-  while value > 0 {
-    value = value / 10
-    result += 1
-  }
-  result.max(1)
-}
-
-///|
-/// The line-decorations lane width the layout uses — Monaco's
-/// `EditorLayoutInfoComputer` (`editorOptions.ts:2906-2910`): the configured
-/// `lineDecorationsWidth`, plus 16px for the folding controls when folding
-/// is enabled and `showFoldingControls` is not `never`.
-fn Viewer::layout_decorations_width(self : Viewer) -> Double {
-  let folding_reserve : Double = if self.options.folding &&
-    self.options.show_folding_controls != Never {
-    16.0
-  } else {
-    0.0
-  }
-  self.options.line_decorations_width.to_double() + folding_reserve
-}
-
-///|
-/// The full margin width: the line-number band plus the line-decorations
-/// lane — Monaco's `layoutInfo.contentLeft` (the viewer has no glyph margin,
-/// so `contentLeft = lineNumbersWidth + decorationsWidth`).
-fn Viewer::gutter_width(self : Viewer, model_line_count : Int) -> Double {
-  self.line_numbers_width(model_line_count) + self.layout_decorations_width()
-}
-
-///|
-/// Independent computed `EditorLayoutInfo` identity. Comparing only
-/// `contentLeft` (the sum of the first two fields) loses compensated changes
-/// where the line-number band shrinks as the decorations lane grows.
-priv struct ViewerLayoutIdentity {
-  line_numbers_width : Double
-  decorations_width : Double
-  content_left : Double
-  content_width : Double
-  height : Double
-  view_line_count : Int
-} derive(Eq)
-
-///|
-fn Viewer::layout_identity(
-  self : Viewer,
-  model_line_count : Int,
-  view_line_count : Int,
-) -> ViewerLayoutIdentity {
-  let line_numbers_width = self.line_numbers_width(model_line_count)
-  let decorations_width = self.layout_decorations_width()
-  {
-    line_numbers_width,
-    decorations_width,
-    content_left: line_numbers_width + decorations_width,
-    content_width: self.measured_content_width,
-    height: self.measured_height,
-    view_line_count,
-  }
 }

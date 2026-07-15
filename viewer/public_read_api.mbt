@@ -56,7 +56,7 @@ fn Viewer::get_visible_ranges_plus_viewport_above_below(
   self : Viewer,
 ) -> Array[@base_common.Range] {
   guard self.get_view_model() is Some(view_model) else { return [] }
-  let line_height = self.font_info.line_height.to_double()
+  let line_height = self.configuration.snapshot().font_info.line_height.to_double()
   let height = view_model.view_layout.dimensions().height
   // `Math.round` of a non-negative ratio is `floor(x + 0.5)`.
   let rounded = (height / line_height + 0.5).to_int()
@@ -158,7 +158,7 @@ pub fn Viewer::get_visible_column_from_position(
 ) -> Int {
   guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
-  let tab_size = self.options.tab_size
+  let tab_size = self.configuration.snapshot().options.tab_size
   @core.visible_column_from_column(
     model.get_line_content(position.line_number),
     position.column,
@@ -176,7 +176,7 @@ fn Viewer::get_statusbar_column(
 ) -> Int {
   guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
-  let tab_size = self.options.tab_size
+  let tab_size = self.configuration.snapshot().options.tab_size
   @core.to_statusbar_column(
     model.get_line_content(position.line_number),
     position.column,
@@ -351,33 +351,11 @@ fn Viewer::get_vertical_offset_after_position(
 /// lane; the glyph-margin terms are `0`). Like Monaco this does not gate on a
 /// model.
 pub fn Viewer::get_layout_info(self : Viewer) -> @config.EditorLayoutInfo {
-  let content_left = self.read_api_content_left()
-  let content_width = self.measured_content_width
-  let height = self.measured_height
-  let decorations_width = if content_left > 0.0 {
-    self.layout_decorations_width()
-  } else {
-    // No rendered content → no gutter at all; report the lane as absent too.
-    0.0
+  let model_line_count = match self.get_model() {
+    Some(model) => Some(model.snapshot.line_count())
+    None => None
   }
-  let line_numbers_width = content_left - decorations_width
-  {
-    width: content_left + content_width,
-    height,
-    glyph_margin_left: 0.0,
-    glyph_margin_width: 0.0,
-    line_numbers_left: 0.0,
-    line_numbers_width,
-    decorations_left: line_numbers_width,
-    decorations_width,
-    content_left,
-    content_width,
-    // The scrollbar cluster is otherwise unmodeled; this mirrors the
-    // `default_scrollbar_size` the viewer's scrollable element renders with
-    // (`viewer/ui/scrollbar/scrollable_element.mbt`).
-    horizontal_scrollbar_height: 10.0,
-    vertical_scrollbar_width: 10.0,
-  }
+  self.configuration.snapshot().layout_info(model_line_count)
 }
 
 ///|
@@ -466,7 +444,8 @@ pub fn Viewer::get_scrolled_visible_position(
 /// by the view model's measured `gutter_width`; `0` with no model.
 fn Viewer::read_api_content_left(self : Viewer) -> Double {
   match self.get_model() {
-    Some(model) => self.gutter_width(model.snapshot.line_count())
+    Some(model) =>
+      self.configuration.snapshot().gutter_width(model.snapshot.line_count())
     None => 0.0
   }
 }

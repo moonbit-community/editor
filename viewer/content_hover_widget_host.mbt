@@ -145,7 +145,9 @@ fn Viewer::ensure_content_hover_widget(
           self.scrolled_visible_position_top(position)
         },
         // Monaco reads `EditorOption.lineHeight` — configuration, not layout.
-        line_height: () => self.font_info.line_height.to_double(),
+        line_height: () => {
+          self.configuration.snapshot().font_info.line_height.to_double()
+        },
         keep_hover_open: () => self.keep_hover_open(),
         handle_mouseleave: (posx, posy) => {
           self.on_content_hover_widget_mouse_leave(posx, posy)

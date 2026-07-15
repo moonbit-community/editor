@@ -213,7 +213,7 @@ fn Viewer::layout_agent_feedback_widget(
   start_line : Int,
 ) -> Unit {
   widget.set_anchor_line(start_line)
-  let line_height = self.font_info.line_height.to_double()
+  let line_height = self.configuration.snapshot().font_info.line_height.to_double()
   let layout = self.get_layout_info()
   let scroll_top = self.get_scroll_top()
   let scroll_height = self.get_scroll_height()

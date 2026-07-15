@@ -42,7 +42,7 @@ fn Viewer::pointer_handler_helper(
     // --- ViewContext substitutes ---
     view_model: () => self.get_view_model(),
     get_layout_info: () => self.get_layout_info(),
-    get_font_info: () => self.font_info,
+    get_font_info: () => self.configuration.snapshot().font_info,
     get_current_selection: () => self.view_selection(),
     // --- ViewController substitutes ---
     dispatch_mouse: data => self.dispatch_mouse(data),

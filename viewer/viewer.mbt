@@ -24,7 +24,9 @@ pub struct Viewer {
   /// Viewer-lifetime subscriptions, distinct from ModelData's swap-scoped
   /// listeners and View's browser-resource store.
   priv lifetime_disposables : Array[@base_common.Disposable]
-  priv mut options : ViewerOptions
+  /// Viewer-lifetime options, measured geometry, font facts, and derived
+  /// layout identity behind one configuration transition owner.
+  priv configuration : EditorConfigurationState
   priv did_change_model : @base_common.Emitter[@editor_api.ModelChangedEvent]
   /// Monaco's `onDidChangeModelContent` (`cew:105`), re-fired from the
   /// installed model's public content event by the `attach_model`
@@ -84,24 +86,6 @@ pub struct Viewer {
   /// lines intersecting the viewport at the last flush, resynced from the
   /// layout every flush.
   priv mut rendered_window : @view_layout.LineWindow?
-  /// The measured font facts (Monaco's `EditorOption.fontInfo`): starts as
-  /// the untrusted headless estimate and is replaced by
-  /// `FontMeasurements.readFontInfo` at the first attached measure.
-  priv mut font_info : @config.FontInfo
-  /// The measured editor box (Monaco's `EditorOption.layoutInfo` role — the
-  /// container observer lives in `editorConfiguration.ts`, and `ViewLayout`
-  /// *reads* layout info from the configuration): the content width (view box
-  /// minus the gutter) and the viewport height. Written by `measure`; read
-  /// pre-model by the wrap-column math and `get_layout_info`, and seeded into
-  /// each per-model `ViewLayout` at construction.
-  priv mut measured_content_width : Double
-  priv mut measured_height : Double
-  /// Last model/view line counts incorporated into the computed layout
-  /// identity. Model-line digits size the line-number lane; view-line count is
-  /// an independent `layoutInfo` fact.
-  priv mut layout_model_line_count : Int
-  priv mut layout_line_count : Int
-  priv mut soft_wrap_column : Int
   /// The host element handed to `attach` — Monaco's `_containerDomElement`.
   priv mut container : @rdom.Element?
   /// The Viewer-owned no-model placeholder (deviation: Monaco has no
@@ -117,7 +101,6 @@ pub struct Viewer {
   /// The cancellable root render request. `None` is both the idle state and
   /// the disposed state; callbacks clear the slot before flushing.
   priv mut render_frame : @base_common.Disposable?
-  priv mut measure_requested : Bool
   priv mut pending_rendered : PendingRendered?
   priv mut scroll_dirty : Bool
   /// This editor's decoration `ownerId` (Monaco's per-widget editor id): the
@@ -233,7 +216,7 @@ fn Viewer::Viewer(
     disposed: false,
     testing_registration: None,
     lifetime_disposables: [],
-    options,
+    configuration: EditorConfigurationState(options, font_info),
     did_change_model: @base_common.Emitter::new(),
     did_change_model_content: @base_common.Emitter::new(),
     did_change_cursor_position: @base_common.Emitter::new(),
@@ -254,18 +237,11 @@ fn Viewer::Viewer(
     model_data: None,
     model_data_generation: 0,
     rendered_window: None,
-    font_info,
-    measured_content_width: 0.0,
-    measured_height: 0.0,
-    layout_model_line_count: 0,
-    layout_line_count: 0,
-    soft_wrap_column: 0,
     container: None,
     placeholder_element: None,
     placeholder_text: None,
     overlay_widgets: Map([]),
     render_frame: None,
-    measure_requested: false,
     pending_rendered: None,
     scroll_dirty: false,
     editor_id: next_editor_id(),
@@ -465,18 +441,13 @@ pub fn Viewer::on_did_dispose(
 /// without a rebuild; the current view model is rebuilt when wrapping, tab, or
 /// render settings change.
 pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
-  if self.options == options {
+  let previous_configuration = self.configuration.event_snapshot()
+  let previous = previous_configuration.configuration.options
+  if previous == options {
     return
   }
-  let previous = self.options
-  let previous_font_info = self.font_info
-  let previous_soft_wrap_column = self.soft_wrap_column
-  let previous_layout_identity = self.layout_identity(
-    self.layout_model_line_count,
-    self.layout_line_count,
-  )
   let event_batch = self.begin_view_event_batch()
-  self.options = options
+  self.configuration.replace_options(options) |> ignore
   if previous.theme != options.theme {
     self.apply_theme()
   }
@@ -495,12 +466,9 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
     // (Monaco's synchronous `_recomputeOptions`), so the wrap column below
     // already uses the new advance width.
     self.refresh_font_info()
-    self.soft_wrap_column = self.options.soft_wrap_column_for_content_width(
-      self.measured_content_width,
-      self.measured_char_width(),
-    )
+    self.configuration.recompute_soft_wrap_column() |> ignore
     self.on_configuration_changed(previous_options=previous)
-    self.measure_requested = true
+    self.configuration.request_measure()
   }
   let current_model_line_count = match self.get_model() {
     Some(model) => model.snapshot.line_count()
@@ -510,20 +478,11 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
     Some(view_model) => view_model.line_count()
     None => 0
   }
-  self.layout_model_line_count = current_model_line_count
-  self.layout_line_count = current_view_line_count
-  let layout_info_changed = previous_layout_identity !=
-    self.layout_identity(current_model_line_count, current_view_line_count)
+  self.configuration.set_line_counts(
+    current_model_line_count, current_view_line_count,
+  )
   match
-    view_configuration_changed_event(
-      previous,
-      options,
-      previous_font_info,
-      self.font_info,
-      previous_soft_wrap_column,
-      self.soft_wrap_column,
-      layout_info_changed~,
-    ) {
+    previous_configuration.changed_event(self.configuration.event_snapshot()) {
     Some(event) => self.emit_view_event(ViewConfigurationChanged(event))
     None => ()
   }
@@ -537,14 +496,14 @@ pub fn Viewer::update_options(self : Viewer, options : ViewerOptions) -> Unit {
 /// squiggle stylesheet from the newly cascaded colors; the view keeps its DOM
 /// and scroll position.
 fn Viewer::apply_theme(self : Viewer) -> Unit {
+  let theme = self.configuration.snapshot().options.theme
   match self.placeholder_element {
-    Some(placeholder) =>
-      placeholder.set_attribute("data-theme", self.options.theme)
+    Some(placeholder) => placeholder.set_attribute("data-theme", theme)
     None => ()
   }
   match self.get_view() {
     Some(view) => {
-      view.root.set_attribute("data-theme", self.options.theme)
+      view.root.set_attribute("data-theme", theme)
       view.apply_squiggly_theme()
     }
     None => ()
@@ -565,7 +524,10 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   let document = @rdom.document()
   let placeholder = document.create_element("section")
   placeholder.set_attribute("class", @view.empty_editor_class_name())
-  placeholder.set_attribute("data-theme", self.options.theme)
+  placeholder.set_attribute(
+    "data-theme",
+    self.configuration.snapshot().options.theme,
+  )
   let message = document.create_element("div")
   message.set_attribute("class", "source-message")
   let message_text = document.create_text_node("")
@@ -581,12 +543,12 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   self.add_lifetime_disposable(
     @browser_config.font_measurements().on_did_change(() => {
       if !self.disposed {
-        self.measure_requested = true
+        self.configuration.request_measure()
         self.schedule_render()
       }
     }),
   )
-  self.measure_requested = true
+  self.configuration.request_measure()
   self.schedule_render()
 }
 
@@ -703,8 +665,7 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
   self.clear_agent_feedback_widgets() |> ignore
   model_data.dispose()
   self.model_data = None
-  self.layout_model_line_count = 0
-  self.layout_line_count = 0
+  self.configuration.reset_model_line_counts()
   match self.container {
     Some(host) => {
       host.remove_attribute("data-mode-id")
@@ -773,7 +734,7 @@ fn Viewer::get_view(self : Viewer) -> @view.View? {
 /// The current options snapshot — the read side of `update_options` (Monaco's
 /// `getOptions`/`getRawOptions`, collapsed onto the one options struct).
 pub fn Viewer::get_options(self : Viewer) -> ViewerOptions {
-  self.options
+  self.configuration.snapshot().options
 }
 
 ///|
@@ -912,7 +873,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.pending_rendered = None
   self.rendered_window = None
   self.horizontal_reveal_request = None
-  self.measure_requested = false
+  self.configuration.clear_measure_request()
   self.scroll_dirty = false
   self.did_change_model.dispose()
   self.did_change_model_content.dispose()
@@ -943,7 +904,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
 /// `layout()`. The explicit-dimension form is not ported: the viewer always
 /// measures its host element.
 pub fn Viewer::layout(self : Viewer) -> Unit {
-  self.measure_requested = true
+  self.configuration.request_measure()
   self.schedule_render()
 }
 

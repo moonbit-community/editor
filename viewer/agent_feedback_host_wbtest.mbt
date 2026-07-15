@@ -71,11 +71,11 @@ fn with_feedback_test_viewer(
 ///|
 test "feedback lane reserves 18px while enabled and restores the base" {
   with_feedback_test_viewer("alpha\nbeta\ngamma", (viewer, service) => {
-    assert_eq(viewer.options.line_decorations_width, 10)
+    assert_eq(viewer.get_options().line_decorations_width, 10)
     service.set_feedback_enabled(test_model_uri(), true)
-    assert_eq(viewer.options.line_decorations_width, 28)
+    assert_eq(viewer.get_options().line_decorations_width, 28)
     service.set_feedback_enabled(test_model_uri(), false)
-    assert_eq(viewer.options.line_decorations_width, 10)
+    assert_eq(viewer.get_options().line_decorations_width, 10)
   })
 }
 
@@ -169,7 +169,7 @@ test "feedback content flush preserves central owners and refreshes model state"
   input.suppress_selection_change_once = true
   widgets.reply_drafts.set(comment.id, "draft survives rebuild")
   widgets.widget_id_pool = 17
-  assert_eq(viewer.options.line_decorations_width, 28)
+  assert_eq(viewer.get_options().line_decorations_width, 28)
   assert_eq(input.hover_decoration_ids.length(), 1)
   assert_eq(widgets.highlight_decoration_ids.length(), 1)
   assert_eq(input_entry.listeners.length(), 9)
@@ -193,7 +193,7 @@ test "feedback content flush preserves central owners and refreshes model state"
   assert_eq(widgets.widgets.length(), 0)
   assert_eq(input_entry.listeners.length(), 9)
   assert_eq(widget_entry.listeners.length(), 5)
-  assert_eq(viewer.options.line_decorations_width, 28)
+  assert_eq(viewer.get_options().line_decorations_width, 28)
 
   viewer.dispose()
   model.dispose()
@@ -225,7 +225,7 @@ test "feedback model swap removal and reattach preserve only Viewer-lifetime sta
   input.suppress_selection_change_once = true
   widgets.reply_drafts.set(comment.id, "first model draft")
   widgets.widget_id_pool = 23
-  assert_eq(viewer.options.line_decorations_width, 28)
+  assert_eq(viewer.get_options().line_decorations_width, 28)
   assert_eq(input.hover_decoration_ids.length(), 1)
   assert_eq(widgets.highlight_decoration_ids.length(), 1)
 
@@ -248,7 +248,7 @@ test "feedback model swap removal and reattach preserve only Viewer-lifetime sta
   // normal orphan-pruning policy.
   assert_eq(widgets.reply_drafts[comment.id], "first model draft")
   assert_eq(widgets.widget_id_pool, 23)
-  assert_eq(viewer.options.line_decorations_width, 10)
+  assert_eq(viewer.get_options().line_decorations_width, 10)
 
   viewer.set_model(None)
   assert_true(physical_equal(input, viewer.test_feedback_input_contribution()))
@@ -266,7 +266,7 @@ test "feedback model swap removal and reattach preserve only Viewer-lifetime sta
   assert_true(
     physical_equal(widgets, viewer.test_feedback_widget_contribution()),
   )
-  assert_eq(viewer.options.line_decorations_width, 28)
+  assert_eq(viewer.get_options().line_decorations_width, 28)
   assert_eq(widgets.reply_drafts[comment.id], "first model draft")
   assert_eq(widgets.widget_id_pool, 23)
 

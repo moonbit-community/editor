@@ -26,7 +26,6 @@ priv struct TokenizerSyntaxTokenBackend {
   model_state : TokenizationModelState
   resolve_support : (String) -> InternalTokenizationSupportAdapter?
   mut tokenizer : TokenizerWithStateStoreAndTextModel?
-  mut background_tokenization_state_value : BackgroundTokenizationState
   mut default_background_tokenizer : DefaultBackgroundTokenizer?
   tokens : @common_tokens.ContiguousTokensStore
   attached_view_states : Array[AttachedViewHandlerEntry]
@@ -49,7 +48,6 @@ fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
     model_state,
     resolve_support,
     tokenizer: None,
-    background_tokenization_state_value: InProgress,
     default_background_tokenizer: None,
     tokens: @common_tokens.ContiguousTokensStore::new(
       @services.language_id_codec,
@@ -185,32 +183,9 @@ fn TokenizerSyntaxTokenBackend::reset_tokenization(
   self.default_background_tokenizer = None
   match self.tokenizer {
     Some(tokenizer) => {
-      let output = BackgroundTokenizationStore(
-        set_tokens=batches => self.set_tokens(batches) |> ignore,
-        set_font_info=changes => self.set_font_info(changes),
-        background_tokenization_finished=() => {
-          if self.background_tokenization_state_value == Completed {
-            return
-          }
-          self.background_tokenization_state_value = Completed
-          self.shared.did_change_background_state.fire(())
-        },
-        set_end_state=(line_number, state) => {
-          match self.tokenizer {
-            Some(current) =>
-              match
-                current.state_store().get_first_invalid_end_state_line_number() {
-                Some(first_invalid) =>
-                  if line_number >= first_invalid {
-                    current.state_store().set_end_state(line_number, state)
-                    |> ignore
-                  }
-                None => ()
-              }
-            None => ()
-          }
-        },
-      )
+      let output = BackgroundTokenizationStore(set_tokens=batches => {
+        self.set_tokens(batches) |> ignore
+      })
       let worker = DefaultBackgroundTokenizer(tokenizer, output)
       self.default_background_tokenizer = Some(worker)
       worker.handle_changes()
@@ -267,17 +242,6 @@ fn TokenizerSyntaxTokenBackend::set_tokens(
 }
 
 ///|
-/// Fires exact syntactic font changes while live.
-fn TokenizerSyntaxTokenBackend::set_font_info(
-  self : TokenizerSyntaxTokenBackend,
-  changes : FontTokensUpdate,
-) -> Unit {
-  if !self.model_state.disposing.val {
-    self.shared.did_change_font_tokens.fire({ changes, })
-  }
-}
-
-///|
 /// Joins every per-view latest range and refreshes it.
 fn TokenizerSyntaxTokenBackend::refresh_all_visible_line_tokens(
   self : TokenizerSyntaxTokenBackend,
@@ -331,63 +295,6 @@ fn TokenizerSyntaxTokenBackend::refresh_range(
       None => ()
     }
   }
-  match self.default_background_tokenizer {
-    Some(worker) => worker.check_finished()
-    None => ()
-  }
-}
-
-///|
-/// Builds accurate state through the requested line and stores the batch.
-fn TokenizerSyntaxTokenBackend::force_tokenization(
-  self : TokenizerSyntaxTokenBackend,
-  line_number : Int,
-) -> Unit {
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
-  match self.tokenizer {
-    Some(tokenizer) => tokenizer.update_tokens_until_line(builder, line_number)
-    None => ()
-  }
-  self.set_tokens(builder.finalize()) |> ignore
-  match self.default_background_tokenizer {
-    Some(worker) => worker.check_finished()
-    None => ()
-  }
-}
-
-///|
-/// Missing support is accurate; live support delegates the invalid frontier.
-fn TokenizerSyntaxTokenBackend::has_accurate_tokens_for_line(
-  self : TokenizerSyntaxTokenBackend,
-  line_number : Int,
-) -> Bool {
-  match self.tokenizer {
-    Some(tokenizer) => tokenizer.has_accurate_tokens_for_line(line_number)
-    None => true
-  }
-}
-
-///|
-/// Missing support is cheap; live support applies the 2048-unit rule.
-fn TokenizerSyntaxTokenBackend::is_cheap_to_tokenize(
-  self : TokenizerSyntaxTokenBackend,
-  line_number : Int,
-) -> Bool {
-  match self.tokenizer {
-    Some(tokenizer) => tokenizer.is_cheap_to_tokenize(line_number)
-    None => true
-  }
-}
-
-///|
-/// Conditionally forces one line only when cheap.
-fn TokenizerSyntaxTokenBackend::tokenize_if_cheap(
-  self : TokenizerSyntaxTokenBackend,
-  line_number : Int,
-) -> Unit {
-  if self.is_cheap_to_tokenize(line_number) {
-    self.force_tokenization(line_number)
-  }
 }
 
 ///|
@@ -404,46 +311,12 @@ fn TokenizerSyntaxTokenBackend::get_line_tokens(
 }
 
 ///|
-/// Whether any contiguous syntactic token state is stored.
-fn TokenizerSyntaxTokenBackend::has_tokens(
-  self : TokenizerSyntaxTokenBackend,
-) -> Bool {
-  self.tokens.has_tokens()
-}
-
-///|
-/// Current background lifecycle state.
-fn TokenizerSyntaxTokenBackend::background_tokenization_state(
-  self : TokenizerSyntaxTokenBackend,
-) -> BackgroundTokenizationState {
-  self.background_tokenization_state_value
-}
-
-///|
 /// Event subscriptions forwarded by the model part.
 fn TokenizerSyntaxTokenBackend::on_did_change_tokens(
   self : TokenizerSyntaxTokenBackend,
   listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.shared.on_did_change_tokens(listener)
-}
-
-///|
-/// Subscribes to exact child-owned syntactic font payloads.
-fn TokenizerSyntaxTokenBackend::on_did_change_font_tokens(
-  self : TokenizerSyntaxTokenBackend,
-  listener : (ModelFontTokensChangedEvent) -> Unit,
-) -> @base_common.Disposable {
-  self.shared.on_did_change_font_tokens(listener)
-}
-
-///|
-/// Subscribes to background completion transitions.
-fn TokenizerSyntaxTokenBackend::on_did_change_background_tokenization_state(
-  self : TokenizerSyntaxTokenBackend,
-  listener : (Unit) -> Unit,
-) -> @base_common.Disposable {
-  self.shared.on_did_change_background_tokenization_state(listener)
 }
 
 ///|

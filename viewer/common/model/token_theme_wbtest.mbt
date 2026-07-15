@@ -110,16 +110,3 @@ test "default color map resolves mtk classes to the workbench token vars" {
     "color: var(--vscode-token-keyword);",
   )
 }
-
-///|
-test "token_theme_style_block emits one mtk rule per color" {
-  let block = token_theme_style_block([
-    "", "var(--vscode-editor-foreground)", "var(--vscode-editor-background)", "var(--vscode-token-keyword)",
-  ])
-  assert_eq(
-    block,
-    ".mtk1{color:var(--vscode-editor-foreground);}" +
-    ".mtk2{color:var(--vscode-editor-background);}" +
-    ".mtk3{color:var(--vscode-token-keyword);}",
-  )
-}

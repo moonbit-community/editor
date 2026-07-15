@@ -195,25 +195,25 @@ test "set_value emits one full-range public change with isFlush" {
 }
 
 ///|
-test "set_value re-seeds live token model state and suppresses full reset event" {
+test "set_value re-seeds visible token state without a full reset event" {
   let registration = @syntax.tokenization_registry.register(
     "moonbit",
     @syntax.PlainTokenizer::new(),
   )
   let model = wb_model("alpha\nbravo")
-  model.tokenization.force_tokenization(model.get_line_count())
-  assert_eq(model.tokenization.has_tokens(), true)
+  let view = model.on_before_attached()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   let to_lines : Array[Int] = []
   let _sub = model.on_did_change_tokens(e => {
     to_lines.push(e.ranges[0].to_line_number)
   })
   model.set_value("one\ntwo\nthree")
   // The shared model state sees the NEW line count before flush handling, while
-  // `reset_tokenization(false)` suppresses the whole-document reset event.
-  assert_true(to_lines == [])
-  assert_eq(model.tokenization.has_tokens(), false)
-  model.tokenization.force_tokenization(model.get_line_count())
-  assert_eq(model.tokenization.has_tokens(), true)
+  // the internal reset suppresses its whole-document event. The retained
+  // visible range is refreshed and reports only lines one through two.
+  assert_true(to_lines == [2])
+  assert_eq(model.tokenization.get_line_tokens(3).get_line_content(), "three")
+  model.on_before_detached(view)
   registration.dispose()
 }
 

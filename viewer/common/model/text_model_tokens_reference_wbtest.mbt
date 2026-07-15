@@ -1,9 +1,8 @@
-///| Faithful white-box conformance port of vscode's `RangePriorityQueueImpl` suite.
+///| White-box coverage for the retained `RangePriorityQueueImpl` operations.
 ///
 /// Source: `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`. Both `test(...)` cases preserve
-/// their original names. Branch-derived cases below cover queue members the
-/// two upstream tests do not call directly.
+/// `b18492a288de038fbc7643aae6de8247029d11bd`. The readonly model retains only
+/// the queue operations consumed by tokenization state tracking.
 
 ///|
 fn or_strings(ranges : Array[@base_common.OffsetRange]) -> Array[String] {
@@ -43,48 +42,25 @@ test "addRange" {
 }
 
 ///|
-test "addRangeAndResize" {
-  let queue = RangePriorityQueueImpl()
-  queue.add_range(OffsetRange(0, 20))
-  queue.add_range(OffsetRange(100, 120))
-  queue.add_range(OffsetRange(200, 220))
-
-  // disjoint
-  queue.add_range_and_resize(OffsetRange(25, 27), 0)
-  assert_str_array_eq(or_strings(queue.get_ranges()), [
-    "[0, 20)", "[98, 118)", "[198, 218)",
-  ])
-  queue.add_range_and_resize(OffsetRange(19, 20), 0)
-  assert_str_array_eq(or_strings(queue.get_ranges()), [
-    "[0, 19)", "[97, 117)", "[197, 217)",
-  ])
-  queue.add_range_and_resize(OffsetRange(19, 97), 0)
-  assert_str_array_eq(or_strings(queue.get_ranges()), ["[0, 39)", "[119, 139)"])
-  queue.add_range_and_resize(OffsetRange(-1000, 1000), 0)
-  assert_str_array_eq(or_strings(queue.get_ranges()), [])
-}
-
-///|
-test "RangePriorityQueueImpl min removeMin delete and toString" {
+test "RangePriorityQueueImpl min delete and addRange" {
   let queue = RangePriorityQueueImpl()
   assert_true(queue.min() is None)
-  assert_true(queue.remove_min() is None)
   queue.add_range(OffsetRange(1, 2))
   queue.add_range(OffsetRange(4, 8))
-  assert_eq(queue.to_string(), "[1, 2) + [4, 8)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[1, 2)", "[4, 8)"])
   assert_true(queue.min() == Some(1))
-  assert_true(queue.remove_min() == Some(1))
-  assert_eq(queue.to_string(), "[4, 8)")
+  queue.delete(1)
+  assert_str_array_eq(or_strings(queue.ranges), ["[4, 8)"])
   queue.delete(4)
-  assert_eq(queue.to_string(), "[5, 8)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[5, 8)"])
   queue.delete(7)
-  assert_eq(queue.to_string(), "[5, 7)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[5, 7)"])
   queue.delete(6)
-  assert_eq(queue.to_string(), "[5, 6)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[5, 6)"])
   queue.delete(5)
-  assert_eq(queue.to_string(), "")
+  assert_true(queue.ranges.is_empty())
   queue.delete(999)
-  assert_eq(queue.to_string(), "")
+  assert_true(queue.ranges.is_empty())
 }
 
 ///|
@@ -92,11 +68,11 @@ test "RangePriorityQueueImpl delete splits interior and addRange covers boundari
   let queue = RangePriorityQueueImpl()
   queue.add_range(OffsetRange(10, 20))
   queue.delete(15)
-  assert_eq(queue.to_string(), "[10, 15) + [16, 20)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[10, 15)", "[16, 20)"])
   queue.add_range(OffsetRange(15, 16))
-  assert_eq(queue.to_string(), "[10, 20)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[10, 20)"])
   queue.add_range(OffsetRange(12, 14))
-  assert_eq(queue.to_string(), "[10, 20)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[10, 20)"])
   queue.add_range(OffsetRange(0, 30))
-  assert_eq(queue.to_string(), "[0, 30)")
+  assert_str_array_eq(or_strings(queue.ranges), ["[0, 30)"])
 }

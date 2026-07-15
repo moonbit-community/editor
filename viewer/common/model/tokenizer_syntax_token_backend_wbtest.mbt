@@ -67,7 +67,7 @@ fn run_idle(task : IdleTask, remaining? : Double = 0.0) -> Unit {
 }
 
 ///|
-test "passive reads never invoke support; explicit force stores exact ranges" {
+test "passive reads never invoke support; stable attached ranges store exact ranges" {
   let harness = backend_harness(["one", "two"])
   let attached_views = AttachedViews()
   let calls : Array[String] = []
@@ -83,31 +83,31 @@ test "passive reads never invoke support; explicit force stores exact ranges" {
   assert_eq(backend.get_line_tokens(1).get_count(), 1)
   assert_eq(backend.get_line_tokens(2).get_count(), 1)
   assert_eq(calls.length(), 0)
-  backend.force_tokenization(1)
-  assert_eq(calls.length(), 1)
-  assert_true(backend.has_tokens())
+  let view = attached_views.attach_view()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  assert_eq(calls.length(), 2)
   assert_eq(events.length(), 1)
   assert_eq(events[0].ranges[0].from_line_number, 1)
-  assert_eq(events[0].ranges[0].to_line_number, 1)
+  assert_eq(events[0].ranges[0].to_line_number, 2)
 }
 
 ///|
 test "too-large and missing support stay passive defaults and schedule nothing" {
   let harness = backend_harness(["one"], too_large=true)
   let resolves = Ref(0)
+  let attached_views = AttachedViews()
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews(),
+    attached_views,
     _ => {
       resolves.val += 1
       Some(logging_support([], Ref(0)))
     },
   )
   assert_eq(resolves.val, 0)
-  assert_true(backend.has_accurate_tokens_for_line(1))
-  assert_true(backend.is_cheap_to_tokenize(1))
-  backend.force_tokenization(1)
-  assert_false(backend.has_tokens())
+  let view = attached_views.attach_view()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1 }], true)
+  assert_eq(resolves.val, 0)
   assert_eq(backend.get_line_tokens(1).get_count(), 1)
 }
 
@@ -124,28 +124,7 @@ test "stable attached ranges refresh synchronously without a scheduler" {
   let handle = attached_views.attach_view()
   handle.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   assert_eq(calls.length(), 2)
-  assert_true(backend.has_accurate_tokens_for_line(2))
   assert_eq(backend.get_line_tokens(1).get_line_content(), "one")
-}
-
-///|
-test "background completion remains completed across reset and repeated finish is silent" {
-  let harness = backend_harness(["one"])
-  let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.model_state,
-    AttachedViews(),
-    _ => Some(logging_support([], Ref(0))),
-  )
-  let state_events = Ref(0)
-  backend.on_did_change_background_tokenization_state(_ => state_events.val += 1)
-  |> ignore
-  backend.force_tokenization(1)
-  assert_true(backend.background_tokenization_state() == Completed)
-  assert_eq(state_events.val, 1)
-  backend.reset_tokenization()
-  assert_true(backend.background_tokenization_state() == Completed)
-  backend.force_tokenization(1)
-  assert_eq(state_events.val, 1)
 }
 
 ///|
@@ -176,64 +155,24 @@ test "scheduler None enqueues nothing; late scheduler wakes once and stale gener
   assert_eq(calls.length(), 0)
   run_idle(scheduler.idle[1])
   assert_eq(calls.length(), 2)
-  assert_true(backend.background_tokenization_state() == Completed)
 }
 
 ///|
-test "disposing guard drops token and font events" {
+test "disposing guard drops token events from reset and visible refresh" {
   let harness = backend_harness(["one"])
+  let attached_views = AttachedViews()
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     harness.model_state,
-    AttachedViews(),
+    attached_views,
     _ => Some(logging_support([], Ref(0))),
   )
   let token_events = Ref(0)
-  let font_events = Ref(0)
   backend.on_did_change_tokens(_ => token_events.val += 1) |> ignore
-  backend.on_did_change_font_tokens(_ => font_events.val += 1) |> ignore
   harness.disposing.val = true
   backend.reset_tokenization()
-  backend.set_font_info(AnnotationsUpdate::create([]))
-  backend.force_tokenization(1)
+  let view = attached_views.attach_view()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1 }], true)
   assert_eq(token_events.val, 0)
-  assert_eq(font_events.val, 0)
-}
-
-///|
-test "set_font_info forwards the exact live payload and one absent removal" {
-  let harness = backend_harness(["one"])
-  let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
-    harness.model_state,
-    AttachedViews(),
-    _ => Some(logging_support([], Ref(0))),
-  )
-  let events : Array[ModelFontTokensChangedEvent] = []
-  backend.on_did_change_font_tokens(event => events.push(event)) |> ignore
-  let changes : FontTokensUpdate = AnnotationsUpdate::create([
-    {
-      range: OffsetRange(1, 4),
-      annotation: Some({
-        font_family: Some("Mono"),
-        font_size_multiplier: Some(1.25),
-        line_height_multiplier: Some(1.5),
-      }),
-    },
-    { range: OffsetRange(7, 9), annotation: None },
-  ])
-  backend.set_font_info(changes)
-  assert_eq(events.length(), 1)
-  assert_true(physical_equal(events[0].changes, changes))
-  let annotations = events[0].changes.annotations()
-  assert_eq(annotations.length(), 2)
-  assert_true(annotations[0].annotation is Some(_))
-  assert_true(annotations[1].annotation is None)
-  harness.disposing.val = true
-  backend.set_font_info(AnnotationsUpdate::create([]))
-  assert_eq(events.length(), 1)
-  backend.dispose()
-  harness.disposing.val = false
-  backend.set_font_info(changes)
-  assert_eq(events.length(), 1)
 }
 
 ///|
@@ -248,7 +187,6 @@ test "failing initial state reports and disables support for the reset" {
     initial_state=() => raise BackendInitialStateError::InitialStateFailure,
     tokenize_encoded=(_text, _has_eol, state) => {
       tokens: [0, tag_to_metadata(Plain)],
-      font_info: None,
       end_state: state,
     },
   )
@@ -258,7 +196,6 @@ test "failing initial state reports and disables support for the reset" {
     _ => Some(failing),
   )
   assert_eq(harness.errors.length(), 1)
-  assert_true(backend.has_accurate_tokens_for_line(1))
   assert_eq(backend.get_line_tokens(1).get_count(), 1)
 }
 

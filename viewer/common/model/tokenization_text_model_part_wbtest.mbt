@@ -75,7 +75,10 @@ fn find_marker(
 }
 
 ///|
-fn toy_part(text : String, language_id : String) -> TokenizationTextModelPart {
+fn toy_part(
+  text : String,
+  language_id : String,
+) -> (TokenizationTextModelPart, AttachedViewImpl) {
   @syntax.tokenization_registry.register(language_id, BlockCommentToy::{  })
   |> ignore
   let lines : Array[String] = []
@@ -87,7 +90,7 @@ fn toy_part(text : String, language_id : String) -> TokenizationTextModelPart {
     }
   }
   lines.push(text[start:text.length()].to_owned())
-  part_from_lines(lines, language_id)
+  part_with_view_from_lines(lines, language_id)
 }
 
 ///|
@@ -127,8 +130,21 @@ fn part_from_lines(
 }
 
 ///|
+fn part_with_view_from_lines(
+  lines : Array[String],
+  language_id : String,
+) -> (TokenizationTextModelPart, AttachedViewImpl) {
+  let attached_views = AttachedViews()
+  let part = TokenizationTextModelPart(
+    test_model_state(lines, language_id),
+    attached_views,
+  )
+  (part, attached_views.attach_view())
+}
+
+///|
 test "the sweep threads state across lines and encodes every line" {
-  let part = toy_part(
+  let (part, view) = toy_part(
     (
       #|let a = 1
       #|/* two
@@ -137,7 +153,7 @@ test "the sweep threads state across lines and encodes every line" {
     ),
     "part-toy",
   )
-  part.force_tokenization(4)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 4 }], true)
 
   // Every line's stored `LineTokens` reproduces the line text.
   assert_eq(part.get_line_tokens(1).get_line_content(), "let a = 1")
@@ -196,7 +212,10 @@ test "language id round-trips through the process-wide codec" {
 /// touching the part's language resets the memo and fires
 /// `on_did_change_tokens`; `dispose` unsubscribes.
 test "registry changes reset the part and fire on_did_change_tokens" {
-  let part = part_from_lines(["let a = 1", "let b = 2"], "part-registry-sub")
+  let (part, view) = part_with_view_from_lines(
+    ["let a = 1", "let b = 2"],
+    "part-registry-sub",
+  )
   let events : Array[ModelTokensChangedEvent] = []
   part.on_did_change_tokens(event => events.push(event)) |> ignore
   // Registry miss reads one passive default token without warming state.
@@ -207,48 +226,26 @@ test "registry changes reset the part and fire on_did_change_tokens" {
   )
   // The part observed the registration itself: memo dropped, whole-document
   // change announced.
-  assert_false(part.has_tokens())
   assert_eq(events.length(), 1)
   assert_false(events[0].semantic_tokens_applied)
   assert_eq(events[0].ranges.length(), 1)
   assert_eq(events[0].ranges[0].from_line_number, 1)
   assert_eq(events[0].ranges[0].to_line_number, 2)
-  // Re-read remains passive; explicit force resolves the support.
+  // Re-read remains passive; a stable attached range drives production lexing.
   assert_eq(part.get_line_tokens(1).get_count(), 1)
-  part.force_tokenization(1)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   assert_eq(part.get_line_tokens(1).get_count(), 2)
   // Other languages' registrations do not touch the part.
   let other = @syntax.tokenization_registry.register(
     "part-registry-sub-other",
     BlockCommentToy::{  },
   )
-  assert_true(part.has_tokens())
   assert_eq(events.length(), 2)
   other.dispose()
   // dispose unsubscribes: the deregistration no longer reaches the part.
   part.dispose()
   registration.dispose()
-  assert_true(part.has_tokens())
   assert_eq(events.length(), 2)
-}
-
-///|
-test "reset_tokenization drops the memo and re-reads the registry" {
-  let part = part_from_lines(["let a = 1"], "part-reset")
-  assert_false(part.has_tokens())
-  // Registry miss: passive default reads never create stored state.
-  assert_eq(part.get_line_tokens(1).get_count(), 1)
-  assert_false(part.has_tokens())
-  // Register the toy, reset, and the keyword segmentation appears.
-  let registration = @syntax.tokenization_registry.register("part-reset", BlockCommentToy::{
-
-  })
-  part.reset_tokenization()
-  assert_false(part.has_tokens())
-  part.force_tokenization(1)
-  assert_eq(part.get_line_tokens(1).get_count(), 2)
-  assert_eq(part.get_line_tokens(1).get_class_name(0), "mtk3")
-  registration.dispose()
 }
 
 ///|
@@ -258,72 +255,22 @@ test "panic get_line_tokens rejects line zero" {
 }
 
 ///|
-test "panic force_tokenization rejects line count plus one" {
-  let part = part_from_lines(["one"], "invalid-line-high")
-  part.force_tokenization(2)
-}
-
-///|
 test "token_count is a passive stored/default read" {
   let lines = ["one", "two", "three"]
   let calls : Array[String] = []
+  let attached_views = AttachedViews()
   let part = TokenizationTextModelPart::new_with_support_resolver(
     test_model_state(lines, "passive-count"),
-    AttachedViews(),
+    attached_views,
     _ => Some(logging_support(calls, Ref(0))),
   )
   assert_eq(part.token_count(), 3)
   assert_true(calls.is_empty())
-  part.force_tokenization(2)
+  let view = attached_views.attach_view()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   let before = calls.length()
   assert_eq(part.token_count(), 3)
   assert_eq(calls.length(), before)
-}
-
-///|
-test "font payload forwards unchanged only through the exposed second emitter" {
-  let lines = ["one"]
-  let disposing = Ref(false)
-  let part = TokenizationTextModelPart::new_with_support_resolver(
-    test_model_state_with_disposing(lines, "part-font-forward", disposing),
-    AttachedViews(),
-    _ => Some(logging_support([], Ref(0))),
-  )
-  let first_emitter_events = Ref(0)
-  let public_events : Array[ModelFontTokensChangedEvent] = []
-  part.first_font_emitter.event(_ => first_emitter_events.val += 1) |> ignore
-  part.on_did_change_font_tokens(event => public_events.push(event)) |> ignore
-  let option : FontTokenOption = {
-    font_family: Some("Mono"),
-    font_size_multiplier: Some(1.25),
-    line_height_multiplier: Some(1.5),
-  }
-  let changes : FontTokensUpdate = AnnotationsUpdate::create([
-    { range: OffsetRange(2, 5), annotation: Some(option) },
-    { range: OffsetRange(8, 9), annotation: None },
-  ])
-  part.backend.set_font_info(changes)
-  assert_eq(first_emitter_events.val, 0)
-  assert_eq(public_events.length(), 1)
-  assert_false(
-    physical_equal(part.first_font_emitter, part.public_font_emitter),
-  )
-  assert_true(physical_equal(public_events[0].changes, changes))
-  let actual = public_events[0].changes.annotations()
-  assert_eq(actual.length(), 2)
-  assert_eq(actual[0].range.start, 2)
-  assert_eq(actual[0].range.end_exclusive, 5)
-  assert_true(actual[0].annotation is Some(_))
-  assert_true(actual[1].annotation is None)
-
-  // Both the backend and part forwarding callback have live-disposal guards.
-  disposing.val = true
-  part.backend.set_font_info(AnnotationsUpdate::create([]))
-  assert_eq(public_events.length(), 1)
-  disposing.val = false
-  part.dispose()
-  part.backend.set_font_info(changes)
-  assert_eq(public_events.length(), 1)
 }
 
 ///|
@@ -331,10 +278,6 @@ test "dispose releases subscriptions emitters and backend before marking dispose
   let part = part_from_lines(["one"], "part-dispose-order")
   let subscription_order : Array[String] = []
   match part.backend_token_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
-  match part.backend_font_subscription {
     Some(subscription) => subscription.dispose()
     None => ()
   }
@@ -346,32 +289,18 @@ test "dispose releases subscriptions emitters and backend before marking dispose
       subscription_order.push("tokens")
     }),
   )
-  part.backend_font_subscription = Some(
-    @base_common.Disposable::from(() => {
-      if part.disposed {
-        abort("font subscription disposed after terminal flag")
-      }
-      subscription_order.push("font")
-    }),
-  )
   part.did_change_tokens.event(_ => ()) |> ignore
-  part.first_font_emitter.event(_ => ()) |> ignore
-  part.public_font_emitter.event(_ => ()) |> ignore
 
   part.dispose()
   assert_true(part.disposed)
-  assert_eq(subscription_order.length(), 2)
+  assert_eq(subscription_order.length(), 1)
   assert_eq(subscription_order[0], "tokens")
-  assert_eq(subscription_order[1], "font")
   assert_true(part.backend_token_subscription is None)
-  assert_true(part.backend_font_subscription is None)
   assert_false(part.did_change_tokens.has_listeners())
-  assert_false(part.first_font_emitter.has_listeners())
-  assert_false(part.public_font_emitter.has_listeners())
   assert_true(part.backend.disposed)
 
   part.dispose()
-  assert_eq(subscription_order.length(), 2)
+  assert_eq(subscription_order.length(), 1)
 }
 
 ///|

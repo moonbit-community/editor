@@ -125,27 +125,6 @@ pub fn ViewModelDecorations::get_decorations_viewport_data(
 }
 
 ///|
-/// `getDecorationsOnLine` (`viewModelDecorations.ts:79-82`).
-#warnings("-unused_value")
-fn ViewModelDecorations::get_decorations_on_line(
-  self : ViewModelDecorations,
-  lines : ViewModelLinesFromProjectedModel,
-  line_number : Int,
-  only_minimap_decorations? : Bool = false,
-  only_margin_decorations? : Bool = false,
-) -> ViewDecorationsCollection {
-  let range : @base_common.Range = Range(
-    line_number,
-    lines.get_view_line_min_column(line_number),
-    line_number,
-    lines.get_view_line_max_column(line_number),
-  )
-  self.computer.get_decorations(
-    range, only_minimap_decorations, only_margin_decorations,
-  )
-}
-
-///|
 fn ViewModelDecorations::compute_decorations(
   self : ViewModelDecorations,
   view_range : @base_common.Range,

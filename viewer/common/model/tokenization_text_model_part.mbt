@@ -22,15 +22,13 @@ pub(all) struct ModelTokensChangedRange {
 }
 
 ///|
-/// Public model tokenization part. Reads are passive; explicit/visible/background demand drives lexing.
+/// Public model tokenization part. Reads are passive; attached visible ranges
+/// and the background worker drive lexing.
 pub struct TokenizationTextModelPart {
   priv model_state : TokenizationModelState
   priv backend : TokenizerSyntaxTokenBackend
   priv did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
-  priv first_font_emitter : @base_common.Emitter[ModelFontTokensChangedEvent]
-  priv public_font_emitter : @base_common.Emitter[ModelFontTokensChangedEvent]
   priv mut backend_token_subscription : @base_common.Disposable?
-  priv mut backend_font_subscription : @base_common.Disposable?
   priv mut disposed : Bool
 }
 
@@ -76,23 +74,13 @@ fn TokenizationTextModelPart::new_with_support_resolver(
     model_state,
     backend,
     did_change_tokens: @base_common.Emitter::new(),
-    first_font_emitter: @base_common.Emitter::new(),
-    public_font_emitter: @base_common.Emitter::new(),
     backend_token_subscription: None,
-    backend_font_subscription: None,
     disposed: false,
   }
   part.backend_token_subscription = Some(
     backend.on_did_change_tokens(event => {
       if !part.model_state.disposing.val {
         part.did_change_tokens.fire(event)
-      }
-    }),
-  )
-  part.backend_font_subscription = Some(
-    backend.on_did_change_font_tokens(event => {
-      if !part.model_state.disposing.val {
-        part.public_font_emitter.fire(event)
       }
     }),
   )
@@ -106,27 +94,6 @@ fn TokenizationTextModelPart::on_did_change_tokens(
   listener : (ModelTokensChangedEvent) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_tokens.event(listener)
-}
-
-///|
-/// Subscribes to exact child-owned font payloads. The source allocates two
-/// registered emitters and exposes the second; both are disposed below.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::on_did_change_font_tokens(
-  self : TokenizationTextModelPart,
-  listener : (ModelFontTokensChangedEvent) -> Unit,
-) -> @base_common.Disposable {
-  self.public_font_emitter.event(listener)
-}
-
-///|
-/// Internal completion-state event, deliberately not forwarded by `TextModel`.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::on_did_change_background_tokenization_state(
-  self : TokenizationTextModelPart,
-  listener : (Unit) -> Unit,
-) -> @base_common.Disposable {
-  self.backend.on_did_change_background_tokenization_state(listener)
 }
 
 ///|
@@ -170,78 +137,6 @@ pub fn TokenizationTextModelPart::get_line_tokens(
 }
 
 ///|
-/// Makes state accurate through one validated line.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::force_tokenization(
-  self : TokenizationTextModelPart,
-  line_number : Int,
-) -> Unit {
-  self.validate_line_number(line_number)
-  self.backend.force_tokenization(line_number)
-}
-
-///|
-/// Forces only when the exact cheapness predicate succeeds.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::tokenize_if_cheap(
-  self : TokenizationTextModelPart,
-  line_number : Int,
-) -> Unit {
-  self.validate_line_number(line_number)
-  self.backend.tokenize_if_cheap(line_number)
-}
-
-///|
-/// Whether the line's carried state is accurate.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::has_accurate_tokens_for_line(
-  self : TokenizationTextModelPart,
-  line_number : Int,
-) -> Bool {
-  self.validate_line_number(line_number)
-  self.backend.has_accurate_tokens_for_line(line_number)
-}
-
-///|
-/// Whether explicit demand for the line is cheap.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::is_cheap_to_tokenize(
-  self : TokenizationTextModelPart,
-  line_number : Int,
-) -> Bool {
-  self.validate_line_number(line_number)
-  self.backend.is_cheap_to_tokenize(line_number)
-}
-
-///|
-/// Whether the contiguous syntactic store contains any explicit tokens.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::has_tokens(
-  self : TokenizationTextModelPart,
-) -> Bool {
-  self.backend.has_tokens()
-}
-
-///|
-/// Current background lifecycle state.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::background_tokenization_state(
-  self : TokenizationTextModelPart,
-) -> BackgroundTokenizationState {
-  self.backend.background_tokenization_state()
-}
-
-///|
-/// Public reset announces one full range by default.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::reset_tokenization(
-  self : TokenizationTextModelPart,
-  fire_token_change_event? : Bool = true,
-) -> Unit {
-  self.backend.reset_tokenization(fire_token_change_event~)
-}
-
-///|
 /// Flush content handling; live lines were replaced before this call.
 fn TokenizationTextModelPart::handle_did_change_content(
   self : TokenizationTextModelPart,
@@ -259,15 +154,6 @@ fn TokenizationTextModelPart::handle_did_change_attached(
 }
 
 ///|
-/// Refreshes all currently requested attached-view ranges synchronously.
-#warnings("-unused_value")
-fn TokenizationTextModelPart::refresh_all_visible_line_tokens(
-  self : TokenizationTextModelPart,
-) -> Unit {
-  self.backend.refresh_all_visible_line_tokens()
-}
-
-///|
 /// Passive telemetry count. One stored/default read per model line and zero
 /// lexer calls, including initial attach and token-change notification paths.
 pub fn TokenizationTextModelPart::token_count(
@@ -282,7 +168,7 @@ pub fn TokenizationTextModelPart::token_count(
 }
 
 ///|
-/// Token listeners participate in model listener ownership; font is intentionally excluded.
+/// Retained token listeners participate in model listener ownership.
 fn TokenizationTextModelPart::has_listeners(
   self : TokenizationTextModelPart,
 ) -> Bool {
@@ -291,7 +177,7 @@ fn TokenizationTextModelPart::has_listeners(
 
 ///|
 /// Releases every registered resource while the inherited disposed flag is
-/// still false: forwarding subscriptions, registered emitters, then backend.
+/// still false: forwarding subscription, registered emitter, then backend.
 fn TokenizationTextModelPart::dispose_owned_resources(
   self : TokenizationTextModelPart,
 ) -> Unit {
@@ -299,15 +185,8 @@ fn TokenizationTextModelPart::dispose_owned_resources(
     Some(subscription) => subscription.dispose()
     None => ()
   }
-  match self.backend_font_subscription {
-    Some(subscription) => subscription.dispose()
-    None => ()
-  }
   self.backend_token_subscription = None
-  self.backend_font_subscription = None
   self.did_change_tokens.dispose()
-  self.first_font_emitter.dispose()
-  self.public_font_emitter.dispose()
   self.backend.dispose()
 }
 

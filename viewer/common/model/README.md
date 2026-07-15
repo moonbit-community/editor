@@ -22,8 +22,8 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   count, disposal guard, selected scheduler, and error reporter. No copied line
   array, closure carrier, or back-reference mediates those reads. `TextModel`
   also owns the attached-view aggregate passed to the part. Ordinary token reads
-  are passive; explicit force, visible-range refresh, and bounded background
-  work are the only lexer drivers. Reads, position/offset conversion, range
+  are passive; attachment-driven visible-range refresh and bounded background
+  work are the lexer drivers. Reads, position/offset conversion, range
   validation, and word lookup delegate to the current snapshot.
 - Model-scoped async freshness uses physical `TextModel` identity plus the
   internal `get_version_id()` counter. URI, host version, revision, and
@@ -58,8 +58,9 @@ decorations. This is the viewer's reduced `vs/editor/common/model` boundary.
   alongside the model's will-dispose, decoration, attached, and content
   emitters. View models register the two ordered content callbacks and own the
   returned disposable handle; the model runs every structural callback before
-  any outgoing callback without storing trait objects. Options/line-height/font
-  emitters remain N-A. Unexpected tokenizer
+  any outgoing callback without storing trait objects. Options, line-height,
+  and token-derived font-decoration lanes remain N-A and have no placeholder
+  emitters. Unexpected tokenizer
   failures are reported immediately through the package's host-neutral
   `println` seam, disable that support for the current reset, and leave the
   model live for a later reset.
@@ -81,9 +82,9 @@ its immutable leaf and all edit machinery are deliberately N-A. See
 execution plan for the frozen parity ledger.
 
 The tokenization-specific public slice is deliberately small: default color and
-lexer-token encoding helpers, visible-line/attached-view demand, model token
-events, scheduler construction, passive line-token reads, and passive token
-counts. Stores, queues, backends, lifecycle helpers, and model-state access stay
+lexer-token encoding helpers, attached-view demand, model token events,
+scheduler construction, passive line-token reads, and passive token counts.
+Stores, queues, backends, lifecycle helpers, and model-state access stay
 private; `pkg.generated.mbti` is the exhaustive package API.
 
 Production dependencies are `base/common`, `syntax`, `viewer/common/services`,

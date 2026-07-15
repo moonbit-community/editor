@@ -134,25 +134,3 @@ pub fn default_token_color_map() -> Array[String] {
      "var(--vscode-token-invalid)", // 13 COLOR_ID_INVALID
   ]
 }
-
-///|
-/// Emits the `mtk<colorId> { color: … }` CSS rules for a color map, the
-/// `<style>` block Monaco generates from `TokenizationRegistry.getColorMap()`.
-/// Index `0` (`ColorId.None`) is skipped. Production styling currently ships
-/// these rules statically in `tokens.css`; this generator is the faithful
-/// artifact and the basis for future dynamic theme injection.
-#warnings("-unused_value")
-fn token_theme_style_block(color_map : Array[String]) -> String {
-  let sb = StringBuilder::new()
-  for i in 1..<color_map.length() {
-    let color = color_map[i]
-    if color != "" {
-      sb.write_string(".mtk")
-      sb.write_string(i.to_string())
-      sb.write_string("{color:")
-      sb.write_string(color)
-      sb.write_string(";}")
-    }
-  }
-  sb.to_string()
-}

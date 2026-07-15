@@ -15,11 +15,10 @@ pub(all) struct VisibleLineRange {
 
 ///|
 /// Immutable normalized visible ranges plus stabilization state.
-#warnings("-unused_value")
 priv struct AttachedViewState {
   visible_line_ranges : Array[@base_common.LineRange]
   stabilized : Bool
-} derive(Debug)
+}
 
 ///|
 /// Retains caller-provided facts without normalization.
@@ -36,24 +35,12 @@ fn AttachedViewState::equals(
   self : AttachedViewState,
   other : AttachedViewState,
 ) -> Bool {
-  self.equals_with(other, (left, right) => left.equals(right))
-}
-
-///|
-/// White-box seam for observing that the identity arm returns before invoking
-/// the source range comparator.
-fn AttachedViewState::equals_with(
-  self : AttachedViewState,
-  other : AttachedViewState,
-  range_equals : (@base_common.LineRange, @base_common.LineRange) -> Bool,
-) -> Bool {
   if physical_equal(self, other) {
     return true
   }
-  if !line_range_arrays_equal_with(
+  if !line_range_arrays_equal(
       self.visible_line_ranges,
       other.visible_line_ranges,
-      range_equals,
     ) {
     return false
   }
@@ -76,12 +63,6 @@ pub struct AttachedViewImpl {
   priv id : Int
   priv mut state_value : AttachedViewState?
   priv handle_state_change : (AttachedViewImpl, AttachedViewState) -> Unit
-}
-
-///|
-/// Current optional state of this handle.
-fn AttachedViewImpl::state(self : AttachedViewImpl) -> AttachedViewState? {
-  self.state_value
 }
 
 ///|
@@ -138,22 +119,6 @@ fn AttachedViews::on_did_change_visible_ranges(
   listener : (AttachedViewStateChange) -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_visible_ranges.event(listener)
-}
-
-///|
-/// Joins and sorts every defined per-view range.
-#warnings("-unused_value")
-fn AttachedViews::visible_line_ranges(
-  self : AttachedViews,
-) -> Array[@base_common.LineRange] {
-  let all : Array[@base_common.LineRange] = []
-  for view in self.views {
-    match view.state() {
-      Some(state) => all.append(state.visible_line_ranges)
-      None => ()
-    }
-  }
-  join_line_ranges(all)
 }
 
 ///|
@@ -302,29 +267,15 @@ fn AttachedViewHandler::dispose(self : AttachedViewHandler) -> Unit {
 }
 
 ///|
-/// Background lifecycle exposed by the tokenization model part.
-#warnings("-unused_value")
-priv enum BackgroundTokenizationState {
-  InProgress
-  Completed
-} derive(Eq, Debug)
-
-///|
 /// Shared state/events held by the concrete syntactic backend.
 priv struct AbstractSyntaxTokenBackend {
   did_change_tokens : @base_common.Emitter[ModelTokensChangedEvent]
-  did_change_font_tokens : @base_common.Emitter[ModelFontTokensChangedEvent]
-  did_change_background_state : @base_common.Emitter[Unit]
 }
 
 ///|
 /// Creates the shared backend contract.
 fn AbstractSyntaxTokenBackend::AbstractSyntaxTokenBackend() -> AbstractSyntaxTokenBackend {
-  {
-    did_change_tokens: @base_common.Emitter::new(),
-    did_change_font_tokens: @base_common.Emitter::new(),
-    did_change_background_state: @base_common.Emitter::new(),
-  }
+  { did_change_tokens: @base_common.Emitter::new() }
 }
 
 ///|
@@ -337,31 +288,11 @@ fn AbstractSyntaxTokenBackend::on_did_change_tokens(
 }
 
 ///|
-/// Subscribes to exact syntactic font updates.
-fn AbstractSyntaxTokenBackend::on_did_change_font_tokens(
-  self : AbstractSyntaxTokenBackend,
-  listener : (ModelFontTokensChangedEvent) -> Unit,
-) -> @base_common.Disposable {
-  self.did_change_font_tokens.event(listener)
-}
-
-///|
-/// Subscribes to completion-state transitions.
-fn AbstractSyntaxTokenBackend::on_did_change_background_tokenization_state(
-  self : AbstractSyntaxTokenBackend,
-  listener : (Unit) -> Unit,
-) -> @base_common.Disposable {
-  self.did_change_background_state.event(listener)
-}
-
-///|
 /// Releases shared emitters.
 fn AbstractSyntaxTokenBackend::dispose(
   self : AbstractSyntaxTokenBackend,
 ) -> Unit {
   self.did_change_tokens.dispose()
-  self.did_change_font_tokens.dispose()
-  self.did_change_background_state.dispose()
 }
 
 ///|
@@ -382,20 +313,11 @@ fn line_range_arrays_equal(
   left : Array[@base_common.LineRange],
   right : Array[@base_common.LineRange],
 ) -> Bool {
-  line_range_arrays_equal_with(left, right, (a, b) => a.equals(b))
-}
-
-///|
-fn line_range_arrays_equal_with(
-  left : Array[@base_common.LineRange],
-  right : Array[@base_common.LineRange],
-  equals : (@base_common.LineRange, @base_common.LineRange) -> Bool,
-) -> Bool {
   if left.length() != right.length() {
     return false
   }
   for i in 0..<left.length() {
-    if !equals(left[i], right[i]) {
+    if !left[i].equals(right[i]) {
       return false
     }
   }

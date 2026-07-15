@@ -211,7 +211,6 @@ test "set_value updates shared token state and token_count stays passive" {
   })
   let model = tokenization_model("old\nvalue", language_id)
   assert_eq(model.tokenization_state.snapshot.val.get_value(), "old\nvalue")
-  assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 2)
   assert_eq(calls.val, 0)
 
@@ -222,15 +221,16 @@ test "set_value updates shared token state and token_count stays passive" {
   )
   assert_eq(model.tokenization_state.snapshot.val.line_count(), 3)
   assert_eq(model.tokenization.get_line_tokens(3).get_line_content(), "now")
-  assert_false(model.tokenization.has_tokens())
   assert_eq(model.tokenization.token_count(), 3)
   assert_eq(calls.val, 0)
 
-  model.tokenization.force_tokenization(2)
+  let view = model.on_before_attached()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   assert_eq(calls.val, 2)
   let before_count = calls.val
   assert_eq(model.tokenization.token_count(), 3)
   assert_eq(calls.val, before_count)
+  model.on_before_detached(view)
   model.dispose()
   registration.dispose()
 }
@@ -290,14 +290,6 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   )
   assert_eq(first_scheduler.delayed.length(), 3)
   assert_true(later_scheduler.delayed.is_empty())
-
-  // The exact supplied handle disappeared; the remaining aggregate contains
-  // only the three handles which have visible state.
-  let aggregate = model.attached_views.visible_line_ranges()
-  assert_eq(aggregate.length(), 3)
-  assert_eq(aggregate[0].start_line_number, 1)
-  assert_eq(aggregate[1].start_line_number, 3)
-  assert_eq(aggregate[2].start_line_number, 5)
 
   model.on_before_detached(later)
   model.on_before_detached(another_headless)
@@ -520,7 +512,6 @@ test "TextModel reports a failing tokenizer and remains live for later reset" {
             tokenizer_calls.val += 1
             {
               tokens: [0, tag_to_metadata(Plain)],
-              font_info: None,
               end_state: TokenizerState(text),
             }
           },
@@ -531,18 +522,18 @@ test "TextModel reports a failing tokenizer and remains live for later reset" {
   assert_eq(reported.length(), 1)
   assert_true(reported[0].contains("InitialStateFailure"))
   assert_eq(model.get_value(), "one\ntwo")
-  model.tokenization.force_tokenization(2)
   assert_eq(tokenizer_calls.val, 0)
 
-  // A later reset reacquires support after the reported failure; the same
-  // model can tokenize and then complete ordinary content/lifecycle work.
-  model.tokenization.reset_tokenization(fire_token_change_event=false)
-  model.tokenization.force_tokenization(2)
+  // A later production flush reacquires support after the reported failure;
+  // an attached visible range can then tokenize normally.
+  model.set_value("still\nlive")
+  let view = model.on_before_attached()
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
   // One successful reset probes support and then seeds the state store, so
   // the initial-state callback runs twice after the first reported failure.
   assert_eq(attempts.val, 3)
   assert_eq(tokenizer_calls.val, 2)
-  model.set_value("still\nlive")
   assert_eq(model.get_value(), "still\nlive")
+  model.on_before_detached(view)
   model.dispose()
 }

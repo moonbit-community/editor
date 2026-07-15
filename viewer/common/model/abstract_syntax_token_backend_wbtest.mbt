@@ -49,35 +49,14 @@ test "AttachedViewState equality checks ranges before stabilization" {
 }
 
 ///|
-test "AttachedViewState identity returns before walking ranges" {
-  let state = AttachedViewState([LineRange(1, 3)], false)
-  let comparisons = Ref(0)
-  assert_true(
-    state.equals_with(state, (_left, _right) => {
-      comparisons.val += 1
-      false
-    }),
-  )
-  assert_eq(comparisons.val, 0)
-  let copy = AttachedViewState([LineRange(1, 3)], false)
-  assert_true(
-    state.equals_with(copy, (_left, _right) => {
-      comparisons.val += 1
-      true
-    }),
-  )
-  assert_eq(comparisons.val, 1)
-}
-
-///|
-test "AttachedViews preserves identity, joins ranges, and emits absent detach state" {
+test "AttachedViews preserves identity and emits committed and absent states" {
   let manager = AttachedViews()
   let events : Array[AttachedViewStateChange] = []
   manager.on_did_change_visible_ranges(event => events.push(event)) |> ignore
   let first = manager.attach_view()
   let second = manager.attach_view()
   first.set_visible_lines([{ start_line_number: 3, end_line_number: 5 }], false)
-  let first_state = first.state().unwrap()
+  let first_state = first.state_value.unwrap()
   assert_false(first_state.stabilized)
   assert_eq(first_state.visible_line_ranges.length(), 1)
   assert_eq(first_state.visible_line_ranges[0].start_line_number, 3)
@@ -89,18 +68,16 @@ test "AttachedViews preserves identity, joins ranges, and emits absent detach st
     ],
     true,
   )
-  let aggregate = manager.visible_line_ranges()
-  assert_eq(aggregate.length(), 1)
-  assert_eq(aggregate[0].start_line_number, 1)
-  assert_eq(aggregate[0].end_line_number_exclusive, 8)
   assert_true(events[0].view.same(first))
   assert_true(events[1].view.same(second))
+  let second_state = second.state_value.unwrap()
+  assert_eq(second_state.visible_line_ranges.length(), 2)
+  assert_eq(second_state.visible_line_ranges[0].start_line_number, 1)
+  assert_eq(second_state.visible_line_ranges[1].start_line_number, 6)
   manager.detach_view(first)
   assert_true(events[2].view.same(first))
   assert_true(events[2].state is None)
-  assert_true(first.state().unwrap().equals(first_state))
-  let remaining = manager.visible_line_ranges()
-  assert_eq(remaining.length(), 2)
+  assert_true(first.state_value.unwrap().equals(first_state))
 }
 
 ///|

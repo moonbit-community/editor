@@ -7,30 +7,13 @@
 /// cancellable injected scheduler are the Gate-B-approved adaptations.
 
 ///|
-/// Strict UTF-16 line-length bound for cheap demand tokenization.
-const CHEAP_TOKENIZATION_LENGTH_LIMIT : Int = 2048
-
-///|
 /// Private maximum-line sentinel used only when no invalid frontier exists.
 const MAX_LINE_NUMBER_SENTINEL : Int = 0x7FFFFFFF
 
 ///|
-/// One source-shaped syntactic font token returned beside encoded words.
-#warnings("-struct_never_constructed-unused_value")
-priv struct FontToken {
-  start_index : Int
-  end_index : Int
-  font_family : String?
-  font_size_multiplier : Double?
-  line_height_multiplier : Double?
-} derive(Eq, Debug)
-
-///|
-/// Raw start-offset token words, optional font information, and carried state.
-#warnings("-unused_field")
+/// Raw start-offset token words and carried state.
 priv struct EncodedTokenizationResult {
   tokens : Array[UInt]
-  font_info : Array[FontToken]?
   end_state : @syntax.TokenizerState
 }
 
@@ -89,7 +72,6 @@ fn public_tokenizer_adapter(
           text.length(),
           language_id=encoded_language_id,
         ),
-        font_info: None,
         end_state,
       }
     },
@@ -152,15 +134,6 @@ fn RangePriorityQueueImpl::RangePriorityQueueImpl() -> RangePriorityQueueImpl {
 }
 
 ///|
-/// Returns the backing ranges in queue order.
-#warnings("-unused_value")
-fn RangePriorityQueueImpl::get_ranges(
-  self : RangePriorityQueueImpl,
-) -> Array[@base_common.OffsetRange] {
-  self.ranges
-}
-
-///|
 /// Smallest queued line, or `None`.
 fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
   if self.ranges.is_empty() {
@@ -168,22 +141,6 @@ fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
   } else {
     Some(self.ranges[0].start)
   }
-}
-
-///|
-/// Removes and returns the smallest line, advancing or deleting its range.
-#warnings("-unused_value")
-fn RangePriorityQueueImpl::remove_min(self : RangePriorityQueueImpl) -> Int? {
-  if self.ranges.is_empty() {
-    return None
-  }
-  let range = self.ranges[0]
-  if range.start + 1 == range.end_exclusive {
-    self.ranges.remove(0) |> ignore
-  } else {
-    self.ranges[0] = OffsetRange(range.start + 1, range.end_exclusive)
-  }
-  Some(range.start)
 }
 
 ///|
@@ -224,60 +181,6 @@ fn RangePriorityQueueImpl::add_range(
   range : @base_common.OffsetRange,
 ) -> Unit {
   @base_common.OffsetRange::add_range(range, self.ranges)
-}
-
-///|
-/// Replaces/resizes an edit range and shifts every later queued range.
-#warnings("-unused_value")
-fn RangePriorityQueueImpl::add_range_and_resize(
-  self : RangePriorityQueueImpl,
-  range : @base_common.OffsetRange,
-  new_length : Int,
-) -> Unit {
-  let mut first_might_intersect = 0
-  while !(first_might_intersect >= self.ranges.length() ||
-        range.start <= self.ranges[first_might_intersect].end_exclusive) {
-    first_might_intersect += 1
-  }
-  let mut first_after = first_might_intersect
-  while !(first_after >= self.ranges.length() ||
-        range.end_exclusive < self.ranges[first_after].start) {
-    first_after += 1
-  }
-  let delta = new_length - range.length()
-  for i in first_after..<self.ranges.length() {
-    self.ranges[i] = self.ranges[i].delta(delta)
-  }
-  if first_might_intersect == first_after {
-    let replacement = @base_common.OffsetRange(
-      range.start,
-      range.start + new_length,
-    )
-    if !replacement.is_empty() {
-      self.ranges.insert(first_might_intersect, replacement)
-    }
-  } else {
-    let start = range.start.min(self.ranges[first_might_intersect].start)
-    let end_exclusive = range.end_exclusive.max(
-        self.ranges[first_after - 1].end_exclusive,
-      ) +
-      delta
-    let replacement = @base_common.OffsetRange(start, end_exclusive)
-    let delete_count = first_after - first_might_intersect
-    for _ in 0..<delete_count {
-      self.ranges.remove(first_might_intersect) |> ignore
-    }
-    if !replacement.is_empty() {
-      self.ranges.insert(first_might_intersect, replacement)
-    }
-  }
-}
-
-///|
-/// Joins each range representation with the literal source separator.
-#warnings("-unused_value")
-fn RangePriorityQueueImpl::to_string(self : RangePriorityQueueImpl) -> String {
-  self.ranges.map(range => range.to_string()).join(" + ")
 }
 
 ///|
@@ -464,14 +367,6 @@ fn TokenizerWithStateStoreAndTextModel::TokenizerWithStateStoreAndTextModel(
 }
 
 ///|
-/// Exposes the live tracking store to backend scheduling.
-fn TokenizerWithStateStoreAndTextModel::state_store(
-  self : TokenizerWithStateStoreAndTextModel,
-) -> TrackingTokenizationStateStore {
-  self.base.store
-}
-
-///|
 /// First invalid line plus carried state.
 fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(
   self : TokenizerWithStateStoreAndTextModel,
@@ -510,33 +405,6 @@ fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
     )
     |> ignore
   }
-}
-
-///|
-/// Accurate iff the line lies strictly before the first invalid end state.
-fn TokenizerWithStateStoreAndTextModel::has_accurate_tokens_for_line(
-  self : TokenizerWithStateStoreAndTextModel,
-  line_number : Int,
-) -> Bool {
-  line_number < self.base.store.get_first_invalid_end_state_line_number_or_max()
-}
-
-///|
-/// Accurate lines are cheap; only a short first-invalid line is otherwise cheap.
-fn TokenizerWithStateStoreAndTextModel::is_cheap_to_tokenize(
-  self : TokenizerWithStateStoreAndTextModel,
-  line_number : Int,
-) -> Bool {
-  let first_invalid = self.base.store.get_first_invalid_end_state_line_number_or_max()
-  if line_number < first_invalid {
-    return true
-  }
-  if line_number == first_invalid &&
-    self.model_state.snapshot.val.get_line_length(line_number) <
-    CHEAP_TOKENIZATION_LENGTH_LIMIT {
-    return true
-  }
-  false
 }
 
 ///|
@@ -689,7 +557,6 @@ fn safe_tokenize(
       let encoded_language_id = language_id_codec.register(language_id)
       {
         tokens: [0, tag_to_metadata(Plain, language_id=encoded_language_id)],
-        font_info: None,
         end_state: state,
       }
     }
@@ -699,28 +566,17 @@ fn safe_tokenize(
 }
 
 ///|
-/// Callback contract consumed by default/custom background tokenizers.
+/// Callback contract consumed by the default background tokenizer.
 priv struct BackgroundTokenizationStore {
   apply_tokens : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit
-  apply_font_info : (FontTokensUpdate) -> Unit
-  finish : () -> Unit
-  apply_end_state : (Int, @syntax.TokenizerState) -> Unit
 }
 
 ///|
-/// Creates a background output store from source-shaped callbacks.
+/// Creates a background output store for contiguous token batches.
 fn BackgroundTokenizationStore::BackgroundTokenizationStore(
   set_tokens~ : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit,
-  set_font_info~ : (FontTokensUpdate) -> Unit,
-  background_tokenization_finished~ : () -> Unit,
-  set_end_state~ : (Int, @syntax.TokenizerState) -> Unit,
 ) -> BackgroundTokenizationStore {
-  {
-    apply_tokens: set_tokens,
-    apply_font_info: set_font_info,
-    finish: background_tokenization_finished,
-    apply_end_state: set_end_state,
-  }
+  { apply_tokens: set_tokens }
 }
 
 ///|
@@ -730,35 +586,6 @@ fn BackgroundTokenizationStore::set_tokens(
   tokens : Array[@common_tokens.ContiguousMultilineTokens],
 ) -> Unit {
   (self.apply_tokens)(tokens)
-}
-
-///|
-/// Applies syntactic font updates.
-#warnings("-unused_value")
-fn BackgroundTokenizationStore::set_font_info(
-  self : BackgroundTokenizationStore,
-  changes : FontTokensUpdate,
-) -> Unit {
-  (self.apply_font_info)(changes)
-}
-
-///|
-/// Publishes background completion.
-fn BackgroundTokenizationStore::background_tokenization_finished(
-  self : BackgroundTokenizationStore,
-) -> Unit {
-  (self.finish)()
-}
-
-///|
-/// Applies one custom-worker end state.
-#warnings("-unused_value")
-fn BackgroundTokenizationStore::set_end_state(
-  self : BackgroundTokenizationStore,
-  line_number : Int,
-  state : @syntax.TokenizerState,
-) -> Unit {
-  (self.apply_end_state)(line_number, state)
 }
 
 ///|
@@ -933,7 +760,6 @@ fn DefaultBackgroundTokenizer::background_tokenize_for_at_least_1ms(
     }
   }
   self.background_token_store.set_tokens(builder.finalize())
-  self.check_finished()
 }
 
 ///|
@@ -960,19 +786,6 @@ fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
     first_invalid.line_number,
   )
   first_invalid.line_number
-}
-
-///|
-/// Publishes completion whenever live and all states are valid.
-fn DefaultBackgroundTokenizer::check_finished(
-  self : DefaultBackgroundTokenizer,
-) -> Unit {
-  if self.is_disposed {
-    return
-  }
-  if self.tokenizer_with_state_store.base.store.all_states_valid() {
-    self.background_token_store.background_tokenization_finished()
-  }
 }
 
 ///|

@@ -93,7 +93,6 @@ priv struct DefaultWorkerHarness {
   attached : Ref[Int]
   lexer_calls : Array[String]
   token_batches : Ref[Int]
-  finish_calls : Ref[Int]
 }
 
 ///|
@@ -125,36 +124,22 @@ fn default_worker_harness(
     tokenize_encoded=(text, _has_eol, _state) => {
       lexer_calls.push(text)
       scheduling.trace.push("lex")
-      {
-        tokens: [0, tag_to_metadata(Plain)],
-        font_info: None,
-        end_state: TokenizerState(text),
-      }
+      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text) }
     },
   )
   let tokenizer = TokenizerWithStateStoreAndTextModel(
     line_count, support, model_state, @services.language_id_codec,
   )
   let token_batches = Ref(0)
-  let finish_calls = Ref(0)
-  let output = BackgroundTokenizationStore(
-    set_tokens=_batches => {
-      token_batches.val += 1
-      scheduling.trace.push("tokens")
-    },
-    set_font_info=_changes => (),
-    background_tokenization_finished=() => {
-      finish_calls.val += 1
-      scheduling.trace.push("finished")
-    },
-    set_end_state=(_line_number, _state) => (),
-  )
+  let output = BackgroundTokenizationStore(set_tokens=_batches => {
+    token_batches.val += 1
+    scheduling.trace.push("tokens")
+  })
   {
     worker: DefaultBackgroundTokenizer(tokenizer, output),
     attached,
     lexer_calls,
     token_batches,
-    finish_calls,
   }
 }
 
@@ -267,7 +252,6 @@ test "one millisecond tokenizes but a value strictly greater than one breaks" {
   at_boundary_worker.worker.background_tokenize_for_at_least_1ms()
   assert_eq(at_boundary_worker.lexer_calls.length(), 1)
   assert_eq(at_boundary_worker.token_batches.val, 1)
-  assert_eq(at_boundary_worker.finish_calls.val, 1)
 
   let after_boundary = worker_scheduler_harness()
   after_boundary.now_values.append([0.0, 1.001])
@@ -275,7 +259,6 @@ test "one millisecond tokenizes but a value strictly greater than one breaks" {
   after_boundary_worker.worker.background_tokenize_for_at_least_1ms()
   assert_eq(after_boundary_worker.lexer_calls.length(), 0)
   assert_eq(after_boundary_worker.token_batches.val, 1)
-  assert_eq(after_boundary_worker.finish_calls.val, 0)
 }
 
 ///|
@@ -287,7 +270,6 @@ test "slice stops at final line and otherwise continues while invalid states rem
   assert_eq(harness.lexer_calls.length(), 3)
   assert_false(harness.worker.has_lines_to_tokenize())
   assert_eq(harness.token_batches.val, 1)
-  assert_eq(harness.finish_calls.val, 1)
 }
 
 ///|

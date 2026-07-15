@@ -40,11 +40,7 @@ fn logging_support(
     },
     tokenize_encoded=(text, has_eol, state) => {
       calls.push("\{text}:\{has_eol}:\{to_repr(state)}")
-      {
-        tokens: [0, tag_to_metadata(Plain)],
-        font_info: None,
-        end_state: TokenizerState(text),
-      }
+      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text) }
     },
   )
 }
@@ -96,30 +92,10 @@ test "TokenizerWithStateStore demands through line and records hasEOL true" {
   assert_eq(calls.length(), 2)
   assert_true(calls[0].contains(":true:"))
   assert_true(calls[1].contains(":true:"))
-  assert_true(tokenizer.has_accurate_tokens_for_line(1))
-  assert_true(tokenizer.has_accurate_tokens_for_line(2))
-  assert_false(tokenizer.has_accurate_tokens_for_line(3))
-  assert_eq(builder.finalize().length(), 1)
-}
-
-///|
-test "cheapness is strict at 2048 and only the first invalid line is cheap" {
-  let short = "x".repeat(2047)
-  let boundary = "x".repeat(2048)
-  let harness = token_test_harness([short, boundary, "x"])
-  let tokenizer = TokenizerWithStateStoreAndTextModel(
-    3,
-    logging_support([], Ref(0)),
-    harness.model_state,
-    @services.language_id_codec,
+  assert_true(
+    tokenizer.base.store.get_first_invalid_end_state_line_number() == Some(3),
   )
-  assert_true(tokenizer.is_cheap_to_tokenize(1))
-  assert_false(tokenizer.is_cheap_to_tokenize(2))
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
-  tokenizer.update_tokens_until_line(builder, 1)
-  assert_true(tokenizer.is_cheap_to_tokenize(1))
-  assert_false(tokenizer.is_cheap_to_tokenize(2))
-  assert_false(tokenizer.is_cheap_to_tokenize(3))
+  assert_eq(builder.finalize().length(), 1)
 }
 
 ///|
@@ -175,107 +151,6 @@ test "safe_tokenize missing and failing support reports then returns language fa
   )
   assert_eq(fallback.tokens[0], 3)
   assert_eq(harness.errors.length(), 1)
-}
-
-///|
-test "encoded tokenization preserves absent empty and nonempty font info" {
-  let harness = token_test_harness(["abc"])
-  let state = @syntax.TokenizerState("state")
-  let absent = safe_tokenize(
-    @services.language_id_codec,
-    "token-test",
-    Some(logging_support([], Ref(0))),
-    "abc",
-    true,
-    state,
-    harness.model_state,
-  )
-  assert_true(absent.font_info is None)
-
-  let empty_fonts : Array[FontToken] = []
-  let empty_support = InternalTokenizationSupportAdapter(
-    initial_state=() => state,
-    tokenize_encoded=(_text, _has_eol, _state) => {
-      tokens: [0, tag_to_metadata(Plain)],
-      font_info: Some(empty_fonts),
-      end_state: state,
-    },
-  )
-  let empty = safe_tokenize(
-    @services.language_id_codec,
-    "token-test",
-    Some(empty_support),
-    "abc",
-    true,
-    state,
-    harness.model_state,
-  )
-  guard empty.font_info is Some(actual_empty) else {
-    fail("expected present empty font info")
-  }
-  assert_true(physical_equal(actual_empty, empty_fonts))
-  assert_true(actual_empty.is_empty())
-
-  let fonts : Array[FontToken] = [
-    {
-      start_index: 1,
-      end_index: 3,
-      font_family: Some("Mono"),
-      font_size_multiplier: Some(1.25),
-      line_height_multiplier: Some(1.5),
-    },
-  ]
-  let nonempty_support = InternalTokenizationSupportAdapter(
-    initial_state=() => state,
-    tokenize_encoded=(_text, _has_eol, _state) => {
-      tokens: [0, tag_to_metadata(Plain)],
-      font_info: Some(fonts),
-      end_state: state,
-    },
-  )
-  let nonempty = safe_tokenize(
-    @services.language_id_codec,
-    "token-test",
-    Some(nonempty_support),
-    "abc",
-    true,
-    state,
-    harness.model_state,
-  )
-  guard nonempty.font_info is Some(actual_fonts) else {
-    fail("expected nonempty font info")
-  }
-  assert_true(physical_equal(actual_fonts, fonts))
-  assert_eq(actual_fonts.length(), 1)
-  assert_eq(actual_fonts[0].start_index, 1)
-  assert_eq(actual_fonts[0].end_index, 3)
-  assert_true(actual_fonts[0].font_family == Some("Mono"))
-  assert_true(actual_fonts[0].font_size_multiplier == Some(1.25))
-  assert_true(actual_fonts[0].line_height_multiplier == Some(1.5))
-}
-
-///|
-test "background store forwards one exact font update value" {
-  let observed : Array[FontTokensUpdate] = []
-  let store = BackgroundTokenizationStore(
-    set_tokens=_batches => (),
-    set_font_info=changes => observed.push(changes),
-    background_tokenization_finished=() => (),
-    set_end_state=(_line_number, _state) => (),
-  )
-  let changes : FontTokensUpdate = AnnotationsUpdate::create([
-    {
-      range: OffsetRange(4, 8),
-      annotation: Some({
-        font_family: None,
-        font_size_multiplier: Some(0.75),
-        line_height_multiplier: None,
-      }),
-    },
-  ])
-  store.set_font_info(changes)
-  assert_eq(observed.length(), 1)
-  assert_true(physical_equal(observed[0], changes))
 }
 
 ///|

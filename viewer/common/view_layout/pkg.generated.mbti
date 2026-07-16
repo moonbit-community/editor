@@ -50,6 +50,7 @@ pub struct ConstantTimePrefixSumComputer {
   mut prefix_sum : Array[Int]
   mut index_by_sum : Array[Int]
 }
+pub fn ConstantTimePrefixSumComputer::ConstantTimePrefixSumComputer(ArrayView[Int]) -> Self
 pub fn ConstantTimePrefixSumComputer::get_index_of(Self, Int) -> PrefixSumIndexOfResult
 pub fn ConstantTimePrefixSumComputer::get_prefix_sum(Self, Int) -> Int
 pub fn ConstantTimePrefixSumComputer::get_total_sum(Self) -> Int
@@ -219,6 +220,7 @@ pub struct PrefixSumComputer {
   mut prefix_sum : Array[Int]
   mut prefix_sum_valid_index : Int
 }
+pub fn PrefixSumComputer::PrefixSumComputer(ArrayView[Int]) -> Self
 pub fn PrefixSumComputer::get_count(Self) -> Int
 pub fn PrefixSumComputer::get_index_of(Self, Int) -> PrefixSumIndexOfResult
 pub fn PrefixSumComputer::get_prefix_sum(Self, Int) -> Int

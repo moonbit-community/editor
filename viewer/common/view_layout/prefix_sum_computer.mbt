@@ -23,16 +23,18 @@ pub struct PrefixSumComputer {
 }
 
 ///|
-pub fn PrefixSumComputer::new(values : Array[Int]) -> Self {
-  let owned = Array::make(values.length(), 0)
-  for i in 0..<values.length() {
-    owned[i] = values[i]
-  }
+pub fn PrefixSumComputer::PrefixSumComputer(values : ArrayView[Int]) -> Self {
+  let owned = values.to_owned()
   {
     values: owned,
     prefix_sum: Array::make(owned.length(), 0),
     prefix_sum_valid_index: -1,
   }
+}
+
+///|
+pub fn PrefixSumComputer::new(values : Array[Int]) -> Self {
+  PrefixSumComputer(values[:])
 }
 
 ///|
@@ -207,11 +209,10 @@ pub struct ConstantTimePrefixSumComputer {
 }
 
 ///|
-pub fn ConstantTimePrefixSumComputer::new(values : Array[Int]) -> Self {
-  let owned = Array::make(values.length(), 0)
-  for i in 0..<values.length() {
-    owned[i] = values[i]
-  }
+pub fn ConstantTimePrefixSumComputer::ConstantTimePrefixSumComputer(
+  values : ArrayView[Int],
+) -> Self {
+  let owned = values.to_owned()
   {
     values: owned,
     is_valid: false,
@@ -219,6 +220,11 @@ pub fn ConstantTimePrefixSumComputer::new(values : Array[Int]) -> Self {
     prefix_sum: [],
     index_by_sum: [],
   }
+}
+
+///|
+pub fn ConstantTimePrefixSumComputer::new(values : Array[Int]) -> Self {
+  ConstantTimePrefixSumComputer(values[:])
 }
 
 ///|

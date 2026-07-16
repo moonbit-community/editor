@@ -31,7 +31,7 @@ pub(all) struct FoldingLimitReporter {
 /// expanded while the user is editing inside it — Monaco's `SelectedLines`
 /// (`folding.ts`): whether any selection starts within the given inclusive
 /// line range.
-pub(all) struct SelectedLines {
+pub struct SelectedLines {
   starts_inside : (Int, Int) -> Bool
 }
 

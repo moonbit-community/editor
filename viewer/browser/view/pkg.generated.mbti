@@ -50,7 +50,7 @@ pub(all) enum ContentWidgetPositionPreference {
   Exact
 } derive(Eq)
 
-pub(all) struct ContentWidgetRenderedCoordinate {
+pub struct ContentWidgetRenderedCoordinate {
   top : Double
   left : Double
 } derive(Eq, @debug.Debug)
@@ -89,7 +89,7 @@ pub struct EditorScrollbar {
 pub fn EditorScrollbar::content(Self) -> @dom.Element
 pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
 
-pub(all) struct HorizontalPosition {
+pub struct HorizontalPosition {
   left : Int
 } derive(Eq, @debug.Debug)
 
@@ -116,7 +116,7 @@ pub fn PartFingerprint::collect(@dom.Element?, @dom.Element) -> Bytes
 pub fn PartFingerprint::from_int(Int) -> Self
 pub fn PartFingerprint::to_int(Self) -> Int
 
-pub(all) struct View {
+pub struct View {
   root : @dom.Element
   overflow_guard : @dom.Element
   view_lines : ViewLines
@@ -180,7 +180,7 @@ pub(all) struct ViewContext {
   model_position_to_view_position : (@common.Position) -> @common.Position
 }
 
-pub(all) struct ViewCursorRenderData {
+pub struct ViewCursorRenderData {
   dom_node : @dom.Element
   position : @common.Position
   content_left : Double
@@ -220,7 +220,7 @@ pub struct ViewFocusChangedEvent {
 }
 pub fn ViewFocusChangedEvent::ViewFocusChangedEvent(Bool) -> Self
 
-pub(all) struct ViewLineOptions {
+pub struct ViewLineOptions {
   line_height : Int
   space_width : Double
   middot_width : Double
@@ -244,7 +244,7 @@ pub fn ViewLines::get_position_from_dom_info(Self, @view_model.ViewModel, @dom.E
 pub fn ViewLines::install_geometry_readers(Self, (Int) -> Int, (Int) -> @view_layout.TextDirection) -> Unit
 pub fn ViewLines::install_live_configuration_reader(Self, () -> ViewLinesConfiguration) -> Unit
 
-pub(all) struct ViewLinesConfiguration {
+pub struct ViewLinesConfiguration {
   line_height : Int
   typical_halfwidth_character_width : Double
   is_viewport_wrapping : Bool

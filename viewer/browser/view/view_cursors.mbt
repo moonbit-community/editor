@@ -184,7 +184,7 @@ fn cursor_style(data : CursorRenderData, visible~ : Bool) -> String {
 /// a view position; `content_left` is the caret's x in content space
 /// (`ViewCursor.render` returns `contentLeft: this._renderData.left`,
 /// `viewCursor.ts:274-281`); `width` is the source's hardcoded `2`.
-pub(all) struct ViewCursorRenderData {
+pub struct ViewCursorRenderData {
   dom_node : @rdom.Element
   position : @base_common.Position
   content_left : Double

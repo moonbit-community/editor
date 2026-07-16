@@ -23,15 +23,9 @@ pub struct DragScrolling {
   // private fields
 }
 pub fn DragScrolling::dispose(Self) -> Unit
-pub fn DragScrolling::new(DragScrollingDirection, PointerHandlerHelper, MouseTargetFactory, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Self
 pub fn DragScrolling::set_dispatch(Self, (@browser.MouseTarget, Bool, NavigationCommandRevealType) -> Unit) -> Unit
 pub fn DragScrolling::start(Self, @browser.MouseTarget, @browser.EditorDomMouseEvent) -> Unit
 pub fn DragScrolling::stop(Self) -> Unit
-
-pub(all) enum DragScrollingDirection {
-  TopBottom
-  LeftRight
-} derive(Eq, @debug.Debug)
 
 pub struct HitTestContext {
   view_model : @view_model.ViewModel

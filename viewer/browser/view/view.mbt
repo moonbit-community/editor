@@ -10,7 +10,7 @@
 /// `hit_test_dom.mbt`, `controller_host.mbt`, and `reveal.mbt` — the
 /// foreign-method rule keeps those `Viewer::` methods out of this package,
 /// so cross-package field access is the only option.
-pub(all) struct View {
+pub struct View {
   root : @rdom.Element
   overflow_guard : @rdom.Element
   priv squiggly_style : @rdom.Element

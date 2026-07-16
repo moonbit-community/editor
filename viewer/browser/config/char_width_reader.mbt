@@ -1,25 +1,26 @@
 // Ported from `vscode/src/vs/editor/browser/config/charWidthReader.ts`.
 // Monaco's `DomCharWidthReader` class is construction ceremony around one
-// synchronous read; `read_char_widths` keeps the exported function's name
+// synchronous read; `read_char_widths` keeps the source function's name
 // and steps (build the test DOM, attach to `document.body`, read
 // `offsetWidth / 256`, remove).
 
 ///|
-pub(all) enum CharWidthRequestType {
+#warnings("-unused_value")
+priv enum CharWidthRequestType {
   Regular
   Italic
   Bold
-} derive(Eq, Debug)
+} derive(Eq)
 
 ///|
-pub(all) struct CharWidthRequest {
+priv struct CharWidthRequest {
   chr : String
   request_type : CharWidthRequestType
   mut width : Double
 }
 
 ///|
-pub fn CharWidthRequest::new(
+fn CharWidthRequest::new(
   chr : String,
   request_type : CharWidthRequestType,
 ) -> CharWidthRequest {
@@ -35,7 +36,7 @@ fn CharWidthRequest::fulfill(self : CharWidthRequest, width : Double) -> Unit {
 /// Monaco `readCharWidths`: measures every request's character in a
 /// hidden container styled with the bare font info (regular, bold, and
 /// italic test rows).
-pub fn read_char_widths(
+fn read_char_widths(
   bare_font_info : @common_config.BareFontInfo,
   requests : Array[CharWidthRequest],
 ) -> Unit {

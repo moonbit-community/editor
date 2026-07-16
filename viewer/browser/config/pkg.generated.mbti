@@ -4,7 +4,6 @@ package "moonbit-community/editor/viewer/browser/config"
 import {
   "moonbit-community/editor/base/common",
   "moonbit-community/rabbita/dom",
-  "moonbitlang/core/debug",
 }
 
 // Values
@@ -12,24 +11,9 @@ pub fn apply_font_info(@dom.Element, @moonbit-community/editor/viewer/common/con
 
 pub fn font_measurements() -> FontMeasurementsImpl
 
-pub fn read_char_widths(@moonbit-community/editor/viewer/common/config.BareFontInfo, Array[CharWidthRequest]) -> Unit
-
 // Errors
 
 // Types and methods
-pub(all) struct CharWidthRequest {
-  chr : String
-  request_type : CharWidthRequestType
-  mut width : Double
-}
-pub fn CharWidthRequest::new(String, CharWidthRequestType) -> Self
-
-pub(all) enum CharWidthRequestType {
-  Regular
-  Italic
-  Bold
-} derive(Eq, @debug.Debug)
-
 pub struct FontMeasurementsImpl {
   // private fields
 }

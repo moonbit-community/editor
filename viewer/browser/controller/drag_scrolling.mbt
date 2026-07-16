@@ -21,10 +21,10 @@
 //     this port's `MouseTargetOutsideEditor` always carries a position.
 
 ///|
-pub(all) enum DragScrollingDirection {
+priv enum DragScrollingDirection {
   TopBottom
   LeftRight
-} derive(Eq, Debug)
+}
 
 ///|
 /// `DragScrolling` (dragScrolling.ts:17-52).
@@ -58,7 +58,7 @@ pub fn DragScrolling::set_dispatch(
 }
 
 ///|
-pub fn DragScrolling::new(
+fn DragScrolling::new(
   direction : DragScrollingDirection,
   view_helper : PointerHandlerHelper,
   mouse_target_factory : MouseTargetFactory,

@@ -23,7 +23,7 @@ pub(all) struct ClientCoordinates {
 } derive(Eq, @debug.Debug)
 pub fn ClientCoordinates::to_page_coordinates(Self) -> PageCoordinates
 
-pub(all) struct CoordinatesRelativeToEditor {
+pub struct CoordinatesRelativeToEditor {
   x : Double
   y : Double
 } derive(Eq, @debug.Debug)
@@ -70,7 +70,7 @@ pub fn EditorMouseEventFactory::on_mouse_move(Self, @dom.Element, (EditorDomMous
 pub fn EditorMouseEventFactory::on_mouse_up(Self, @dom.Element, (EditorDomMouseEvent) -> Unit) -> @common.Disposable
 pub fn EditorMouseEventFactory::on_pointer_down(Self, @dom.Element, (EditorDomMouseEvent, Int) -> Unit) -> @common.Disposable
 
-pub(all) struct EditorPagePosition {
+pub struct EditorPagePosition {
   x : Double
   y : Double
   width : Double

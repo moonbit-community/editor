@@ -68,7 +68,7 @@ pub fn ContentHoverController::install_sync_timer(Self, @common.Disposable) -> U
 pub fn ContentHoverController::record_pointer(Self, Double, Double, @hover.EventModifiers) -> Unit
 pub fn ContentHoverController::reset_model_state(Self) -> Unit
 
-pub(all) struct ContentHoverWidget {
+pub struct ContentHoverWidget {
   wrapper : @dom.Element
   hover : @dom.Element
   scrollable : @scrollbar.ScrollableElementDom

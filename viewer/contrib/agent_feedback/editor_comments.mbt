@@ -12,7 +12,7 @@
 /// `ISessionEditorComment` trimmed to the single agent-feedback source.
 /// `id` is the prefixed navigation/anchor id (`to_session_editor_comment_id`);
 /// `source_id` is the raw `AgentFeedback.id` the service mutations take.
-pub(all) struct SessionEditorComment {
+pub struct SessionEditorComment {
   id : String
   source_id : String
   kind : @agent_feedback_api.AgentFeedbackKind

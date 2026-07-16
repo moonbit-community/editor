@@ -69,12 +69,12 @@ pub fn should_show_hover(HoverEnabled, MultiCursorModifier, EventModifiers) -> B
 // Errors
 
 // Types and methods
-pub(all) struct ComputedHover {
+pub struct ComputedHover {
   range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ContentHoverComputer {
+pub struct ContentHoverComputer {
   participants : Array[HoverParticipantHandle]
 }
 pub async fn ContentHoverComputer::compute_async(Self, @model.TextModel, HoverAnchor, source? : HoverStartSource, token? : @language.CancellationToken, is_current? : () -> Bool) -> ComputedHover? noraise
@@ -99,19 +99,19 @@ pub fn HoverAnchor::priority(Self) -> Int
 pub fn HoverAnchor::range(Self) -> @common.Range
 pub fn HoverAnchor::supports_marker_hover(Self) -> Bool
 
-pub(all) enum HoverAnchorType {
+pub enum HoverAnchorType {
   Range
   ForeignElement
 } derive(Eq, @debug.Debug)
 
-pub(all) struct HoverComputeContext {
+pub struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
   source : HoverStartSource
   line_decorations : Array[@model.ModelDecoration]
 }
 
-pub(all) struct HoverController {
+pub struct HoverController {
   anchor : HoverAnchor?
   operation : HoverOperation
   insist_on_keeping : Bool
@@ -158,14 +158,14 @@ pub(all) enum HoverEffect {
   HoverRunAsyncAndSync(Int)
 }
 
-pub(all) enum HoverEnabled {
+pub enum HoverEnabled {
   HoverEnabledOn
   HoverEnabledOff
   HoverEnabledOnKeyboardModifier
 }
 pub fn HoverEnabled::from_config(String) -> Self
 
-pub(all) enum HoverOpState {
+pub enum HoverOpState {
   HoverOpIdle
   HoverOpFirstWait
   HoverOpSecondWait
@@ -173,7 +173,7 @@ pub(all) enum HoverOpState {
   HoverOpWaitingForAsyncShowingLoading
 } derive(Eq)
 
-pub(all) struct HoverOperation {
+pub struct HoverOperation {
   state : HoverOpState
   token : Int
   parts : Array[HoverPart]
@@ -186,7 +186,7 @@ pub fn HoverOperation::idle_at(Int) -> Self
 pub fn HoverOperation::result(Self) -> HoverResult?
 pub fn HoverOperation::start(Self, HoverStartMode, HoverOperationOptions) -> (HoverOperationStartEffect, Self)
 
-pub(all) struct HoverOperationOptions {
+pub struct HoverOperationOptions {
   should_focus : Bool
   anchor : HoverAnchor
   source : HoverStartSource
@@ -194,7 +194,7 @@ pub(all) struct HoverOperationOptions {
 } derive(Eq, @debug.Debug)
 pub fn HoverOperationOptions::new(HoverAnchor, should_focus? : Bool, source? : HoverStartSource, insist_on_keeping_hover_visible? : Bool) -> Self
 
-pub(all) enum HoverOperationStartEffect {
+pub enum HoverOperationStartEffect {
   HoverOperationNoStart
   HoverOperationScheduleDelayed(Int)
   HoverOperationRunAsyncAndSync(Int)
@@ -207,7 +207,7 @@ pub(all) enum HoverPart {
   LoadingHover(range~ : @common.Range, message~ : String)
 } derive(Eq, @debug.Debug)
 
-pub(all) struct HoverParticipantHandle {
+pub struct HoverParticipantHandle {
   ordinal : Int
   suggest_hover_anchor : ((@view_model.InjectedText?, @common.Range, Double?, Double?) -> HoverAnchor?)?
   compute_sync : (HoverComputeContext) -> Array[HoverPart]
@@ -221,7 +221,7 @@ pub struct HoverParticipantOwner {
 } derive(Eq, @debug.Debug)
 pub fn HoverParticipantOwner::new() -> Self
 
-pub(all) struct HoverParticipantRegistry {
+pub struct HoverParticipantRegistry {
   entries : Array[(HoverParticipantServices) -> HoverParticipantHandle]
 }
 pub fn HoverParticipantRegistry::build_all(Self, HoverParticipantServices) -> Array[HoverParticipantHandle]
@@ -247,14 +247,14 @@ pub fn HoverRequestStamp::generation(Self) -> Int
 pub fn HoverRequestStamp::is_current(Self, @model.TextModel?, Int) -> Bool
 pub fn HoverRequestStamp::model(Self) -> @model.TextModel
 
-pub(all) struct HoverResult {
+pub struct HoverResult {
   value : Array[HoverPart]
   is_complete : Bool
   has_loading_message : Bool
   options : HoverOperationOptions
 } derive(Eq, @debug.Debug)
 
-pub(all) struct HoverSettings {
+pub struct HoverSettings {
   enabled : HoverEnabled
   sticky : Bool
   hiding_delay : Int
@@ -272,7 +272,7 @@ pub(all) enum HoverStartSource {
   HoverStartKeyboard
 } derive(Eq, @debug.Debug)
 
-pub(all) struct HoverTiming {
+pub struct HoverTiming {
   hover_time_ms : Double
   first_wait_ms : Double
   second_wait_ms : Double
@@ -280,12 +280,12 @@ pub(all) struct HoverTiming {
 } derive(Eq, @debug.Debug)
 pub fn HoverTiming::from_delay(Int) -> Self
 
-pub(all) struct HoverView {
+pub struct HoverView {
   range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq)
 
-pub(all) struct HoverWidgetView {
+pub struct HoverWidgetView {
   anchor_range : @common.Range
   parts : Array[HoverPart]
 } derive(Eq)
@@ -302,7 +302,7 @@ pub struct MarkerHoverParticipant {
 pub fn MarkerHoverParticipant::hover_participant_handle(Self) -> HoverParticipantHandle
 pub fn MarkerHoverParticipant::new(@markers.MarkerDecorationsHandle) -> Self
 
-pub(all) struct MouseCloserState {
+pub struct MouseCloserState {
   mut initial_pos_x : Double?
   mut initial_pos_y : Double?
   mut closest_distance : Double?
@@ -311,7 +311,7 @@ pub fn MouseCloserState::is_mouse_getting_closer(Self, Double, Double, Double, D
 pub fn MouseCloserState::new() -> Self
 pub fn MouseCloserState::reset(Self) -> Unit
 
-pub(all) enum MultiCursorModifier {
+pub enum MultiCursorModifier {
   MultiCursorAlt
   MultiCursorCtrl
   MultiCursorMeta

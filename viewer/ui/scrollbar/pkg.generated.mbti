@@ -47,14 +47,7 @@ pub fn MouseWheelClassifier::accept_standard_wheel_event(Self, StandardWheelEven
 pub fn MouseWheelClassifier::is_physical_mouse_wheel(Self) -> Bool
 pub fn MouseWheelClassifier::new() -> Self
 
-pub(all) struct MouseWheelClassifierItem {
-  timestamp : Double
-  delta_x : Double
-  delta_y : Double
-  mut score : Double
-} derive(@debug.Debug)
-
-pub(all) struct ScrollableElementDom {
+pub struct ScrollableElementDom {
   wrapper : @dom.Element
   content : @dom.Element
   vertical_bar : @dom.Element
@@ -110,7 +103,7 @@ pub(all) struct ScrollbarDrag {
   initial_state : @view_layout.ScrollbarState
 }
 
-pub(all) struct StandardWheelEvent {
+pub struct StandardWheelEvent {
   delta_x : Double
   delta_y : Double
 }

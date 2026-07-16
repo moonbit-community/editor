@@ -43,7 +43,7 @@ pub(all) struct ContentWidgetDimension {
 ///|
 /// Monaco `IContentWidgetRenderedCoordinate`, passed to `afterRender` after
 /// the write phase has selected and applied a concrete placement.
-pub(all) struct ContentWidgetRenderedCoordinate {
+pub struct ContentWidgetRenderedCoordinate {
   top : Double
   left : Double
 } derive(Eq, Debug)

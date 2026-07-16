@@ -48,7 +48,7 @@ pub fn toggle_collapse_state(FoldingModel, Int, Array[Int]) -> Unit
 // Errors
 
 // Types and methods
-pub(all) struct FoldRange {
+pub struct FoldRange {
   start_line_number : Int
   end_line_number : Int
   type_ : String?
@@ -56,12 +56,12 @@ pub(all) struct FoldRange {
   mut source : FoldSource
 } derive(Eq, @debug.Debug)
 
-pub(all) enum FoldRangesOrRegions {
+pub enum FoldRangesOrRegions {
   Regions(FoldingRegions)
   Ranges(Array[FoldRange])
 }
 
-pub(all) enum FoldSource {
+pub enum FoldSource {
   Provider
   UserDefined
   Recovered
@@ -112,7 +112,7 @@ pub fn FoldingModel::toggle_collapse_state(Self, Array[FoldingRegion]) -> Unit
 pub fn FoldingModel::update(Self, FoldingRegions, selection? : SelectedLines) -> Unit
 pub fn FoldingModel::update_post(Self, FoldingRegions) -> Unit
 
-pub(all) struct FoldingModelChangeEvent {
+pub struct FoldingModelChangeEvent {
   model : FoldingModel
   collapse_state_changed : Array[FoldingRegion]?
 }
@@ -193,7 +193,7 @@ pub(all) enum RegionFilter {
   RegionFilterWithLevel((FoldingRegion, Int) -> Bool)
 }
 
-pub(all) struct SelectedLines {
+pub struct SelectedLines {
   starts_inside : (Int, Int) -> Bool
 }
 

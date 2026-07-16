@@ -15,7 +15,7 @@ pub const VIEW_LINE_CLASS_NAME : String = "view-line"
 /// treating a changed option id as proof that a retained row changed. Typed
 /// theme identity remains CSS/root-owned (approved N-A); experimental
 /// whitespace rendering and GPU selection remain explicit deferred seams.
-pub(all) struct ViewLineOptions {
+pub struct ViewLineOptions {
   line_height : Int
   space_width : Double
   middot_width : Double

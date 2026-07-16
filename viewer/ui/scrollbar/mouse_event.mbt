@@ -8,7 +8,7 @@
 /// `3 × -deltaY`, so `wheelDeltaY / 120` and `-deltaY / 40` are the same
 /// number. (deviation: the Firefox-on-non-mac line-mode `/ 3` quirk rides
 /// on the dropped browser sniffing and is omitted with it.)
-pub(all) struct StandardWheelEvent {
+pub struct StandardWheelEvent {
   delta_x : Double
   delta_y : Double
 }

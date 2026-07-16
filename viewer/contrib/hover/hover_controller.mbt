@@ -1,5 +1,5 @@
 ///|
-pub(all) struct HoverView {
+pub struct HoverView {
   range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)
@@ -58,7 +58,7 @@ pub let hover_loading_message_ms : Int = 3 * hover_delay_ms
 /// Pure configured-delay arithmetic from Monaco's HoverOperation getters.
 /// Doubles preserve the source's half-millisecond values for odd delays; the
 /// current browser settings use the integral 300ms default above.
-pub(all) struct HoverTiming {
+pub struct HoverTiming {
   hover_time_ms : Double
   first_wait_ms : Double
   second_wait_ms : Double
@@ -104,7 +104,7 @@ pub(all) enum HoverStartSource {
 
 ///|
 /// Source-shaped options retained by one hover operation.
-pub(all) struct HoverOperationOptions {
+pub struct HoverOperationOptions {
   should_focus : Bool
   anchor : HoverAnchor
   source : HoverStartSource
@@ -195,7 +195,7 @@ pub fn HoverRequestStamp::is_current(
 
 ///|
 /// Result snapshot emitted by the pure operation after the initial wait.
-pub(all) struct HoverResult {
+pub struct HoverResult {
   value : Array[HoverPart]
   is_complete : Bool
   has_loading_message : Bool
@@ -206,7 +206,7 @@ pub(all) struct HoverResult {
 /// Host work selected by `HoverOperation::start`. Timers and computation stay
 /// host-owned; this value makes every valid start-mode/state branch explicit
 /// and deterministic.
-pub(all) enum HoverOperationStartEffect {
+pub enum HoverOperationStartEffect {
   HoverOperationNoStart
   HoverOperationScheduleDelayed(Int)
   HoverOperationRunAsyncAndSync(Int)
@@ -219,7 +219,7 @@ pub(all) enum HoverOperationStartEffect {
 /// `WaitingForAsync*` states cover the post-delay window while the async compute
 /// is still in flight (the second one shows the loading message); `Idle` is the
 /// complete (or quiescent) state.
-pub(all) enum HoverOpState {
+pub enum HoverOpState {
   HoverOpIdle
   HoverOpFirstWait
   HoverOpSecondWait
@@ -235,7 +235,7 @@ pub(all) enum HoverOpState {
 /// methods. `parts` is Monaco's accumulating `_result`; `token` rotates per
 /// anchor so stale timers and streamed async results are dropped at their guards
 /// (the role Monaco's scheduler / iterable cancellation plays).
-pub(all) struct HoverOperation {
+pub struct HoverOperation {
   state : HoverOpState
   token : Int
   parts : Array[HoverPart]
@@ -408,7 +408,7 @@ pub(all) enum HoverEffect {
 /// and whether it was complete). Placement (above/below, sizing) is the
 /// content-hover widget's own state, as in the source
 /// (`ContentHoverWidget._positionPreference`).
-pub(all) struct HoverController {
+pub struct HoverController {
   /// Monaco `_hoverOperation.options.anchor`: the anchor the operation is
   /// currently computing for (`None` once cleared).
   anchor : HoverAnchor?
@@ -954,7 +954,7 @@ pub fn HoverController::highlight_decorations(
 /// a `RenderedContentHover` and drives the content-hover widget's `show` /
 /// `hide` when it changes — Monaco's `_setCurrentResult` →
 /// `_showHover`/`_hideHover` seam. Placement is the widget's own concern.
-pub(all) struct HoverWidgetView {
+pub struct HoverWidgetView {
   anchor_range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)

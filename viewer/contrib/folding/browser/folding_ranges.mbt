@@ -14,7 +14,7 @@ pub(all) struct LineRange {
 
 ///|
 /// Where a fold range came from — `FoldSource` (`foldingRanges.ts:13`).
-pub(all) enum FoldSource {
+pub enum FoldSource {
   Provider
   UserDefined
   Recovered
@@ -36,7 +36,7 @@ fn FoldSource::abbr(self : FoldSource) -> String {
 /// (`foldingRanges.ts:25`). `type_` is Monaco's `type` (a MoonBit keyword),
 /// the `FoldingRangeKind` id a provider attached. `is_collapsed` and
 /// `source` are mutable because `sanitizeAndMerge` rewrites them in place.
-pub(all) struct FoldRange {
+pub struct FoldRange {
   start_line_number : Int
   end_line_number : Int
   type_ : String?
@@ -422,7 +422,7 @@ pub fn FoldingRegions::from_fold_ranges(
 ///|
 /// The `FoldingRegions | FoldRange[]` parameter union of `sanitizeAndMerge`
 /// (`foldingRanges.ts:302-303`), made explicit for MoonBit.
-pub(all) enum FoldRangesOrRegions {
+pub enum FoldRangesOrRegions {
   Regions(FoldingRegions)
   Ranges(Array[FoldRange])
 }

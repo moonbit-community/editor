@@ -56,7 +56,7 @@ pub fn AgentFeedbackService::set_feedback_resolved(Self, @common.Uri, String, Bo
 pub fn AgentFeedbackService::set_navigation_anchor(Self, @common.Uri, String?) -> Unit
 pub fn AgentFeedbackService::update_feedback(Self, @common.Uri, String, String) -> Unit
 
-pub(all) struct SessionEditorComment {
+pub struct SessionEditorComment {
   id : String
   source_id : String
   kind : @agent_feedback_api.AgentFeedbackKind

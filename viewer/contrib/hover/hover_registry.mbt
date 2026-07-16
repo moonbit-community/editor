@@ -4,7 +4,7 @@
 /// global that the hover contribution populates, not state the viewer services
 /// own. Each factory builds a participant from the editor-scoped services, like
 /// Monaco's `instantiationService.createInstance(ctor, editor)`.
-pub(all) struct HoverParticipantRegistry {
+pub struct HoverParticipantRegistry {
   entries : Array[(HoverParticipantServices) -> HoverParticipantHandle]
 }
 

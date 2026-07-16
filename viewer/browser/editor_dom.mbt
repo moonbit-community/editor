@@ -56,7 +56,7 @@ pub fn ClientCoordinates::to_page_coordinates(
 ///|
 /// The position of the editor in the page — `EditorPagePosition`
 /// (editorDom.ts:55-64).
-pub(all) struct EditorPagePosition {
+pub struct EditorPagePosition {
   x : Double
   y : Double
   width : Double
@@ -67,7 +67,7 @@ pub(all) struct EditorPagePosition {
 /// Coordinates relative to the (top;left) of the editor, scale-corrected —
 /// `CoordinatesRelativeToEditor` (editorDom.ts:72-79). Can be negative when
 /// the mouse is outside the editor.
-pub(all) struct CoordinatesRelativeToEditor {
+pub struct CoordinatesRelativeToEditor {
   x : Double
   y : Double
 } derive(Eq, Debug)

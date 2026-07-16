@@ -2,12 +2,13 @@
 // in the checked-in source, lines 23-152.
 
 ///|
-pub(all) struct MouseWheelClassifierItem {
+#warnings("-unused_field")
+priv struct MouseWheelClassifierItem {
   timestamp : Double
   delta_x : Double
   delta_y : Double
   mut score : Double
-} derive(Debug)
+}
 
 ///|
 fn MouseWheelClassifierItem::new(

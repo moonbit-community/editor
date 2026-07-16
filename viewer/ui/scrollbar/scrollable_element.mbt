@@ -3,7 +3,7 @@
 /// Monaco-shaped DOM shell and the custom scrollbar node geometry; callers
 /// decide whether scroll positions are written back into `ViewLayout` or a
 /// native content element.
-pub(all) struct ScrollableElementDom {
+pub struct ScrollableElementDom {
   wrapper : @rdom.Element
   content : @rdom.Element
   vertical_bar : @rdom.Element

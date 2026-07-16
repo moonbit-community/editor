@@ -12,7 +12,7 @@ pub(all) enum HoverPart {
 
 ///|
 /// Complete hover result after participant parts have been merged and sorted.
-pub(all) struct ComputedHover {
+pub struct ComputedHover {
   range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
@@ -24,7 +24,7 @@ pub(all) struct ComputedHover {
 /// services they need at construction instead. `line_decorations` is selected
 /// once by the computer and `source` is forwarded unchanged to every
 /// sync/async participant.
-pub(all) struct HoverComputeContext {
+pub struct HoverComputeContext {
   model : @model.TextModel
   anchor : HoverAnchor
   source : HoverStartSource
@@ -87,7 +87,7 @@ fn hover_line_decorations(
 /// hit's injected text (if any), the hit's model range, and the recorded
 /// pointer position (`viewer/contrib/hover/browser/hover_events.mbt` extracts
 /// them).
-pub(all) struct HoverParticipantHandle {
+pub struct HoverParticipantHandle {
   ordinal : Int
   suggest_hover_anchor : ((
     @view_model.InjectedText?,
@@ -296,7 +296,7 @@ pub fn MarkdownHoverParticipant::hover_participant_handle(
 
 ///|
 /// Coordinates hover participants for one viewer service set.
-pub(all) struct ContentHoverComputer {
+pub struct ContentHoverComputer {
   participants : Array[HoverParticipantHandle]
 }
 

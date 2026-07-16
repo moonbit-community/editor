@@ -19,7 +19,7 @@ pub let hover_sticky_debug : Bool = false
 
 ///|
 /// Monaco `editor.hover.enabled` (`IHoverSettings.enabled`).
-pub(all) enum HoverEnabled {
+pub enum HoverEnabled {
   HoverEnabledOn
   HoverEnabledOff
   HoverEnabledOnKeyboardModifier
@@ -41,7 +41,7 @@ pub fn HoverEnabled::from_config(value : String) -> HoverEnabled {
 ///|
 /// Monaco `editor.multiCursorModifier` reduced to the modifier key it resolves to
 /// (`'altKey' | 'ctrlKey' | 'metaKey'`).
-pub(all) enum MultiCursorModifier {
+pub enum MultiCursorModifier {
   MultiCursorAlt
   MultiCursorCtrl
   MultiCursorMeta
@@ -87,7 +87,7 @@ pub fn EventModifiers::none() -> EventModifiers {
 ///|
 /// Monaco `ContentHoverController` `IHoverSettings`: the snapshot of the
 /// `editor.hover` options taken in `_hookListeners`.
-pub(all) struct HoverSettings {
+pub struct HoverSettings {
   enabled : HoverEnabled
   sticky : Bool
   hiding_delay : Int

@@ -74,7 +74,7 @@ pub(all) struct ContentHoverWidgetHost {
 /// (`.monaco-resizable-hover`), `hover` is the base `HoverWidget`'s
 /// `containerDomNode` (`.monaco-hover.fade-in`), `scrollable` wraps its
 /// `contentsDomNode` (`.monaco-hover-content`).
-pub(all) struct ContentHoverWidget {
+pub struct ContentHoverWidget {
   wrapper : @rdom.Element
   hover : @rdom.Element
   scrollable : @scrollbar.ScrollableElementDom

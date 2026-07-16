@@ -6,7 +6,7 @@
 
 ///|
 /// `HoverAnchorType` (`hoverTypes.ts:42-45`).
-pub(all) enum HoverAnchorType {
+pub enum HoverAnchorType {
   Range
   ForeignElement
 } derive(Eq, Debug)

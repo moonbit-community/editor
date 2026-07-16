@@ -7,7 +7,7 @@
 /// Live configuration values read by `ViewLines.onConfigurationChanged` in the
 /// same order as Monaco's retained caches. `view_line_options` is the exact
 /// equality-gated subset owned by each retained `ViewLine`.
-pub(all) struct ViewLinesConfiguration {
+pub struct ViewLinesConfiguration {
   line_height : Int
   typical_halfwidth_character_width : Double
   is_viewport_wrapping : Bool

@@ -7,7 +7,7 @@ test can assert directly.
 ## Commands
 
 ```sh
-just check                   # check all targets, format, architecture guards
+just check                   # check all targets and source formatting
 just test                    # all MoonBit tests
 just build                   # check + browser assets + native server
 just test-browser            # all Playwright suites

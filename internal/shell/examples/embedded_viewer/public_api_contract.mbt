@@ -1,6 +1,6 @@
-// Compile-only external-host fixture for the supported Viewer facade. This
-// package is classified as an external host by check-architecture.mbtx, so the
-// imports and inferred browser-owned values below prove the public boundary.
+// Compile-only contract for the supported Viewer facade. The imports and
+// inferred browser-owned values below keep the public embedding boundary
+// checked by the real MoonBit package.
 
 ///|
 fn contract_disposable() -> @base_common.Disposable {

@@ -208,11 +208,13 @@ internal/shell/server_host_native/main
 
 ## Dependency Rules
 
-`scripts/check-architecture.mbtx`, target checks, and MoonBit cycle checks
-enforce these rules:
+`moon check --target all` enforces package cycles and target compatibility.
+The remaining rules are intentionally kept visible in `moon.pkg`, generated
+interfaces, and code review instead of duplicated in an architecture-lint
+script:
 
 - Product code does not import `vscode/` or `codemirror/`.
-- Only `internal/shell/**` imports `internal/shell/*` packages.
+- Reusable packages do not import the `internal/shell/**` reference host.
 - `viewer/common/**` and non-browser contribution packages stay multi-target;
   `viewer/browser/**`, contribution `browser/**` packages, and root `viewer`
   stay js-only.
@@ -220,14 +222,9 @@ enforce these rules:
   framework packages. The reference shell owns the app framework.
 - Browser helper packages do not import the parent `viewer` facade.
 - `viewer/common/**` does not import `viewer/contrib/**`.
-- The root generated interface cannot expose private view/testing packages,
-  contribution implementations, concrete services, duplicate option/cursor
-  enums, public option/service/state layouts, or headless/debug/test helpers.
-- Workbench-tier packages (`internal/shell/**`, except examples, and `tests/**`)
-  may import viewer internals. External-host stand-ins may import only root
-  `viewer` and `viewer/common/**`; the embedded example is the positive
-  compile/runtime proof, and an excluded manifest fixture self-tests rejection
-  of testing/contribution imports.
+- The root `viewer` package is the external browser facade; embedders use it and
+  public `viewer/common/**` contracts rather than private browser/contribution
+  implementation packages. The embedded example keeps this surface compiling.
 - Concrete `syntax/lang_*` packages are selected by hosts, examples, or tests,
   not by the reusable viewer core.
 

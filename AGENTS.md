@@ -14,6 +14,14 @@
 
 Completed execution plans are compressed history, not current contracts.
 
+## Architecture Changes
+
+Follow `docs/architecture.md` and review dependency changes in `moon.pkg`.
+Review public API changes through the owning `pkg.generated.mbti`. Do not add
+architecture-lint scripts for one-time design decisions; automate only a
+repeated concrete failure mode, and keep the check generic rather than naming
+current methods or implementation types.
+
 ## Reference Ports
 
 Follow `docs/exec-plans/_PORT_PLAYBOOK.md` for Monaco/VS Code or CodeMirror

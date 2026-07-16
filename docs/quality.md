@@ -22,8 +22,12 @@ cross-package or browser-visible implementation complete.
 - Shared packages remain FFI-free; js/native-only packages declare their target.
 - Viewer packages use only Rabbita's DOM/JS bindings, not its TEA framework.
 - The shell/backend remains optional to embedders.
-- `just check` is authoritative for the scripted boundary rules; see
-  `docs/architecture.md` for the complete dependency policy.
+- `just check` is read-only: it checks every target and verifies formatting.
+- Review `moon.pkg` changes against `docs/architecture.md`, and review public API
+  changes through `pkg.generated.mbti`.
+- Do not add architecture lint for a one-time design decision. Automate a
+  boundary only after the same concrete failure recurs, and keep the check
+  generic rather than naming current methods or implementation types.
 
 ## Reference Tests
 

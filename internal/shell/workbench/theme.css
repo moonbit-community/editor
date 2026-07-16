@@ -57,7 +57,7 @@
   /* editorError/Warning/Info/Hint.border are null in VS Code's normal (non-HC)
      themes, so they stay unset here too — the visible squiggle is the runtime
      inline-SVG background computed from the *-foreground tokens above
-     (viewer/browser/view/squiggly_theme.mbt), not this border rule. The
+     (internal/viewer/browser/view/squiggly_theme.mbt), not this border rule. The
      border-double/dotted CSS in markers.css is a faithful copy of the HC
      fallback and is correctly inert (this viewer has no high-contrast theme). */
   --vscode-editorUnnecessaryCode-opacity: 0.67;

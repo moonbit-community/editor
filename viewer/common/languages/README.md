@@ -15,7 +15,7 @@ The viewer's DOM-free language registry and token-to-HTML helpers.
   expressions.
 - `set_tokens_provider` forwards to the process-wide
   `syntax.tokenization_registry`. Therefore tokenizer registrations remain global
-  even when tests or embedders use an isolated `Languages::new()` instance.
+  even when tests or embedders use an isolated `Languages()` instance.
 - `tokenize_line_to_html` and `tokenize_to_string` port
   `vs/editor/common/languages/textToHtmlTokenizer.ts`.
 

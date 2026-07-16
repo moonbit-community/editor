@@ -190,6 +190,33 @@ Former artifacts: `warning-ffi-dead-surface-cleanup-2026-07-15-addendum.md`,
 `viewer-lifecycle-domain-aggregates.md`,
 `viewer-lifecycle-domain-aggregates-gate-a.md`.
 
+### MoonBit-native API and internal Viewer boundary
+
+The reviewed visibility ledger narrowed 116 public representations and made
+five implementation carriers private while preserving ten caller-constructed
+contracts and two open provider traits. Mouse-target factories became
+package-private local methods on the foreign browser target type, and the
+controller's test-only boundary became white-box.
+
+Ninety product constructors plus the internal browser-test context now use
+canonical `Type(...)` construction with compatible `#alias(new)` entry points.
+The two prefix-sum implementations use `ArrayView[Int]` primary constructors,
+copy their inputs, and retain `new(Array[Int])` compatibility wrappers;
+selected private read-only helpers also accept views without broad public
+signature churn.
+
+Twelve concrete browser runtime, scrollbar, testing, and contribution packages
+moved below `internal/viewer/**`. Root `viewer`, public `viewer/browser`, and
+the public common/capability packages remain the supported embedding surface.
+All twenty CSS/font assets retained their original paths and hashes. Final
+validation passed 1,438 JS tests, 1,011 native tests, all 83 Playwright tests,
+the production build, generated-interface review, and the module-internal
+package checks.
+
+Former artifacts:
+`moonbit-native-api-visibility-and-internal-boundary-refactor.md`,
+`moonbit-native-api-visibility-and-internal-boundary-refactor-gate-a.md`.
+
 ## Removed Obsolete Incomplete Plans
 
 These plans were not compressed as completed work. Their original scopes no

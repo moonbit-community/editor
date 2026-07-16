@@ -3,9 +3,10 @@
 /// feature controllers. Concrete host backings never cross this root facade.
 ///
 /// The hover participant registry is *not* held here: it is a free global in
-/// `viewer/hover` populated by that feature's contribution, mirroring Monaco's
-/// `HoverParticipantRegistry`. `Viewer::request_hover` projects these services
-/// into a `@hover.HoverParticipantServices` when it builds a hover computer.
+/// `internal/viewer/contrib/hover` populated by that feature's contribution,
+/// mirroring Monaco's `HoverParticipantRegistry`. `Viewer::request_hover`
+/// projects these services into a `@hover.HoverParticipantServices` when it
+/// builds a hover computer.
 pub struct ViewerServices {
   priv languages : @languages.LanguageHandle
   priv marker_decorations : @markers.MarkerDecorationsHandle

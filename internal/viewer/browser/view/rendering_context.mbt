@@ -2,8 +2,8 @@
 /// Inputs `Viewer` provides to `View` for one readonly browser render.
 /// `pub(all)`: `Viewer::flush_render` (`view_host.mbt`, root `viewer`
 /// package) builds this via a struct literal passed straight into
-/// `View::render` — the foreign-method rule keeps that call out of this
-/// package, so the literal construction crosses the package boundary.
+/// `View::render`. The internal view package does not import the root facade,
+/// so this literal construction crosses the package boundary.
 pub(all) struct ViewRenderInput {
   /// The rendered 1-based half-open view-line window: exactly the lines
   /// intersecting the viewport (already clamped to the document).

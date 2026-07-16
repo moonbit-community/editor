@@ -1,10 +1,17 @@
 # internal/viewer/browser/view
 
-The browser-side, per-model editor `View`. This JS-only MoonBit package owns
-the editor DOM subtree, coordinated rendering, the shared row recycler, and
-all implemented Monaco view parts. The root `Viewer` owns the `View` lifetime:
-there is no `View` without an attached model, and a model swap disposes and
-replaces the complete per-model instance.
+The browser-side, per-model editor `View`. This module-private, JS-only MoonBit
+package owns the editor DOM subtree, coordinated rendering, the shared row
+recycler, and all implemented Monaco view parts. The root `Viewer` owns the
+`View` lifetime: there is no `View` without an attached model, and a model swap
+disposes and replaces the complete per-model instance. The package does not
+import root `viewer`; Viewer-facing composition stays at the root so the
+dependency remains one-way.
+
+`View` is `pub`, not `pub(all)`: root code can read the reviewed DOM and
+view-part fields recorded in `pkg.generated.mbti`, while construction remains
+through the canonical `View(...)` constructor rather than an exposed struct
+literal.
 
 The implementation is pinned to the `vscode` submodule at
 checked-in source. Files preserve Monaco source-unit
@@ -122,7 +129,7 @@ rewrites a row only when the concatenated content changes.
 ## Content widgets
 
 `ContentWidgets` implements the generic content-widget layer; concrete hover
-widgets remain in `viewer/contrib/hover/browser`.
+widgets remain in `internal/viewer/contrib/hover/browser`.
 
 - `ContentWidgetHandle` retains live id, DOM-node, and position getters;
   `allowEditorOverflow` and `useDisplayNone`; and independently optional

@@ -26,9 +26,9 @@ reusable `viewer`, file tree, remote transport, and browser-test observability.
   a field recovered from `ViewerServices`.
 - Public Viewer lifecycle subscriptions update shell state and drive tree
   `autoReveal`. Build/render/hover telemetry comes from the internal
-  Viewer-id-keyed `viewer/browser/testing` registry; diagnostic telemetry is
-  reread from the retained marker store. Together they emit the structured
-  harness events in `../../../docs/harness.md`.
+  Viewer-id-keyed `internal/viewer/browser/testing` registry; diagnostic
+  telemetry is reread from the retained marker store. Together they emit the
+  structured harness events in `../../../docs/harness.md`.
 - Agent-feedback state is enabled per opened resource and persisted in
   `localStorage`; this reference host has no agent execution loop.
 
@@ -39,9 +39,10 @@ The only exported functions are `start_app`, `mount_app`, and the harness-facing
 
 Composition belongs here. Viewer and file tree do not know about each other or
 the transport. As an internal workbench-tier consumer this package may retain
-feature implementations and use `viewer/browser/testing`; external embedders
-remain restricted to root `viewer` and `viewer/common/**`. JavaScript FFI is
-limited to host capabilities, harness events, storage, and protocol URL lookup.
+feature implementations and use `internal/viewer/browser/testing`; external
+embedders remain restricted to root `viewer`, `viewer/browser`, and
+`viewer/common/**`. JavaScript FFI is limited to host capabilities, harness
+events, storage, and protocol URL lookup.
 
 Run `moon test internal/shell/workbench --target js`, `just check`, and the
 relevant `just test-browser-*` suite.

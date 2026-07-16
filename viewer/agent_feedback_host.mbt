@@ -6,9 +6,11 @@
 // (`_updateReservedGutterSpace`), the selection → inline-input flow
 // (`_onSelectionChanged` / `_show` / `_updatePosition`) and the glyph-click
 // line selection (`_selectLine`). The widget DOM lives in
-// `viewer/contrib/agent_feedback/browser`; the DOM-free store and grouping
-// in `viewer/contrib/agent_feedback`. Kept here per the foreign-method rule
-// (every `Viewer::` method lives in `Viewer`'s own package).
+// `internal/viewer/contrib/agent_feedback/browser`; the DOM-free store and
+// grouping live in `internal/viewer/contrib/agent_feedback`. Viewer-facing
+// subscriptions stay in the root composition package: moving them into an
+// internal contribution would reverse the dependency on `viewer` and create a
+// package cycle.
 //
 // Deviations from the source, recorded up front: the session scope gate is
 // the service's `is_feedback_enabled` (the host decides which files are in

@@ -25,7 +25,7 @@ ownership and lifecycle rules that are not obvious from signatures.
   when no model/browser View exists.
 - Omitting `services` makes the Viewer create and own an internal bundle.
   Passing `services` explicitly always borrows that bundle, including a bundle
-  returned by `ViewerServices::new`; this is the form for sharing languages,
+  returned by `ViewerServices(...)`; this is the form for sharing languages,
   diagnostics, feedback, and quick-diff state between Viewers.
 - `set_model(TextModel?)` installs a caller-owned readonly model in the one
   `ViewerModelSlot.current` bundle. The same object is a no-op; replacement or
@@ -157,8 +157,11 @@ TextModel (caller-owned)
 
 The root package owns every `Viewer::` method and the cross-package glue for
 input, reveal, widgets, folding, hover, quick diff, feedback, and
-decorations. Feature mechanisms remain in their `viewer/common/**`,
-`viewer/browser/**`, or `viewer/contrib/**` owner packages. Each hover request
+decorations. Public values remain in `viewer/common/**` and `viewer/browser`;
+concrete browser and contribution mechanisms live in
+`internal/viewer/browser/**` and `internal/viewer/contrib/**`. Those
+lower-level packages do not import the root facade, so Viewer-facing
+composition stays here without reversing dependencies. Each hover request
 captures the physical `TextModel`, its internal content version, a
 Viewer-lifetime monotonic generation, and a caller-owned cancellation token.
 Replacement, content invalidation, detach, model disposal, and Viewer disposal

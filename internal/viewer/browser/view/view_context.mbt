@@ -4,9 +4,9 @@
 /// facade remains `Viewer` and browser DOM ownership stays on each part.
 ///
 /// `pub(all)`: built by `Viewer::build_view_context` (`view_host.mbt`), which
-/// lives with `Viewer` and thus, by the foreign-method rule, cannot live in
-/// this package — so construction is a plain cross-package record literal
-/// rather than a same-package `ViewContext::new`.
+/// stays beside the root-owned Viewer state to preserve dependency direction.
+/// Construction is therefore a plain cross-package record literal rather than
+/// a same-package constructor.
 pub(all) struct ViewContext {
   // Monaco's `RenderingContext.linesVisibleRangesForRange` seam: measures the
   // pixel rects of a zero-based view-column range on a view line off the live

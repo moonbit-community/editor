@@ -36,3 +36,10 @@ view/controller, Rabbita TEA/vdom/command, transport, or `internal/shell/**`.
 
 The emitted stylesheet remains at the stable asset path
 `viewer/ui/scrollbar/scrollable_element.css`.
+
+## Focused validation
+
+```sh
+moon check internal/viewer/ui/scrollbar --target js
+moon test internal/viewer/ui/scrollbar --target js -v
+```

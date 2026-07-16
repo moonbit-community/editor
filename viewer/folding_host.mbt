@@ -2,8 +2,9 @@
 // (`vscode/src/vs/editor/contrib/folding/browser/folding.ts`, vscode
 // checked-in submodule): the
 // event-handler bodies that need the editor. The controller *state* is owned
-// by the Viewer's central contribution entry (the foreign-method rule split,
-// see that file's header).
+// by the Viewer's central contribution entry; editor-facing glue stays beside
+// the root-owned Viewer state so the folding implementation remains below the
+// public facade.
 //
 // Deviations beyond the contrib file's recorded omissions:
 //   * `triggerFoldingModelChanged` runs synchronously — no `Delayer`

@@ -26,7 +26,7 @@ host document
   -> viewer/common/model.TextModel
   -> viewer/common/view_model.ViewModel
   -> viewer/common/view_layout.ViewLayout
-  -> viewer/browser/view.View
+  -> internal/viewer/browser/view.View
   -> DOM
 ```
 
@@ -95,7 +95,9 @@ Common code never imports browser or contribution packages.
 
 ### Viewer browser tier
 
-The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
+The root `viewer` facade and public `viewer/browser` contract package are
+js-only. Concrete browser runtime packages live below the module-private
+`internal/viewer/**` boundary:
 
 - `viewer` is the opaque public facade, the Monaco `CodeEditorWidget` and
   `editor.api.ts` role. Public browser construction is only `Viewer::create`;
@@ -105,45 +107,58 @@ The root `viewer`, `viewer/browser/**`, and `viewer/ui/scrollbar` are js-only:
 - `viewer/browser` owns canonical editor mouse events, target kinds, DOM
   coordinates, the mutable live ViewZone descriptor/opaque accessor contract, and
   the opaque unmanaged overlay-widget handle.
-- `viewer/browser/testing` is a JS-only Viewer-id-keyed workbench/browser-test
-  registry. Root publishes callback-backed build/render/hover facts downward;
-  the package never imports root Viewer and is not an external API.
-- `viewer/browser/config` measures fonts and browser geometry.
-- `viewer/browser/controller` owns hit testing, mouse selection, drag
+- `internal/viewer/browser/testing` is a JS-only Viewer-id-keyed
+  workbench/browser-test registry. Root publishes callback-backed
+  build/render/hover facts downward; the package never imports root Viewer and
+  is not an external API.
+- `internal/viewer/browser/config` measures fonts and browser geometry.
+- `internal/viewer/browser/controller` owns hit testing, mouse selection, drag
   scrolling, and scrollbar input.
-- `viewer/browser/view` is one package owning the DOM tree, render/event
-  ordering, recycler, content/overlay widgets, current-line and model
-  decorations, margin, selections, cursor, virtualized lines, zones, and the
-  scrollbar view part. Its focused `.mbt` files preserve source-unit
+- `internal/viewer/browser/view` is one package owning the DOM tree,
+  render/event ordering, recycler, content/overlay widgets, current-line and
+  model decorations, margin, selections, cursor, virtualized lines, zones,
+  and the scrollbar view part. Its focused `.mbt` files preserve source-unit
   responsibilities; they are not package or namespace boundaries.
 - `viewer/browser/view_parts/*` contains CSS assets at their stable build
   paths. These asset-only directories have no MoonBit package or executable
   ownership.
-- `viewer/ui/scrollbar` owns custom scrollbar DOM and pointer behavior; its
-  arithmetic lives in `viewer/common/view_layout`.
+- `internal/viewer/ui/scrollbar` owns custom scrollbar DOM and pointer
+  behavior; its emitted stylesheet remains at
+  `viewer/ui/scrollbar/scrollable_element.css`, and its arithmetic lives in
+  `viewer/common/view_layout`.
 
-`viewer/browser/view` owns closed event/render handle enums, rendering
+`internal/viewer/browser/view` owns closed event/render handle enums, rendering
 contexts, concrete view parts, and their lifecycle wiring. Files in that
 directory share private declarations as one compilation unit. Root
-`viewer/*.mbt` contains `Viewer::` glue because foreign methods must live with
-`Viewer`.
+`viewer/*.mbt` contains the `Viewer::` composition glue: the internal browser
+packages are lower-level dependencies and cannot import the root facade
+without reversing the dependency and creating a package cycle.
 
 ### Contributions
 
-Contributions depend on editor common/browser layers; editor common never
-depends on them.
+Concrete contributions live below `internal/viewer/contrib/**`. They depend on
+editor common/browser layers; editor common never depends on them.
 
-- `viewer/contrib/hover` is the DOM-free state/computation layer;
-  `hover/browser` owns its widget and browser controller.
-- `viewer/contrib/agent_feedback` owns concrete feedback storage/service
-  projection; host DTOs and the callback handle live in
-  `viewer/common/agent_feedback_api`, while `agent_feedback/browser` owns input
-  and bubble widgets.
-- `viewer/contrib/quick_diff/common` owns baseline state and diff contracts;
-  its public host handle lives in `viewer/common/quick_diff_api`, and
-  `quick_diff/browser` produces gutter decorations.
-- `viewer/contrib/folding/browser` currently owns the complete js-only folding
-  implementation, including ranges, hidden areas, decorations, and controller.
+- `internal/viewer/contrib/hover` is the DOM-free state/computation layer;
+  `internal/viewer/contrib/hover/browser` owns its widget and browser
+  controller. The emitted hover stylesheet remains at
+  `viewer/contrib/hover/hover.css`.
+- `internal/viewer/contrib/agent_feedback` owns concrete feedback
+  storage/service projection; host DTOs and the callback handle live in
+  `viewer/common/agent_feedback_api`, while
+  `internal/viewer/contrib/agent_feedback/browser` owns input and bubble
+  widgets. Its emitted stylesheet remains at
+  `viewer/contrib/agent_feedback/browser/agent_feedback.css`.
+- `internal/viewer/contrib/quick_diff/common` owns baseline state and diff
+  contracts; its public host handle lives in
+  `viewer/common/quick_diff_api`, and
+  `internal/viewer/contrib/quick_diff/browser` produces gutter decorations.
+  Its emitted stylesheet remains at
+  `viewer/contrib/quick_diff/browser/quick_diff.css`.
+- `internal/viewer/contrib/folding/browser` currently owns the complete
+  js-only folding implementation, including ranges, hidden areas, decorations,
+  and controller. Its emitted stylesheet remains at
+  `viewer/contrib/folding/browser/folding.css`.
 
 The root editor registry has two distinct ownership layers. Its process-wide
 contribution-description table contains constructors only; the adjacent command
@@ -215,13 +230,13 @@ script:
 
 - Product code does not import `vscode/` or `codemirror/`.
 - Reusable packages do not import the `internal/shell/**` reference host.
-- `viewer/common/**` and non-browser contribution packages stay multi-target;
-  `viewer/browser/**`, contribution `browser/**` packages, and root `viewer`
-  stay js-only.
+- `viewer/common/**` and DOM-free internal contribution packages stay
+  multi-target; public `viewer/browser`, internal browser runtime and
+  contribution-browser packages, and root `viewer` stay js-only.
 - Viewer packages may use `rabbita/dom` and `rabbita/js`, not Rabbita's TEA
   framework packages. The reference shell owns the app framework.
 - Browser helper packages do not import the parent `viewer` facade.
-- `viewer/common/**` does not import `viewer/contrib/**`.
+- `viewer/common/**` does not import `internal/viewer/**`.
 - The root `viewer` package is the external browser facade; embedders use it and
   public `viewer/common/**` contracts rather than private browser/contribution
   implementation packages. The embedded example keeps this surface compiling.

@@ -1,10 +1,11 @@
 // The editor-side half of `vscode/src/vs/workbench/contrib/scm/browser/
 // quickDiffDecorator.ts` (checked-in vscode submodule): what
 // `QuickDiffDecorator` does with its `codeEditor` — own a decorations
-// collection and refill it from the quick-diff changes. Per the
-// foreign-method rule the `Viewer`-touching body lives here as `Viewer::`
-// glue; the pure pieces (change computation, decoration construction) live
-// in `viewer/contrib/quick_diff/` and are called from this file.
+// collection and refill it from the quick-diff changes. The `Viewer`-touching
+// body lives here as root composition glue; the pure pieces (change
+// computation and decoration construction) live in
+// `internal/viewer/contrib/quick_diff/`. Those packages are dependencies of
+// `viewer` and cannot import the facade back without creating a package cycle.
 
 ///|
 /// Recomputes the quick-diff gutter decorations for the current model. The

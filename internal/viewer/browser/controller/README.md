@@ -49,3 +49,10 @@ common view-model/layout, and `internal/viewer/ui/scrollbar` types. It must not
 import `viewer`, `internal/shell/**`, or Rabbita TEA/vdom/command packages.
 Shared browser mouse event/target values live in `viewer/browser`; the DOM
 hit-test algorithm lives here.
+
+## Focused validation
+
+```sh
+moon check internal/viewer/browser/controller --target js
+moon test internal/viewer/browser/controller --target js -v
+```

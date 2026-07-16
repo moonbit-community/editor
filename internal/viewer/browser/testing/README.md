@@ -11,3 +11,10 @@ are idempotent and generation-aware, so an old handle cannot remove a later
 registration that reuses the same id. Render observations intentionally omit
 diagnostic payloads; hosts that need diagnostics read them from their retained
 marker service.
+
+## Focused validation
+
+```sh
+moon check internal/viewer/browser/testing --target js
+moon test internal/viewer/browser/testing --target js -v
+```

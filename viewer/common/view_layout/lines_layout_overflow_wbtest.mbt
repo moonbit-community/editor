@@ -44,7 +44,7 @@ test "ViewLayout exposes uncoerced large line totals and offsets" {
 
   assert_eq(layout.get_vertical_offset_for_line_number(1), 4294967294.0)
   assert_eq(layout.get_vertical_offset_after_line_number(1), 4294967304.0)
-  // `EditorScrollDimensions::new` is a separate source-owned ToInt32 boundary.
+  // `EditorScrollDimensions(...)` is a separate source-owned ToInt32 boundary.
   assert_eq(layout.get_content_height(), 8.0)
   assert_false(layout.is_after_lines(4294967304.0))
   assert_true(layout.is_after_lines(4294967304.5))

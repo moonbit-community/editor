@@ -4,12 +4,13 @@
 /// Each part owns its own DOM nodes, private state, dirty flag, prepare step,
 /// and write step.
 ///
-/// `pub(all)`: `Viewer` (root `viewer` package) holds `view : View?` and
-/// reads several fields directly (`root`, `overflow_guard`, `view_lines`,
-/// `editor_scrollbar`, `content_widgets`) from `view_host.mbt`, `input.mbt`,
-/// `hit_test_dom.mbt`, `controller_host.mbt`, and `reveal.mbt` — the
-/// foreign-method rule keeps those `Viewer::` methods out of this package,
-/// so cross-package field access is the only option.
+/// `pub`, not `pub(all)`: root `viewer` code reads the reviewed DOM and
+/// view-part fields below from `viewer.mbt`, `attach_model.mbt`, `input.mbt`,
+/// `controller_host.mbt`, `overlay_widgets_host.mbt`, and
+/// `content_hover_widget_host.mbt` (plus root white-box tests). This internal
+/// package is a dependency of `viewer`; importing the root facade back to host
+/// that composition would create a package cycle. Callers construct the value
+/// through `View(...)`, not a struct literal.
 pub struct View {
   root : @rdom.Element
   overflow_guard : @rdom.Element
@@ -146,7 +147,7 @@ pub fn View::View(
 ///|
 /// Installs the model/configuration subset consumed by the model-scoped
 /// ViewZones part. `read_configuration` is live and is re-read on each later
-/// configuration event; `View::new` already performed the source constructor
+/// configuration event; `View(...)` already performed the source constructor
 /// snapshot before ViewZones created its DOM.
 pub fn View::install_view_zones_context(
   self : View,

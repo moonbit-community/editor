@@ -2,8 +2,9 @@
 // `ContentHoverWidgetWrapper._showHover`/`_hideHover` (driving the persistent
 // `ContentHoverWidget` when `_setCurrentResult` changed the shown result) plus
 // the `ICodeEditor` surface the widget consumes (`addContentWidget` /
-// `layoutContentWidget` / `render`), expressed as `Viewer::` glue — the
-// foreign-method rule keeps these out of the widget's own package.
+// `layoutContentWidget` / `render`), expressed as `Viewer::` glue beside the
+// root-owned Viewer state. Keeping the contribution package below the facade
+// also avoids an internal-contribution -> root-viewer dependency.
 
 ///|
 /// Reconciles the persistent content-hover widget with the controller's

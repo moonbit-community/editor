@@ -1,10 +1,9 @@
 // The viewer core's side of the `internal/viewer/browser/view` seam: builds the
 // `ViewContext` capability struct `View::render` needs (the local analog of
 // Monaco's `View` reading its owning `CodeEditorWidget`) and owns the render
-// loop entry points. Kept out of `view.mbt` because `View::render` cannot
-// reference `Viewer` directly (the foreign-method rule keeps every `Viewer::`
-// method in `Viewer`'s own package) without creating a
-// `browser/view ↔ browser/widget/code_editor` cross-package cycle.
+// loop entry points. It stays beside the root-owned Viewer state so the
+// internal view package does not import the public facade and create a
+// `internal/viewer/browser/view ↔ viewer` dependency cycle.
 
 ///|
 fn Viewer::build_view_context(

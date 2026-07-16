@@ -34,8 +34,8 @@ remain in Git history.
 
 The implemented units from upstream `browser/view.ts`, `browser/view/*.ts`,
 and `browser/viewParts/**/*.ts` map to focused files in the single js-only
-local `viewer/browser/view` package. Unsupported pinned view-part units keep
-their reviewed `DEFERRED`/`N-A` dispositions in Git history:
+local `internal/viewer/browser/view` package. Unsupported pinned view-part
+units keep their reviewed `DEFERRED`/`N-A` dispositions in Git history:
 
 - `browser/view.ts` maps to `view.mbt`;
 - shared view machinery maps to source-shaped units such as
@@ -84,18 +84,19 @@ these local owners:
   multi-target `viewer/common/editor_api` package.
 - Public mouse, ViewZone/accessor, and unmanaged overlay-widget contracts map
   to `viewer/browser`; mutable/rendered zone and widget state remains private in
-  `viewer/browser/view`.
+  `internal/viewer/browser/view`.
 - The opaque `Viewer`, `ViewerOptions`, `ViewerServices`, and `ViewerViewState`
   facade maps to root `viewer`. Root factories let external hosts construct the
   browser-owned zone/widget values without importing browser internals.
 - Language, marker, feedback, quick-diff, and logging service seams map to
   opaque handles beside their public vocabularies. Concrete feature services
-  remain caller-retained common/contribution implementations and never appear
-  in the root generated interface.
+  remain caller-retained common values or module-private
+  `internal/viewer/contrib/**` implementations and never appear in the root
+  generated interface.
 - Root debug subscriptions have no public upstream/API role. Internal
   workbench/browser observability maps to the local Viewer-id-keyed
-  `viewer/browser/testing` seam, while the embedded host uses the semantic
-  model-change event plus a URI-guarded native animation frame.
+  `internal/viewer/browser/testing` seam, while the embedded host uses the
+  semantic model-change event plus a URI-guarded native animation frame.
 
 The boundary migration uses the checked-in `vscode` submodule. Its closed local
 and upstream ledgers, dependency proof, and generated-interface snapshots

@@ -8,10 +8,12 @@
 // (`_handleNavigation`), the item-hover range highlight (the widget's
 // `_highlightRange`, homed here because it touches the model), and the
 // reply-draft capture/prune across rebuilds. The widget DOM lives in
-// `viewer/contrib/agent_feedback/browser`. Kept here per the foreign-method
-// rule. Deviations: the highlight skips the overview-ruler companion
-// decoration (no overview ruler yet), `getMinContentWidthInPx` is not
-// ported (overlay widgets don't feed the scroll width), and rebuilds ride
+// `internal/viewer/contrib/agent_feedback/browser`. Viewer-facing lifecycle
+// glue stays in the root composition package because the internal contribution
+// is a dependency of `viewer`; importing the facade back from that package
+// would create a cycle. Deviations: the highlight skips the overview-ruler
+// companion decoration (no overview ruler yet), `getMinContentWidthInPx` is
+// not ported (overlay widgets don't feed the scroll width), and rebuilds ride
 // the feedback-change event only (the upstream observable also re-read PR
 // review state).
 

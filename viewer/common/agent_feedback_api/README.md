@@ -3,9 +3,10 @@
 This multi-target package owns the feedback DTOs, event values, and opaque
 callback handle that may cross the public Viewer service boundary. It imports
 only `base/common`; concrete storage, mutation policy, persistence, and browser
-widgets remain in `viewer/contrib/agent_feedback` and its browser package.
+widgets remain in `internal/viewer/contrib/agent_feedback` and its browser
+package.
 
-`AgentFeedbackHandle::new` requires the complete reviewed twelve-callback floor.
+`AgentFeedbackHandle(...)` requires the complete reviewed twelve-callback floor.
 The handle forwards those operations without owning captured state or
 lifecycle. External hosts can therefore inject a custom implementation through
 `ViewerServices` without importing a contribution package, while the reference

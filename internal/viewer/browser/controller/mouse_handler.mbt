@@ -70,8 +70,8 @@ pub(all) struct MouseDispatchData {
 ///|
 /// `IPointerHandlerHelper` (`mouseHandler.ts:28-57`), the closure-struct form
 /// (Monaco's is the object literal `View._createPointerHandlerHelper`
-/// builds; the root `viewer` package builds this one — the foreign-method
-/// rule keeps `Viewer::`/`View::` calls out of this package).
+/// builds). The root `viewer` package builds this one so the internal
+/// controller does not import the facade or reach into root-owned Viewer state.
 ///
 /// Grouped deviations, each marked below:
 ///   * Monaco's `MouseHandler` also holds a `ViewContext` (view model, view

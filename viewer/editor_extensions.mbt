@@ -7,12 +7,11 @@
 // `KeybindingsRegistry.registerKeybindingRule` + `CommandsRegistry`,
 // `EditorCommand.runEditorCommand`).
 //
-// Structural deviation: MoonBit's foreign-method rule keeps `Viewer::` glue
-// in this root package
-// and there is no DI/services collection to port, so the registry inverts
-// *dispatch and lifecycle* (who instantiates contributions, who routes
-// commands/keys) — not file placement. The `*_host.mbt` files stay here as
-// the contribution ctors this registry instantiates, preconditions are live
+// Structural deviation: contribution glue stays with the root-owned `Viewer`
+// state, and there is no DI/services collection to port, so the registry
+// inverts *dispatch and lifecycle* (who instantiates contributions, who routes
+// commands/keys) — not file placement. The `*_host.mbt` files stay here as the
+// contribution ctors this registry instantiates, preconditions are live
 // predicates over the `Viewer` instead of `ContextKeyExpression`s, and
 // registration happens in one initializer (`build_editor_registry`) because
 // MoonBit has no import-time side effects.

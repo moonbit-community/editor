@@ -47,14 +47,14 @@ pub fn GlobalPointerMoveMonitor::new() -> Self
 pub fn GlobalPointerMoveMonitor::start_monitoring(Self, @dom.Element, Int, Int, (@dom.MouseEvent) -> Unit, (@dom.Event?) -> Unit) -> Unit
 pub fn GlobalPointerMoveMonitor::stop_monitoring(Self, Bool, browser_event? : @dom.Event) -> Unit
 
-pub(all) struct StandardMouseEvent {
+pub struct StandardMouseEvent {
   browser_event : @dom.MouseEvent
   left_button : Bool
   middle_button : Bool
   right_button : Bool
   buttons : Int
   target : @dom.Element?
-  mut detail : Int
+  detail : Int
   posx : Double
   posy : Double
   ctrl_key : Bool

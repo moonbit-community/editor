@@ -1,6 +1,6 @@
 ///|
 /// Monaco-shaped language selector filter.
-pub(all) struct LanguageFilter {
+pub struct LanguageFilter {
   language : String?
   scheme : String?
   pattern : String?

@@ -68,7 +68,7 @@ pub(all) enum HoverContent {
   Markdown(String)
 } derive(Eq, @debug.Debug)
 
-pub(all) struct LanguageFilter {
+pub struct LanguageFilter {
   language : String?
   scheme : String?
   pattern : String?

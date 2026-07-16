@@ -222,7 +222,7 @@ pub fn[T] MicrotaskEmitter::event(Self[T], (T) -> Unit) -> Disposable
 pub fn[T] MicrotaskEmitter::fire(Self[T], T) -> Unit
 pub fn[T] MicrotaskEmitter::new(merge? : (Array[T]) -> T, schedule? : (() -> Unit) -> Unit) -> Self[T]
 
-pub(all) struct OffsetRange {
+pub struct OffsetRange {
   start : Int
   end_exclusive : Int
 } derive(Eq, @debug.Debug)

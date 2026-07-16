@@ -28,7 +28,7 @@ pub(open) trait Logger {
 
 ///|
 /// Logger sink that drops every entry.
-pub(all) struct NullLogger(Unit)
+pub struct NullLogger(Unit)
 
 ///|
 /// Creates a sink that ignores logs and flushes.
@@ -50,7 +50,7 @@ pub impl Logger for NullLogger with fn flush(_self) {
 
 ///|
 /// In-memory logger used by tests and harness-facing diagnostics.
-pub(all) struct MemoryLogger {
+pub struct MemoryLogger {
   entries : Array[LogEntry]
   flush_count : Ref[Int]
 }
@@ -87,7 +87,7 @@ pub impl Logger for MemoryLogger with fn flush(self) {
 
 ///|
 /// Logger sink that fans each entry and flush to multiple sinks.
-pub(all) struct MultiplexLogger {
+pub struct MultiplexLogger {
   loggers : Array[&Logger]
 }
 
@@ -116,7 +116,7 @@ pub impl Logger for MultiplexLogger with fn flush(self) {
 ///|
 /// Thresholded logging facade used by services that should not know the sink
 /// implementation.
-pub(all) struct LogService {
+pub struct LogService {
   level : LogLevel
   logger : &Logger
 }

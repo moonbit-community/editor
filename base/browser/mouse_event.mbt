@@ -19,14 +19,14 @@
 // nullable in the source.
 
 ///|
-pub(all) struct StandardMouseEvent {
+pub struct StandardMouseEvent {
   browser_event : @rdom.MouseEvent
   left_button : Bool
   middle_button : Bool
   right_button : Bool
   buttons : Int
   target : @rdom.Element?
-  mut detail : Int
+  detail : Int
   posx : Double
   posy : Double
   ctrl_key : Bool

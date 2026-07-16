@@ -14,7 +14,7 @@ pub(all) struct Position {
 /// of Monaco's `OffsetRange` (`core/ranges/offsetRange.ts`); field names use the
 /// repo's snake_case (`end_exclusive`). The name `Range` is reserved for
 /// Monaco's line/column range (see `monaco_range.mbt`).
-pub(all) struct OffsetRange {
+pub struct OffsetRange {
   start : Int
   end_exclusive : Int
 } derive(Eq, Debug)

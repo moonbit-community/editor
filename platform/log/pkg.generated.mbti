@@ -35,7 +35,7 @@ pub(all) enum LogLevel {
 pub fn LogLevel::is_warning_or_error(Self) -> Bool
 pub fn LogLevel::label(Self) -> String
 
-pub(all) struct LogService {
+pub struct LogService {
   level : LogLevel
   logger : &Logger
 }
@@ -49,7 +49,7 @@ pub fn LogService::new(level? : LogLevel, logger? : &Logger) -> Self
 pub fn LogService::trace(Self, String, String, details? : Array[(String, String)]) -> Unit
 pub fn LogService::warn(Self, String, String, details? : Array[(String, String)]) -> Unit
 
-pub(all) struct MemoryLogger {
+pub struct MemoryLogger {
   entries : Array[LogEntry]
   flush_count : @ref.Ref[Int]
 }
@@ -58,13 +58,13 @@ pub fn MemoryLogger::flush_count(Self) -> Int
 pub fn MemoryLogger::new() -> Self
 pub impl Logger for MemoryLogger
 
-pub(all) struct MultiplexLogger {
+pub struct MultiplexLogger {
   loggers : Array[&Logger]
 }
 pub fn MultiplexLogger::new(Array[&Logger]) -> Self
 pub impl Logger for MultiplexLogger
 
-pub(all) struct NullLogger(Unit)
+pub struct NullLogger(Unit)
 pub fn NullLogger::new() -> Self
 pub impl Logger for NullLogger
 

@@ -88,7 +88,7 @@ pub(open) trait LineTokenizer {
 /// Registration change notification, the ported subset of Monaco's
 /// `ITokenizationSupportChangedEvent`
 /// (`vscode/src/vs/editor/common/languages.ts:2503-2506`).
-pub(all) struct TokenizationChangedEvent {
+pub struct TokenizationChangedEvent {
   changed_languages : Array[String]
   changed_color_map : Bool
 }

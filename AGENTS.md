@@ -8,10 +8,11 @@
 - Commands and test-layer selection: `docs/harness.md`
 - Required checks and conformance-test rules: `docs/quality.md`
 - Style: `docs/styles.md`
-- Future cross-package plans: `docs/exec-plans/README.md`
+- Active cross-package plans and compressed history:
+  `docs/exec-plans/{README,HISTORY}.md`
 - Monaco/CodeMirror source maps: `docs/references/{monaco,codemirror}.md`
 
-Implemented execution plans are history, not current contracts.
+Completed execution plans are compressed history, not current contracts.
 
 ## Reference Ports
 

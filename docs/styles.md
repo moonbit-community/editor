@@ -6,8 +6,8 @@
   not narrate implementation history or restate signatures.
 - Put cross-package rules in `docs/architecture.md`, local contracts/checks in
   package READMEs, and future multi-package work in `docs/exec-plans/`.
-- Do not rewrite implemented plans after architecture changes; update current
-  docs or add a dated superseding plan/addendum.
+- After a plan lands, update current contracts and fold its historical record
+  into `docs/exec-plans/HISTORY.md`; Git retains the detailed artifact.
 - Exported contracts need prose. Private declarations need it only for a
   non-obvious invariant, algorithm, source mapping, coordinate/host boundary,
   freshness rule, or wire/DOM contract. Bare `///|` is only a separator.

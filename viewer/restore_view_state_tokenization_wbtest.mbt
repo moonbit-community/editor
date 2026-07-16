@@ -1,6 +1,6 @@
 // Stabilized-visible-range producer/oracle closure (STB-001..005).
 //
-// Pinned sources from docs/exec-plans/viewer-tokenization-parity.md:
+// Pinned Monaco source clusters:
 // - browser/widget/codeEditor/codeEditorWidget.ts:1074-1076
 //   sha256 18dd294ed185a29c590df75656f18f27d0cefc8d4d778559db946d447130e5d8
 // - browser/view.ts:673-679

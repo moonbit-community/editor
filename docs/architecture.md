@@ -8,8 +8,9 @@ host/backend:
   external import surface.
 
 For exact APIs use the owning package's `pkg.generated.mbti`; for exact
-dependencies use `moon.pkg`. Implemented files under `docs/exec-plans/` are
-historical evidence, not current architecture.
+dependencies use `moon.pkg`. Completed-plan summaries live in
+`docs/exec-plans/HISTORY.md`; they are historical evidence, not current
+architecture.
 
 Monaco/VS Code is the primary behavioral reference and a source of tested
 algorithmic and ownership patterns. It is not a required type, class, package,
@@ -166,11 +167,8 @@ Declared instantiation modes are retained for source parity, but all modes
 currently instantiate eagerly.
 
 This central ownership rule supersedes the feature-local instance tables from
-Track C of the implemented ownership-divergence closeout as of 2026-07-14.
-The reviewed inventory, representation decision, lifetime trace, and completed
-migration are recorded in
-`docs/exec-plans/editor-contribution-single-ownership.md`; the older implemented
-plan remains historical evidence rather than a current contract.
+the earlier ownership-divergence work. The completed migration is summarized in
+`docs/exec-plans/HISTORY.md`; full review artifacts remain in Git history.
 
 ## Reference Shell
 

@@ -162,5 +162,6 @@ Oracle: <revision>
 - [ ] relevant repository checks green
 ```
 
-Implemented plans under an older protocol remain immutable historical evidence;
-do not rewrite them solely to match this playbook.
+Completed plans under an older protocol may be compressed into `HISTORY.md`;
+their full text remains in Git history. Do not rewrite old work solely to make
+it resemble this playbook.

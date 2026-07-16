@@ -1,8 +1,7 @@
 # View-zone `afterLineNumber`: view-line vs Monaco's model-line resolution
 
-Status: known, intentional divergence (2026-06-29). Surfaced while landing
-Track A of `docs/exec-plans/monaco-arch-divergence-closeout.md` (the 1-based
-view-line-number rebase). Oracle: checked-in `vscode` submodule.
+Status: known, intentional divergence (2026-06-29). Surfaced during the
+1-based view-line-number rebase. Oracle: checked-in `vscode` submodule.
 
 ## The divergence
 

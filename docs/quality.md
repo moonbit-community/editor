@@ -1,8 +1,8 @@
 # Quality Gates
 
 Current docs and package READMEs are product contracts. Keep architecture here
-and in `docs/architecture.md`, package details in package READMEs, and history in
-implemented execution plans.
+and in `docs/architecture.md`, package details in package READMEs, and completed
+plan history in `docs/exec-plans/HISTORY.md`.
 
 ## Required Checks
 

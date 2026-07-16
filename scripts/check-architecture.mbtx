@@ -125,8 +125,7 @@ async fn check_viewer_rabbita_bindings(errors : Array[String]) -> Unit {
 }
 
 ///|
-/// Three-tier mirror target invariants (docs/exec-plans/viewer-directory-mirror.md,
-/// Increment A):
+/// Three-tier target invariants (see docs/architecture.md):
 ///   (1) every `viewer/browser/**` and `viewer/contrib/*/browser/**` package
 ///       declares `supported_targets = "js"`, and
 ///   (2) no `viewer/common/**` package declares js-only.
@@ -231,9 +230,8 @@ fn is_browser_tier(manifest : String) -> Bool {
 ///   - external-host stand-ins (`internal/shell/examples/**` and every other
 ///     product package — `web`, `app`, future hosts): only the root `viewer`
 ///     package and `viewer/common/**`. The root package is the `editor.api.ts`
-///     analog — there is no `export.mbt` facade (Decision D2-REVERSED,
-///     `docs/exec-plans/viewer-directory-mirror.md`); the package itself is
-///     the entry point — and it is js-only, so native/headless hosts (the
+///     analog — there is no `export.mbt` facade; the package itself is the
+///     entry point — and it is js-only, so native/headless hosts (the
 ///     shell server hosts) import `viewer/common/**` directly.
 ///     `internal/shell/examples/embedded_viewer` is the named proof that this
 ///     surface suffices for embedding.

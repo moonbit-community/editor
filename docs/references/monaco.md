@@ -16,8 +16,8 @@ product boundary and Monaco as the source to research before changing it.
 
 The upstream `common/model` tree, including its `model/tokens` subdirectory,
 maps to the single multi-target local `viewer/common/model` package. Member-level
-parity evidence remains in frozen execution plans and source citations. The
-tokenization merge used the checked-in `vscode` submodule.
+parity evidence remains in Git history and source citations. The tokenization
+merge used the checked-in `vscode` submodule.
 
 ## View model and inline decorations
 
@@ -26,15 +26,16 @@ The upstream `common/viewModel/inlineDecorations.ts`,
 files in the single multi-target local `viewer/common/view_model` package.
 The upstream `test/common/viewModel/inlineDecorations.test.ts` suite maps to
 `inline_decorations_reference_wbtest.mbt` in that package. The ownership
-merge and its 23-case conformance denominator use the checked-in `vscode` submodule; member-level dispositions and
-terminal product-reach deferrals live in the frozen execution-plan ledger.
+merge and its 23-case conformance denominator use the checked-in `vscode`
+submodule; member-level dispositions and terminal product-reach deferrals
+remain in Git history.
 
 ## Browser view and view parts
 
 The implemented units from upstream `browser/view.ts`, `browser/view/*.ts`,
 and `browser/viewParts/**/*.ts` map to focused files in the single js-only
-local `viewer/browser/view` package. Unsupported pinned view-part units retain
-their explicit `DEFERRED`/`N-A` rows in the execution-plan ledger:
+local `viewer/browser/view` package. Unsupported pinned view-part units keep
+their reviewed `DEFERRED`/`N-A` dispositions in Git history:
 
 - `browser/view.ts` maps to `view.mbt`;
 - shared view machinery maps to source-shaped units such as
@@ -66,11 +67,10 @@ constructs every row eagerly. Local quick diff is the per-Viewer reduction of
 the workbench controller plus decorator, not a port of
 `QuickDiffEditorController`.
 
-The ownership migration used the checked-in `vscode` submodule. Its frozen 567-row upstream
-ledger, 226-row local inventory, representation proof, exact lifetime trace,
-and seam-based lifecycle deviation live in the main
-`docs/exec-plans/editor-contribution-single-ownership.md` plan and its sibling
-`editor-contribution-single-ownership-gate-a*.md` artifacts.
+The ownership migration used the checked-in `vscode` submodule. Its frozen
+upstream/local ledgers, representation proof, lifetime trace, and seam-based
+deviation remain in Git history; the completed outcome is summarized in
+`docs/exec-plans/HISTORY.md`.
 
 ## Public editor API ownership
 
@@ -97,7 +97,7 @@ these local owners:
   `viewer/browser/testing` seam, while the embedded host uses the semantic
   model-change event plus a URI-guarded native animation frame.
 
-The boundary migration uses the checked-in `vscode` submodule. Its closed 210-row local public
-disposition ledger, 1,322-row upstream cluster ledger, dependency proof, and
-generated-interface snapshots live in
-`docs/exec-plans/viewer-public-editor-api-boundary-gate-a*.md`.
+The boundary migration uses the checked-in `vscode` submodule. Its closed local
+and upstream ledgers, dependency proof, and generated-interface snapshots
+remain in Git history; the completed outcome is summarized in
+`docs/exec-plans/HISTORY.md`.

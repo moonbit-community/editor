@@ -1,6 +1,6 @@
 ///| Port of `vscode/src/vs/base/common/uri.ts` (checked-in submodule): the `URI` class, percent encoder/decoder, and `uriToFsPath`.
 ///
-/// Deviations (see docs/exec-plans/monaco-uri-system-port.md):
+/// Reviewed deviations from the pinned Monaco implementation:
 /// - D3: the RFC3986 appendix-B regex and `_rEncodedAsHex` become hand-rolled
 ///   scanners with identical accept/capture semantics.
 /// - D4: JS `encodeURIComponent`/`decodeURIComponent` are reimplemented as

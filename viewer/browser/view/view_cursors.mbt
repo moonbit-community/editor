@@ -1,7 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewCursors/viewCursors.ts`
 // and `viewCursor.ts` (oracle checked-in source), reduced to the arms reachable in this
-// readonly single-cursor product — see the parity ledger in
-// `docs/exec-plans/monaco-view-cursors-current-line-port.md`:
+// readonly single-cursor product:
 //
 // - one primary cursor, no `CursorPlurality`/secondary cursors;
 // - `readOnly` is constant `true`, so `_getCursorBlinking`

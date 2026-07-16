@@ -237,7 +237,7 @@ fn ModelLineProjection::get_view_lines_data(
         data.projected_line,
       )
       let resolved_injection_options = resolve_injection_options(
-        injection_options,
+        injection_options[:],
       )
       let break_offsets = data.segments.map(segment => segment.end_offset)
       let wrapped_text_indent_length = if data.segments.length() > 1 {
@@ -563,7 +563,7 @@ fn injection_options_for_projected_line(
 /// Resolves the canonical model injection options consumed by the projection
 /// into the complete source fields used by the decoration computer.
 fn resolve_injection_options(
-  options : Array[@model.InjectedTextOptions],
+  options : ArrayView[@model.InjectedTextOptions],
 ) -> Array[ResolvedInjectedTextOptions] {
   options.map(option => {
     ResolvedInjectedTextOptions(

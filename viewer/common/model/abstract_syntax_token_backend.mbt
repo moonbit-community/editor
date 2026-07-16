@@ -39,8 +39,8 @@ fn AttachedViewState::equals(
     return true
   }
   if !line_range_arrays_equal(
-      self.visible_line_ranges,
-      other.visible_line_ranges,
+      self.visible_line_ranges[:],
+      other.visible_line_ranges[:],
     ) {
     return false
   }
@@ -204,8 +204,8 @@ fn AttachedViewHandler::line_ranges(
 fn AttachedViewHandler::update(self : AttachedViewHandler) -> Unit {
   if self.disposed ||
     line_range_arrays_equal(
-      self.computed_line_ranges,
-      self.requested_line_ranges,
+      self.computed_line_ranges[:],
+      self.requested_line_ranges[:],
     ) {
     return
   }
@@ -294,7 +294,7 @@ fn AbstractSyntaxTokenBackend::dispose(
 ///|
 /// Normalizes ranges in ascending order and joins touching intervals.
 fn join_line_ranges(
-  ranges : Array[@base_common.LineRange],
+  ranges : ArrayView[@base_common.LineRange],
 ) -> Array[@base_common.LineRange] {
   let set = @base_common.LineRangeSet()
   for range in ranges {
@@ -306,8 +306,8 @@ fn join_line_ranges(
 ///|
 /// Element equality without allocation.
 fn line_range_arrays_equal(
-  left : Array[@base_common.LineRange],
-  right : Array[@base_common.LineRange],
+  left : ArrayView[@base_common.LineRange],
+  right : ArrayView[@base_common.LineRange],
 ) -> Bool {
   if left.length() != right.length() {
     return false

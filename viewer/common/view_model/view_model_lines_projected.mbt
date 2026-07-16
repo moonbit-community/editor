@@ -235,7 +235,7 @@ pub fn ViewModelLinesFromProjectedModel::set_hidden_areas(
   ranges : Array[@base_common.Range],
 ) -> Bool {
   let validated_ranges = ranges.map(r => self.model.validate_range(r))
-  let new_ranges = normalize_line_ranges(validated_ranges)
+  let new_ranges = normalize_line_ranges(validated_ranges[:])
 
   // This checks if there really was a change
   let old_ranges = self.get_hidden_areas()
@@ -326,12 +326,12 @@ pub fn ViewModelLinesFromProjectedModel::model_position_is_visible(
 /// Sorts and merges touching/overlapping line ranges into whole-line ranges
 /// — `normalizeLineRanges` (`viewModelLines.ts:1024`).
 fn normalize_line_ranges(
-  ranges : Array[@base_common.Range],
+  ranges : ArrayView[@base_common.Range],
 ) -> Array[@base_common.Range] {
   if ranges.length() == 0 {
     return []
   }
-  let sorted_ranges = ranges.copy()
+  let sorted_ranges = ranges.to_owned()
   sorted_ranges.sort_by((a, b) => {
     @base_common.Range::compare_ranges_using_starts(a, b)
   })

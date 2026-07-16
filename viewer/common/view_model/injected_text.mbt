@@ -71,7 +71,7 @@ pub fn ProjectedTextLine::from_injected_text(
   line_text : String,
   injected_text : Array[InjectedText],
 ) -> ProjectedTextLine {
-  let normalized = normalize_injected_text(line_text, injected_text)
+  let normalized = normalize_injected_text(line_text, injected_text[:])
   if normalized.length() == 0 {
     return identity_projected_text_line(line_text)
   }
@@ -302,7 +302,7 @@ fn identity_projected_text_line(line_text : String) -> ProjectedTextLine {
 ///|
 fn normalize_injected_text(
   line_text : String,
-  injected_text : Array[InjectedText],
+  injected_text : ArrayView[InjectedText],
 ) -> Array[InjectedText] {
   let normalized : Array[InjectedText] = []
   for item in injected_text {

@@ -157,10 +157,10 @@ pub fn LineRangeSet::add_range(self : LineRangeSet, range : LineRange) -> Unit {
     return
   }
   let ranges = self.normalized_ranges
-  let join_range_start_idx = find_first_idx_monotonous_or_arr_len(ranges, r => {
+  let join_range_start_idx = find_first_idx_monotonous_or_arr_len(ranges[:], r => {
     r.end_line_number_exclusive >= range.start_line_number
   })
-  let join_range_end_idx_exclusive = find_last_idx_monotonous(ranges, r => {
+  let join_range_end_idx_exclusive = find_last_idx_monotonous(ranges[:], r => {
       r.start_line_number <= range.end_line_number_exclusive
     }) +
     1
@@ -185,7 +185,7 @@ pub fn LineRangeSet::add_range(self : LineRangeSet, range : LineRange) -> Unit {
 ///|
 pub fn LineRangeSet::contains(self : LineRangeSet, line_number : Int) -> Bool {
   match
-    find_last_monotonous(self.normalized_ranges, r => {
+    find_last_monotonous(self.normalized_ranges[:], r => {
       r.start_line_number <= line_number
     }) {
     Some(r) => r.end_line_number_exclusive > line_number
@@ -196,7 +196,7 @@ pub fn LineRangeSet::contains(self : LineRangeSet, line_number : Int) -> Bool {
 ///|
 pub fn LineRangeSet::intersects(self : LineRangeSet, range : LineRange) -> Bool {
   match
-    find_last_monotonous(self.normalized_ranges, r => {
+    find_last_monotonous(self.normalized_ranges[:], r => {
       r.start_line_number < range.end_line_number_exclusive
     }) {
     Some(r) => r.end_line_number_exclusive > range.start_line_number
@@ -277,7 +277,7 @@ pub fn LineRangeSet::to_string(self : LineRangeSet) -> String {
 
 ///|
 fn find_first_idx_monotonous_or_arr_len(
-  array : Array[LineRange],
+  array : ArrayView[LineRange],
   predicate : (LineRange) -> Bool,
 ) -> Int {
   let mut i = 0
@@ -295,7 +295,7 @@ fn find_first_idx_monotonous_or_arr_len(
 
 ///|
 fn find_last_idx_monotonous(
-  array : Array[LineRange],
+  array : ArrayView[LineRange],
   predicate : (LineRange) -> Bool,
 ) -> Int {
   let mut i = 0
@@ -313,7 +313,7 @@ fn find_last_idx_monotonous(
 
 ///|
 fn find_last_monotonous(
-  array : Array[LineRange],
+  array : ArrayView[LineRange],
   predicate : (LineRange) -> Bool,
 ) -> LineRange? {
   let idx = find_last_idx_monotonous(array, predicate)

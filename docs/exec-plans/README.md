@@ -1,7 +1,14 @@
 # Execution Plans
 
 This directory contains active plans only, plus the planning rules and a
-compressed historical index. As of 2026-07-16 there are no active plans.
+compressed historical index.
+
+Active plans:
+
+- `moonbit-native-api-visibility-and-internal-boundary-refactor.md`: use
+  current MoonBit language/tooling capabilities to tighten representation
+  visibility, canonicalize constructors, adopt selected `ArrayView` inputs,
+  and move implementation-only viewer packages below `internal/viewer`.
 
 Create a plan here for future work spanning packages or changing harness
 behavior. It must let another engineer execute the work without rediscovery and

@@ -1,7 +1,7 @@
 ///|
 /// Root-relative source path accepted from UI or protocol input after
 /// normalization rejects absolute paths, parent traversal, and NUL bytes.
-pub(all) struct SourcePath {
+pub struct SourcePath {
   value : String
 } derive(Eq, Debug)
 
@@ -23,7 +23,7 @@ pub fn SourceError::to_string(self : SourceError) -> String {
 
 ///|
 /// Result wrapper used instead of raising while normalizing source paths.
-pub(all) enum SourcePathResult {
+pub enum SourcePathResult {
   ParsedSourcePath(SourcePath)
   SourcePathError(SourceError)
 } derive(Eq, Debug)

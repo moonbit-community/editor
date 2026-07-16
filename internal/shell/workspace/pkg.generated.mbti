@@ -25,7 +25,7 @@ pub(all) enum DocumentChange {
   DocumentChangeFailed(uri~ : @common.Uri, error~ : DocumentError)
 } derive(@debug.Debug)
 
-pub(all) struct DocumentContent {
+pub struct DocumentContent {
   text : String
   display_name : String
   language_id : String
@@ -33,7 +33,7 @@ pub(all) struct DocumentContent {
 } derive(@debug.Debug)
 pub fn DocumentContent::DocumentContent(String, display_name? : String, language_id? : String, revision? : String) -> Self
 
-pub(all) struct DocumentError {
+pub struct DocumentError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @common.Uri?
@@ -51,7 +51,7 @@ pub(all) enum DocumentReadResult {
 } derive(@debug.Debug)
 pub impl ToJson for DocumentReadResult
 
-pub(all) struct DocumentSnapshot {
+pub struct DocumentSnapshot {
   uri : @common.Uri
   display_name : String
   language_id : String
@@ -90,7 +90,7 @@ pub(all) enum FileReadResult {
   FileReadError(FileSystemProviderError)
 } derive(@debug.Debug)
 
-pub(all) struct FileSystemProviderError {
+pub struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @common.Uri?
@@ -123,7 +123,7 @@ pub(all) enum SourceError {
 } derive(Eq, @debug.Debug)
 pub fn SourceError::to_string(Self) -> String
 
-pub(all) struct SourcePath {
+pub struct SourcePath {
   value : String
 } derive(Eq, @debug.Debug)
 pub fn SourcePath::display_name(Self) -> String
@@ -131,12 +131,12 @@ pub fn SourcePath::file_uri(Self) -> @common.Uri
 pub fn SourcePath::normalize_root_relative_path(String) -> SourcePathResult
 pub fn SourcePath::to_string(Self) -> String
 
-pub(all) enum SourcePathResult {
+pub enum SourcePathResult {
   ParsedSourcePath(SourcePath)
   SourcePathError(SourceError)
 } derive(Eq, @debug.Debug)
 
-pub(all) struct WatchOptions {
+pub struct WatchOptions {
   recursive : Bool
   excludes : Array[String]
 } derive(@debug.Debug)

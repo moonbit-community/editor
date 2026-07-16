@@ -33,7 +33,7 @@ pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
 /// Remote protocol error packet payload. `request_id` correlates failures to a
 /// request; `provider_code` preserves lower-level filesystem/provider
 /// categories.
-pub(all) struct ProtocolError {
+pub struct ProtocolError {
   code : ProtocolErrorCode
   message : String
   request_id : String
@@ -168,21 +168,21 @@ pub(all) enum ServerPacket {
 
 ///|
 /// Client-packet decode result that preserves structured protocol errors.
-pub(all) enum ClientPacketDecodeResult {
+pub enum ClientPacketDecodeResult {
   DecodedClientPacket(ClientPacket)
   ClientPacketDecodeError(ProtocolError)
 } derive(Debug)
 
 ///|
 /// Server-packet decode result that preserves structured protocol errors.
-pub(all) enum ServerPacketDecodeResult {
+pub enum ServerPacketDecodeResult {
   DecodedServerPacket(ServerPacket)
   ServerPacketDecodeError(ProtocolError)
 } derive(Debug)
 
 ///|
 /// Version-negotiation result used before opening a long-lived connection.
-pub(all) enum ProtocolNegotiation {
+pub enum ProtocolNegotiation {
   ProtocolAccepted(Int)
   ProtocolRejected(ProtocolError)
 } derive(Debug)

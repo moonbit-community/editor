@@ -14,7 +14,7 @@ pub(all) enum FileSystemProviderErrorCode {
 
 ///|
 /// File-provider failure with optional URI context.
-pub(all) struct FileSystemProviderError {
+pub struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @base_common.Uri?
@@ -22,7 +22,7 @@ pub(all) struct FileSystemProviderError {
 
 ///|
 /// Raw file text plus metadata needed to construct a `DocumentSnapshot`.
-pub(all) struct DocumentContent {
+pub struct DocumentContent {
   text : String
   display_name : String
   language_id : String
@@ -55,7 +55,7 @@ pub(all) struct FileChange {
 
 ///|
 /// Watch behavior requested from a provider.
-pub(all) struct WatchOptions {
+pub struct WatchOptions {
   recursive : Bool
   excludes : Array[String]
 } derive(Debug)

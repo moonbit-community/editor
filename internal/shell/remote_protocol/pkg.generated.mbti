@@ -32,7 +32,7 @@ pub(all) enum ClientPacket {
 } derive(@debug.Debug)
 pub impl ToJson for ClientPacket
 
-pub(all) enum ClientPacketDecodeResult {
+pub enum ClientPacketDecodeResult {
   DecodedClientPacket(ClientPacket)
   ClientPacketDecodeError(ProtocolError)
 } derive(@debug.Debug)
@@ -92,7 +92,7 @@ pub(all) struct HoverResultPayload {
   hover : @language.Hover?
 } derive(@debug.Debug)
 
-pub(all) struct ProtocolError {
+pub struct ProtocolError {
   code : ProtocolErrorCode
   message : String
   request_id : String
@@ -114,7 +114,7 @@ pub fn ProtocolErrorCode::from_string(String) -> Self
 pub fn ProtocolErrorCode::label(Self) -> String
 pub fn ProtocolErrorCode::to_string(Self) -> String
 
-pub(all) enum ProtocolNegotiation {
+pub enum ProtocolNegotiation {
   ProtocolAccepted(Int)
   ProtocolRejected(ProtocolError)
 } derive(@debug.Debug)
@@ -147,7 +147,7 @@ pub(all) enum ServerPacket {
 } derive(@debug.Debug)
 pub impl ToJson for ServerPacket
 
-pub(all) enum ServerPacketDecodeResult {
+pub enum ServerPacketDecodeResult {
   DecodedServerPacket(ServerPacket)
   ServerPacketDecodeError(ProtocolError)
 } derive(@debug.Debug)

@@ -1,6 +1,6 @@
 ///|
 /// Mutable result accumulator for MoonBit-authored browser tests.
-pub(all) struct BrowserTestContext {
+pub struct BrowserTestContext {
   suite : String
   failures : Array[String]
   metrics : Map[String, Json]

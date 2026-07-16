@@ -17,7 +17,7 @@ pub fn set_timeout(() -> Unit, Int) -> Unit
 // Errors
 
 // Types and methods
-pub(all) struct BrowserTestContext {
+pub struct BrowserTestContext {
   suite : String
   failures : Array[String]
   metrics : Map[String, Json]

@@ -1,6 +1,6 @@
 ///|
 /// Provider-owned immutable document content for one URI/revision.
-pub(all) struct DocumentSnapshot {
+pub struct DocumentSnapshot {
   uri : @base_common.Uri
   display_name : String
   language_id : String
@@ -11,7 +11,7 @@ pub(all) struct DocumentSnapshot {
 
 ///|
 /// Document-level failure with optional URI context.
-pub(all) struct DocumentError {
+pub struct DocumentError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @base_common.Uri?

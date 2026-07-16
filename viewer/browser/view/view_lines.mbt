@@ -185,7 +185,7 @@ fn ViewLines::ViewLines(
   let view_line_options_ref = Ref(initial_configuration.view_line_options)
   let line_factory = retained_view_line_factory(view_line_options_ref)
   {
-    dom_node: @scrollbar.CachedDomNode::new(dom_element),
+    dom_node: CachedDomNode(dom_element),
     lines_content,
     text_range_resting_spot: document.create_element("div"),
     // `RenderedLinesCollection` constructs through `_set(1, [])`.

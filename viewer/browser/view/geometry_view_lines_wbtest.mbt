@@ -15,10 +15,8 @@ fn geometry_view_lines(
   let last_rendered_data = LastRenderedData::LastRenderedData()
   last_rendered_data.set_current_visible_range(visible_range)
   {
-    dom_node: @scrollbar.CachedDomNode::new(view_line_fixture_context(fixture)),
-    lines_content: @scrollbar.CachedDomNode::new(
-      view_line_fixture_context(fixture),
-    ),
+    dom_node: CachedDomNode(view_line_fixture_context(fixture)),
+    lines_content: CachedDomNode(view_line_fixture_context(fixture)),
     text_range_resting_spot: view_line_fixture_end_node(fixture),
     window,
     lines,

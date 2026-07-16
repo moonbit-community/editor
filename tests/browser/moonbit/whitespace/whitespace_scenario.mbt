@@ -20,7 +20,7 @@ fn whitespace_source_text() -> String {
 
 ///|
 fn run_whitespace_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("whitespace")
+  let ctx = @support.BrowserTestContext("whitespace")
   let done = Ref(false)
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",

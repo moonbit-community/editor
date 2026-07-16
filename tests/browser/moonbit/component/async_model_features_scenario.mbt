@@ -293,7 +293,7 @@ fn run_async_model_features_test() -> Unit {
   languages.register_hover_provider(LanguageId("moonbit"), provider) |> ignore
   let log_service = @log.LogService()
   let log_handle = log_service.log_handle()
-  let services = @viewer.ViewerServices::new(
+  let services = @viewer.ViewerServices(
     languages=languages.language_handle(log_handle),
     log_service=log_handle,
   )

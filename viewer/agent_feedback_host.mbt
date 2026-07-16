@@ -480,7 +480,7 @@ fn Viewer::ensure_agent_feedback_input(
   match existing {
     Some(widget) => widget
     None => {
-      let widget = @agent_feedback_browser.AgentFeedbackInputWidget::new({
+      let widget = @agent_feedback_browser.AgentFeedbackInputWidget({
         on_add: () => self.add_agent_feedback_from_input(submit=false),
         on_add_and_submit: () => self.add_agent_feedback_from_input(submit=true),
         on_cancel: () => self.hide_agent_feedback_input(refocus_editor=true),

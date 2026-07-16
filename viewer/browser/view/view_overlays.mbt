@@ -122,7 +122,7 @@ fn ViewOverlayLine::set_dom_node(
   self : ViewOverlayLine,
   dom_node : @rdom.Element,
 ) -> Unit {
-  self.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+  self.dom_node = Some(CachedDomNode(dom_node))
 }
 
 ///|
@@ -195,7 +195,7 @@ fn ViewOverlays::ViewOverlays(
   dom_element.set_attribute("class", class_name)
   dom_element.set_attribute("data-view-part", class_name)
   {
-    dom_node: @scrollbar.CachedDomNode::new(dom_element),
+    dom_node: CachedDomNode(dom_element),
     dynamic_overlays: [],
     lines: [],
     window: { start: 0, end: 0 },

@@ -47,9 +47,7 @@ pub fn View::View(
   overflow_guard.set_attribute("data-view-part", "overflow-guard")
   // `View` constructs the sole scrolling rail before the scrollbar and view
   // lines because both retain this exact node (`view.ts:181-200`).
-  let lines_content = @scrollbar.CachedDomNode::new(
-    document.create_element("div"),
-  )
+  let lines_content = @scrollbar.CachedDomNode(document.create_element("div"))
   lines_content
   .element()
   .set_attribute("class", "lines-content moonbit-viewer-background")

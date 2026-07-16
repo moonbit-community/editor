@@ -173,7 +173,7 @@ fn prepare_scrollable_timeout_test(scrollable : ScrollableElementDom) -> Unit {
 ///|
 test "500ms hide timeout is cancellable and inert after disposal" {
   install_scrollable_timeout_test_browser()
-  let scrollable = ScrollableElementDom::new("content")
+  let scrollable = ScrollableElementDom("content")
   prepare_scrollable_timeout_test(scrollable)
 
   scrollable.reveal_for_scroll()
@@ -213,7 +213,7 @@ test "500ms hide timeout is cancellable and inert after disposal" {
 
   // Mouse-over and active-drag state disable hide scheduling. The ordinary
   // idle path still performs the 500ms fade when its current callback runs.
-  let guarded = ScrollableElementDom::new("guarded")
+  let guarded = ScrollableElementDom("guarded")
   prepare_scrollable_timeout_test(guarded)
   guarded.mouse_entered()
   guarded.reveal_for_scroll()

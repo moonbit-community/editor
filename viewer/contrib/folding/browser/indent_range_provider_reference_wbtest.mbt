@@ -430,7 +430,7 @@ test "Markers with stateful flags" {
 test "test max folding regions" {
   let lines : Array[String] = []
   let n_regions = MAX_FOLDING_REGIONS
-  let collector = RangesCollector::new({
+  let collector = RangesCollector({
     limit: () => MAX_FOLDING_REGIONS,
     update: (_computed, _limited) => (),
   })

@@ -1,6 +1,6 @@
 ///|
 test "folding decoration controls preserve mouseover always and never policies" {
-  let provider = FoldingDecorationProvider::new(folding_test_model(["line"]))
+  let provider = FoldingDecorationProvider(folding_test_model(["line"]))
 
   let mouseover = provider.get_decoration_option(false, false, false)
   assert_eq(

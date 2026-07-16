@@ -24,7 +24,7 @@ test "get_change_type mirrors quickDiff.ts:121" {
 
 ///|
 test "quick diff service stores, clears, and reports originals per resource" {
-  let service = QuickDiffService::new()
+  let service = QuickDiffService()
   let a = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -56,7 +56,7 @@ test "quick diff service stores, clears, and reports originals per resource" {
 
 ///|
 test "quick_diff_handle adapts the concrete baseline store" {
-  let service = QuickDiffService::new()
+  let service = QuickDiffService()
   let resource = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",

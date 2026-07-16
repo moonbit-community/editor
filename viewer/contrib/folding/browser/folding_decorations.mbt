@@ -166,7 +166,8 @@ pub struct FoldingDecorationProvider {
 }
 
 ///|
-pub fn FoldingDecorationProvider::new(
+#alias(new)
+pub fn FoldingDecorationProvider::FoldingDecorationProvider(
   model : @model.TextModel,
   owner_id? : Int = 0,
 ) -> FoldingDecorationProvider {

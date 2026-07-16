@@ -60,7 +60,7 @@ fn set_component_diagnostics(
 
 ///|
 fn run_viewer_api_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("viewer_api")
+  let ctx = @support.BrowserTestContext("viewer_api")
   assert_container_contract(ctx)
   let rendered_count = Ref(0)
   let rendered_line_count = Ref(0)
@@ -86,7 +86,7 @@ fn run_viewer_api_test() -> Unit {
       let log_handle = log_service.log_handle()
       let languages = @languages.Languages()
       let markers = @markers.MarkerService(schedule=component_queue_microtask)
-      let services = @viewer.ViewerServices::new(
+      let services = @viewer.ViewerServices(
         languages=languages.language_handle(log_handle),
         markers=MarkerStore(markers.marker_service_handle()),
         log_service=log_handle,

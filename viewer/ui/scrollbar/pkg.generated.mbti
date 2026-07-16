@@ -23,8 +23,9 @@ pub fn number_as_pixels(CssLength) -> String
 pub struct CachedDomNode {
   // private fields
 }
+#alias(new)
+pub fn CachedDomNode::CachedDomNode(@dom.Element) -> Self
 pub fn CachedDomNode::element(Self) -> @dom.Element
-pub fn CachedDomNode::new(@dom.Element) -> Self
 pub fn CachedDomNode::set_contain(Self, String) -> Unit
 pub fn CachedDomNode::set_height(Self, CssLength) -> Unit
 pub fn CachedDomNode::set_layer_hinting(Self, Bool) -> Unit
@@ -42,10 +43,11 @@ pub(all) enum CssLength {
 pub struct MouseWheelClassifier {
   // private fields
 }
+#alias(new)
+pub fn MouseWheelClassifier::MouseWheelClassifier() -> Self
 pub fn MouseWheelClassifier::accept(Self, Double, Double, Double) -> Unit
 pub fn MouseWheelClassifier::accept_standard_wheel_event(Self, StandardWheelEvent) -> Unit
 pub fn MouseWheelClassifier::is_physical_mouse_wheel(Self) -> Bool
-pub fn MouseWheelClassifier::new() -> Self
 
 pub struct ScrollableElementDom {
   wrapper : @dom.Element
@@ -71,6 +73,8 @@ pub struct ScrollableElementDom {
   mut hide_timeout : @common.Disposable?
   mut disposed : Bool
 }
+#alias(new)
+pub fn ScrollableElementDom::ScrollableElementDom(String, vertical_size? : Double, horizontal_size? : Double, content? : @dom.Element) -> Self
 pub fn ScrollableElementDom::desired_position_from_track(Self, vertical~ : Bool, @dom.MouseEvent) -> Double
 pub fn ScrollableElementDom::dispose(Self) -> Unit
 pub fn ScrollableElementDom::drag_ended(Self) -> Unit
@@ -80,7 +84,6 @@ pub fn ScrollableElementDom::mouse_left(Self) -> Unit
 pub fn ScrollableElementDom::native_page_delta(Self) -> Double
 pub fn ScrollableElementDom::native_scroll_by(Self, delta_left? : Double, delta_top? : Double) -> Unit
 pub fn ScrollableElementDom::native_scroll_to(Self, vertical~ : Bool, Double) -> Unit
-pub fn ScrollableElementDom::new(String, vertical_size? : Double, horizontal_size? : Double, content? : @dom.Element) -> Self
 pub fn ScrollableElementDom::reveal_for_scroll(Self) -> Unit
 pub fn ScrollableElementDom::set_slider_active(Self, vertical~ : Bool, Bool) -> Unit
 pub fn ScrollableElementDom::set_wrapper_class(Self, String) -> Unit
@@ -107,7 +110,8 @@ pub struct StandardWheelEvent {
   delta_x : Double
   delta_y : Double
 }
-pub fn StandardWheelEvent::new(@dom.WheelEvent) -> Self
+#alias(new)
+pub fn StandardWheelEvent::StandardWheelEvent(@dom.WheelEvent) -> Self
 
 // Type aliases
 

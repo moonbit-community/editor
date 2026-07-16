@@ -131,7 +131,8 @@ pub fn ContentHoverWidget::content_widget_handle(
 /// Builds the persistent widget DOM and its listeners (Monaco's constructor +
 /// `HoverWidget(fadeIn: true)`); starts hidden (`_setRenderedHover(undefined)`).
 /// The caller mounts it exactly once through the editor's content-widget seam.
-pub fn ContentHoverWidget::new(
+#alias(new)
+pub fn ContentHoverWidget::ContentHoverWidget(
   host : ContentHoverWidgetHost,
 ) -> ContentHoverWidget {
   let document = @rdom.document()
@@ -141,7 +142,7 @@ pub fn ContentHoverWidget::new(
   hover.set_attribute("class", "monaco-hover fade-in hidden")
   hover.set_attribute("role", "tooltip")
   hover.set_attribute("tabindex", "0")
-  let scrollable = @scrollbar.ScrollableElementDom::new("monaco-hover-content")
+  let scrollable = @scrollbar.ScrollableElementDom("monaco-hover-content")
   hover.append_child(scrollable.wrapper.as_node())
   wrapper.append_child(hover.as_node())
   let widget : ContentHoverWidget = {
@@ -478,7 +479,7 @@ fn ContentHoverWidget::handle_wheel(
   wheel : @rdom.WheelEvent,
 ) -> Unit {
   let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(
-    @scrollbar.StandardWheelEvent::new(wheel),
+    StandardWheelEvent(wheel),
     alt_key=wheel.get_alt_key(),
     shift_key=wheel.get_shift_key(),
   )

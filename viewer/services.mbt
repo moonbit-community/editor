@@ -26,7 +26,8 @@ pub struct ViewerServices {
 /// model registrations and host state. Omitting the Viewer constructor's
 /// `services` argument creates the same shape internally and transfers only
 /// that internal bundle's lifetime to the Viewer.
-pub fn ViewerServices::new(
+#alias(new)
+pub fn ViewerServices::ViewerServices(
   languages? : @languages.LanguageHandle,
   markers? : @markers.MarkerDecorationsSource,
   agent_feedback? : @agent_feedback_api.AgentFeedbackHandle,
@@ -61,13 +62,13 @@ pub fn ViewerServices::new(
   let (agent_feedback, owned_agent_feedback) = match agent_feedback {
     Some(handle) => (handle, None)
     None => {
-      let service = @agent_feedback.AgentFeedbackService::new()
+      let service = @agent_feedback.AgentFeedbackService()
       (service.agent_feedback_handle(), Some(service))
     }
   }
   let quick_diff = match quick_diff {
     Some(handle) => handle
-    None => @quick_diff.QuickDiffService::new().quick_diff_handle()
+    None => @quick_diff.QuickDiffService().quick_diff_handle()
   }
   {
     languages,

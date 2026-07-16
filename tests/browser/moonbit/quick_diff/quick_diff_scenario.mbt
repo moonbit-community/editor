@@ -27,7 +27,7 @@ fn quick_diff_fixture_model() -> @model.TextModel {
 
 ///|
 fn run_quick_diff_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("quick_diff")
+  let ctx = @support.BrowserTestContext("quick_diff")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")
@@ -45,8 +45,8 @@ fn run_quick_diff_test() -> Unit {
   app.append_child(shell.as_node())
   // Keep the host-owned baseline store concrete; Viewer receives only the
   // callback capability and never owns or disposes this page-lifetime store.
-  let quick_diff = @quick_diff_service.QuickDiffService::new()
-  let services = @viewer.ViewerServices::new(
+  let quick_diff = @quick_diff_service.QuickDiffService()
+  let services = @viewer.ViewerServices(
     quick_diff=quick_diff.quick_diff_handle(),
   )
   let model = quick_diff_fixture_model()

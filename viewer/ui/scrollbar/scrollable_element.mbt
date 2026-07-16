@@ -52,7 +52,8 @@ let default_scrollbar_size = 10.0
 let scrollbar_hide_timeout_ms = 500
 
 ///|
-pub fn ScrollableElementDom::new(
+#alias(new)
+pub fn ScrollableElementDom::ScrollableElementDom(
   content_class : String,
   vertical_size? : Double = default_scrollbar_size,
   horizontal_size? : Double = default_scrollbar_size,

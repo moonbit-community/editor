@@ -104,7 +104,7 @@ fn compile_external_viewer_api_contract(
   let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
-  let services = @viewer.ViewerServices::new(
+  let services = @viewer.ViewerServices(
     languages=languages.language_handle(log_service.log_handle()),
     markers=Decorations(marker_decorations.marker_decorations_handle()),
     agent_feedback=contract_feedback_handle(),

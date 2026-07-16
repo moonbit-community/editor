@@ -108,7 +108,7 @@ test "computeDistanceFromPointToRectangle: inside, beside, and off a corner" {
 ///|
 test "isMouseGettingCloser: first call seeds the reference then tracks the running minimum" {
   // Rectangle x[100,150], y[100,150].
-  let state = MouseCloserState::new()
+  let state = MouseCloserState()
   // First move seeds the reference point and reports false (no closeness yet).
   assert_false(
     state.is_mouse_getting_closer(200.0, 125.0, 100.0, 100.0, 50.0, 50.0),

@@ -58,7 +58,8 @@ pub struct AgentFeedbackInputWidget {
 }
 
 ///|
-pub fn AgentFeedbackInputWidget::new(
+#alias(new)
+pub fn AgentFeedbackInputWidget::AgentFeedbackInputWidget(
   host : AgentFeedbackInputWidgetHost,
 ) -> AgentFeedbackInputWidget {
   let document = @rdom.document()

@@ -5,7 +5,7 @@ fn run_render_perf_test() -> Unit {
     @lang_moonbit.MoonbitTokenizer(),
   )
   |> ignore
-  let ctx = @support.BrowserTestContext::new("viewer_render_perf")
+  let ctx = @support.BrowserTestContext("viewer_render_perf")
   let done = Ref(false)
   let sample_index = Ref(-1)
   let sample_start = Ref(0.0)

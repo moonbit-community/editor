@@ -138,7 +138,8 @@ pub struct EditorDomMouseEvent {
 }
 
 ///|
-pub fn EditorDomMouseEvent::new(
+#alias(new)
+pub fn EditorDomMouseEvent::EditorDomMouseEvent(
   e : @rdom.MouseEvent,
   is_from_pointer_capture : Bool,
   editor_view_dom_node : @rdom.Element,
@@ -236,7 +237,8 @@ pub struct EditorMouseEventFactory {
 }
 
 ///|
-pub fn EditorMouseEventFactory::new(
+#alias(new)
+pub fn EditorMouseEventFactory::EditorMouseEventFactory(
   editor_view_dom_node : @rdom.Element,
 ) -> EditorMouseEventFactory {
   { editor_view_dom_node, }
@@ -252,9 +254,7 @@ fn EditorMouseEventFactory::listen(
   let handler = (event : @rdom.Event) => {
     match event.to_mouse_event() {
       Some(mouse) =>
-        callback(
-          EditorDomMouseEvent::new(mouse, false, self.editor_view_dom_node),
-        )
+        callback(EditorDomMouseEvent(mouse, false, self.editor_view_dom_node))
       None => ()
     }
   }
@@ -296,7 +296,7 @@ pub fn EditorMouseEventFactory::on_pointer_down(
     match event.to_mouse_event() {
       Some(mouse) =>
         callback(
-          EditorDomMouseEvent::new(mouse, false, self.editor_view_dom_node),
+          EditorDomMouseEvent(mouse, false, self.editor_view_dom_node),
           @base_browser.mouse_event_pointer_id(mouse),
         )
       None => ()
@@ -338,7 +338,8 @@ pub struct GlobalEditorPointerMoveMonitor {
 }
 
 ///|
-pub fn GlobalEditorPointerMoveMonitor::new(
+#alias(new)
+pub fn GlobalEditorPointerMoveMonitor::GlobalEditorPointerMoveMonitor(
   editor_view_dom_node : @rdom.Element,
 ) -> GlobalEditorPointerMoveMonitor {
   {
@@ -410,7 +411,7 @@ pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
     initial_buttons,
     e => {
       pointer_move_callback(
-        EditorDomMouseEvent::new(e, true, self.editor_view_dom_node),
+        EditorDomMouseEvent(e, true, self.editor_view_dom_node),
       )
     },
     e => {

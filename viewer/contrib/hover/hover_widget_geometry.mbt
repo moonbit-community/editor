@@ -106,7 +106,8 @@ pub struct MouseCloserState {
 }
 
 ///|
-pub fn MouseCloserState::new() -> MouseCloserState {
+#alias(new)
+pub fn MouseCloserState::MouseCloserState() -> MouseCloserState {
   { initial_pos_x: None, initial_pos_y: None, closest_distance: None }
 }
 

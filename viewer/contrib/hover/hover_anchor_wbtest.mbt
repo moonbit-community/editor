@@ -20,7 +20,7 @@ fn range_anchor(
 }
 
 ///|
-let test_foreign_owner : HoverParticipantOwner = HoverParticipantOwner::new()
+let test_foreign_owner : HoverParticipantOwner = HoverParticipantOwner()
 
 ///|
 fn foreign_anchor(
@@ -48,7 +48,7 @@ test "anchor equals: range anchors compare ranges, foreign anchors compare owner
   assert_false(hover_anchor_equals(range_anchor(1, 4, 4), foreign_anchor(0)))
   // Payload/range do not participate when the explicit owner is the same.
   assert_true(hover_anchor_equals(foreign_anchor(0), foreign_anchor(3)))
-  let other_owner = HoverParticipantOwner::new()
+  let other_owner = HoverParticipantOwner()
   assert_false(
     hover_anchor_equals(foreign_anchor(0), foreign_anchor(0, owner=other_owner)),
   )
@@ -78,7 +78,7 @@ test "range and foreign anchor constructors retain every source field" {
     _ => fail("expected range anchor")
   }
 
-  let owner = HoverParticipantOwner::new()
+  let owner = HoverParticipantOwner()
   let foreign : HoverAnchor = HoverForeignElementAnchor(
     priority=10,
     owner~,
@@ -125,7 +125,7 @@ test "anchor canAdoptVisibleHover is type-gated" {
   assert_false(
     hover_anchor_can_adopt(
       foreign_anchor(1),
-      foreign_anchor(0, owner=HoverParticipantOwner::new()),
+      foreign_anchor(0, owner=HoverParticipantOwner()),
     ),
   )
   assert_false(hover_anchor_can_adopt(foreign_anchor(1), range_anchor(1, 4, 4)))
@@ -143,7 +143,7 @@ test "range adoption uses shown position while foreign adoption ignores it" {
   )
   assert_false(
     hover_anchor_can_adopt_at(
-      foreign_anchor(3, owner=HoverParticipantOwner::new()),
+      foreign_anchor(3, owner=HoverParticipantOwner()),
       foreign,
       Position(1, 1),
     ),
@@ -195,7 +195,7 @@ test "marker participant filters by anchor-line columns with the showIfCollapsed
       tags: None,
     },
   ])
-  let participant = MarkerHoverParticipant::new(
+  let participant = MarkerHoverParticipant(
     marker_decorations.marker_decorations_handle(),
   ).hover_participant_handle()
   let compute = (anchor : HoverAnchor) => {
@@ -280,7 +280,7 @@ test "marker participant isolates distinct live models sharing one URI" {
   )
   let lease_a = marker_decorations.acquire_model(model_a)
   let lease_b = marker_decorations.acquire_model(model_b)
-  let participant = MarkerHoverParticipant::new(
+  let participant = MarkerHoverParticipant(
     marker_decorations.marker_decorations_handle(),
   ).hover_participant_handle()
 

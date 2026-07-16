@@ -113,7 +113,8 @@ pub struct HoverOperationOptions {
 
 ///|
 /// Builds one immutable operation-options snapshot with source defaults.
-pub fn HoverOperationOptions::new(
+#alias(new)
+pub fn HoverOperationOptions::HoverOperationOptions(
   anchor : HoverAnchor,
   should_focus? : Bool = false,
   source? : HoverStartSource = HoverStartMouse,
@@ -339,7 +340,10 @@ pub struct HoverDebouncer {
 ///|
 /// Creates an idle latest-options debouncer with a caller-selected fallback
 /// delay. Browser timer ownership remains outside this pure value.
-pub fn HoverDebouncer::new(default_delay_ms? : Int = 0) -> HoverDebouncer {
+#alias(new)
+pub fn HoverDebouncer::HoverDebouncer(
+  default_delay_ms? : Int = 0,
+) -> HoverDebouncer {
   {
     default_delay_ms,
     generation: 0,
@@ -617,7 +621,7 @@ pub fn HoverController::start_hover_operation_if_necessary(
     None => ()
   }
   let token = self.operation.token + 1
-  let options = HoverOperationOptions::new(
+  let options = HoverOperationOptions(
     anchor,
     should_focus~,
     source~,

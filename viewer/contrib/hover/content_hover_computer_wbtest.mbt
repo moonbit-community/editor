@@ -39,7 +39,7 @@ async test "content hover computer separates sync markers from async markdown" {
     languages: languages.language_handle(@log.LogService().log_handle()),
     marker_decorations: marker_decorations.marker_decorations_handle(),
   }
-  let computer = ContentHoverComputer::new(services)
+  let computer = ContentHoverComputer(services)
   let anchor : HoverAnchor = HoverRangeAnchor(
     priority=0,
     range=Range(2, 3, 2, 8),
@@ -127,7 +127,7 @@ async test "caller cancellation token reaches the language provider unchanged" {
     seen_token,
   })
   |> ignore
-  let computer = ContentHoverComputer::new(
+  let computer = ContentHoverComputer(
     computer_services_with_languages(languages),
   )
   let model = computer_test_model()
@@ -162,7 +162,7 @@ async test "pre-canceled async computation never launches a participant provider
     seen_token,
   })
   |> ignore
-  let computer = ContentHoverComputer::new(
+  let computer = ContentHoverComputer(
     computer_services_with_languages(languages),
   )
   let model = computer_test_model()
@@ -243,7 +243,7 @@ test "line-decoration selector covers whole strict relaxed and crossing ranges" 
   assert_eq(hover_line_decorations(model, invalid).length(), 0)
   let unsupported_foreign = HoverForeignElementAnchor(
     priority=10,
-    owner=HoverParticipantOwner::new(),
+    owner=HoverParticipantOwner(),
     injected_text_index=0,
     range=Range(2, 3, 2, 3),
     initial_mouse_pos_x=None,
@@ -615,7 +615,7 @@ async test "async-each drops later completions after generation guard changes" {
 
 ///|
 test "registry get_all aliases backing factories and build_all sorts ordinals" {
-  let registry = HoverParticipantRegistry::new()
+  let registry = HoverParticipantRegistry()
   let backing = registry.get_all()
   registry.register(_services => controlled_participant(30, "thirty"))
   assert_eq(backing.length(), 1)
@@ -647,12 +647,12 @@ test "registry get_all aliases backing factories and build_all sorts ordinals" {
 test "participant loading-message contract is explicit" {
   let services = computer_services_with_languages(Languages())
   let anchor = async_test_anchor()
-  let markdown = MarkdownHoverParticipant::new(services.languages).hover_participant_handle()
+  let markdown = MarkdownHoverParticipant(services.languages).hover_participant_handle()
   guard markdown.create_loading_message is Some(markdown_loading_message) else {
     fail("expected markdown loading-message callback")
   }
   assert_true(markdown_loading_message(anchor) is Some(LoadingHover(_)))
-  let marker = MarkerHoverParticipant::new(services.marker_decorations).hover_participant_handle()
+  let marker = MarkerHoverParticipant(services.marker_decorations).hover_participant_handle()
   assert_true(marker.create_loading_message is None)
 
   let absent : ContentHoverComputer = { participants: [] }

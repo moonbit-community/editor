@@ -77,17 +77,15 @@ pub struct FoldingModel {
 }
 
 ///|
-pub fn FoldingModel::new(
+#alias(new)
+pub fn FoldingModel::FoldingModel(
   text_model : @model.TextModel,
   decoration_access : FoldingDecorationAccess,
 ) -> FoldingModel {
   {
     text_model,
     decoration_access,
-    regions: FoldingRegions::new(
-      FixedArray::make(0, 0U),
-      FixedArray::make(0, 0U),
-    ),
+    regions: FoldingRegions(FixedArray::make(0, 0U), FixedArray::make(0, 0U)),
     editor_decoration_ids: [],
     update_event_emitter: Emitter(),
   }

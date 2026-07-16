@@ -193,7 +193,7 @@ fn operation_options(
   start : Int,
   source? : HoverStartSource = HoverStartMouse,
 ) -> HoverOperationOptions {
-  HoverOperationOptions::new(
+  HoverOperationOptions(
     HoverRangeAnchor(
       priority=0,
       range=Range(1, start, 1, start),
@@ -366,8 +366,8 @@ test "operation result snapshots wait, complete, and loading facts" {
 
 ///|
 test "pure debouncer retains latest options and rejects stale or canceled runs" {
-  assert_eq(HoverDebouncer::new().default_delay_ms, 0)
-  let initial = HoverDebouncer::new(default_delay_ms=25)
+  assert_eq(HoverDebouncer().default_delay_ms, 0)
+  let initial = HoverDebouncer(default_delay_ms=25)
   assert_eq(initial.default_delay_ms, 25)
   let first_options = operation_options(3)
   let (first_generation, first) = initial.schedule(first_options)

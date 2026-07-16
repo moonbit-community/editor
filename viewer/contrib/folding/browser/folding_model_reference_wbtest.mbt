@@ -221,7 +221,7 @@ fn test_folding_model(
   markers? : @languages.FoldingMarkers,
 ) -> FoldingModel {
   let text_model = folding_test_model(lines)
-  let folding_model = FoldingModel::new(
+  let folding_model = FoldingModel(
     text_model,
     TestDecorationProvider::{ model: text_model }.access(),
   )
@@ -256,7 +256,7 @@ test "collapse" {
     "/**", " * Comment", " */", "class A {", "  void foo() {", "    // comment {",
     "  }", "}",
   ])
-  let folding_model = FoldingModel::new(
+  let folding_model = FoldingModel(
     text_model,
     TestDecorationProvider::{ model: text_model }.access(),
   )
@@ -666,7 +666,7 @@ test "folding decoration" {
     "}",
   ])
   let provider = TestDecorationProvider::{ model: text_model }
-  let folding_model = FoldingModel::new(text_model, provider.access())
+  let folding_model = FoldingModel(text_model, provider.access())
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)
   let r1 = (1, 6, false)

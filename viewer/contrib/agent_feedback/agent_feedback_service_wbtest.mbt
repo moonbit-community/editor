@@ -26,7 +26,7 @@ fn feedback_at(
 
 ///|
 test "add_feedback stores an accepted item and fires change + add events" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let mut change_count = 0
   let mut changed_items = ""
@@ -57,7 +57,7 @@ test "add_feedback stores an accepted item and fires change + add events" {
 
 ///|
 test "created items skip the add event until accepted" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let mut added = ""
   service.on_did_add_feedback(event => added = event.feedback.id) |> ignore
@@ -79,7 +79,7 @@ test "created items skip the add event until accepted" {
 
 ///|
 test "update, reply, and resolve replace the stored item and fire events" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let item = service.add_feedback(resource, Range(4, 1, 4, 8), "typo")
   service.update_feedback(resource, item.id, "typo here")
@@ -97,7 +97,7 @@ test "update, reply, and resolve replace the stored item and fire events" {
 
 ///|
 test "remove_feedback drops the item and a navigation anchor pointing at it" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let item = service.add_feedback(resource, Range(4, 1, 4, 8), "typo")
   let keep = service.add_feedback(resource, Range(9, 1, 9, 8), "keep")
@@ -119,7 +119,7 @@ test "remove_feedback drops the item and a navigation anchor pointing at it" {
 
 ///|
 test "mark_feedback_submitted transitions accepted items and reports counts" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let mut submitted_ids = ""
   let mut user_count = -1
@@ -161,7 +161,7 @@ test "mark_feedback_submitted transitions accepted items and reports counts" {
 
 ///|
 test "set_feedback_items replaces the store and clear_feedback empties it" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   service.add_feedback(resource, Range(1, 1, 1, 1), "old") |> ignore
   let mut change_count = 0
@@ -182,7 +182,7 @@ test "set_feedback_items replaces the store and clear_feedback empties it" {
 
 ///|
 test "get_next_navigable_item steps with wrap-around and re-anchors" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   let ids = ["c1", "c2", "c3"]
   // No anchor: next starts at the first item.
@@ -217,7 +217,7 @@ test "get_next_navigable_item steps with wrap-around and re-anchors" {
 
 ///|
 test "prev with no anchor anchors on the first item then steps back" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/a.mbt")
   // Upstream pins a missing anchor to index 0 for backward navigation, so
   // the first "previous" lands on the last item.
@@ -229,7 +229,7 @@ test "prev with no anchor anchors on the first item then steps back" {
 
 ///|
 test "agent_feedback_handle adapts the concrete service and preserves defaults" {
-  let service = AgentFeedbackService::new()
+  let service = AgentFeedbackService()
   let resource = uri("memory://session/handle.mbt")
   let handle = service.agent_feedback_handle()
   let mut change_count = 0

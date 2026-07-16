@@ -32,7 +32,7 @@ fn set_value_document(marker : String, last_line? : String) -> String {
 
 ///|
 fn run_set_value_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("set_value")
+  let ctx = @support.BrowserTestContext("set_value")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")
@@ -45,8 +45,8 @@ fn run_set_value_test() -> Unit {
   app.append_child(host.as_node())
   // The page owns the mutable baseline store. The Viewer bundle receives a
   // borrowed handle and remains live with the fixture until document teardown.
-  let quick_diff = @quick_diff.QuickDiffService::new()
-  let services = @viewer.ViewerServices::new(
+  let quick_diff = @quick_diff.QuickDiffService()
+  let services = @viewer.ViewerServices(
     quick_diff=quick_diff.quick_diff_handle(),
   )
   let original = set_value_document("alpha_document_marker")

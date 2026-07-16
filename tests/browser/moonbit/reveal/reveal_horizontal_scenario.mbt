@@ -7,7 +7,7 @@
 
 ///|
 fn run_reveal_horizontal_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("reveal_horizontal")
+  let ctx = @support.BrowserTestContext("reveal_horizontal")
   let last_scroll_left = Ref(0.0)
   let last_scroll_top = Ref(0.0)
   let done = Ref(false)

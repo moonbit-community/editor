@@ -27,7 +27,8 @@ pub struct IndentRangeProvider {
 }
 
 ///|
-pub fn IndentRangeProvider::new(
+#alias(new)
+pub fn IndentRangeProvider::IndentRangeProvider(
   editor_model : @model.TextModel,
   language_configuration_service : @languages.LanguageHandle,
   folding_ranges_limit : FoldingLimitReporter,
@@ -88,7 +89,8 @@ pub struct RangesCollector {
 }
 
 ///|
-pub fn RangesCollector::new(
+#alias(new)
+pub fn RangesCollector::RangesCollector(
   folding_ranges_limit : FoldingLimitReporter,
 ) -> RangesCollector {
   {
@@ -143,7 +145,7 @@ pub fn RangesCollector::to_indent_ranges(
       start_indexes[k] = self.start_indexes[i].reinterpret_as_uint()
       end_indexes[k] = self.end_indexes[i].reinterpret_as_uint()
     }
-    FoldingRegions::new(start_indexes, end_indexes)
+    FoldingRegions(start_indexes, end_indexes)
   } else {
     (self.folding_ranges_limit.update)(self.length, Some(limit))
     let mut entries = 0
@@ -182,7 +184,7 @@ pub fn RangesCollector::to_indent_ranges(
         k += 1
       }
     }
-    FoldingRegions::new(start_indexes, end_indexes)
+    FoldingRegions(start_indexes, end_indexes)
   }
 }
 
@@ -220,7 +222,7 @@ pub fn compute_ranges(
   folding_ranges_limit? : FoldingLimitReporter = folding_ranges_limit_default,
   tab_size? : Int = 4,
 ) -> FoldingRegions {
-  let result = RangesCollector::new(folding_ranges_limit)
+  let result = RangesCollector(folding_ranges_limit)
   let previous_regions : Array[PreviousRegion] = []
   let line_count = model.snapshot.line_count()
   // sentinel, to make sure there's at least one entry

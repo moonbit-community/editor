@@ -57,7 +57,7 @@ fn view_zones_source() -> String {
 
 ///|
 fn run_view_zones_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("view_zones")
+  let ctx = @support.BrowserTestContext("view_zones")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")
@@ -89,9 +89,7 @@ fn run_view_zones_test() -> Unit {
   )
   let memory = @log.MemoryLogger()
   let log_service = @log.LogService(level=Trace, logger=memory)
-  let services = @viewer.ViewerServices::new(
-    log_service=log_service.log_handle(),
-  )
+  let services = @viewer.ViewerServices(log_service=log_service.log_handle())
   let viewer = @viewer.Viewer::create(host, services~)
   let public_zone_events = Ref(0)
   let public_mouse_events = Ref(0)

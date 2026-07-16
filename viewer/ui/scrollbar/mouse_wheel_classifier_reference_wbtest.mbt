@@ -9,7 +9,7 @@ fn run_classifier_trace(
   expected_physical : Bool,
   skip_first? : Bool = false,
 ) -> Unit raise {
-  let classifier = MouseWheelClassifier::new()
+  let classifier = MouseWheelClassifier()
   let trace = load_classifier_trace(label)
   assert_true(trace.length() > 0)
   for index, event in trace {

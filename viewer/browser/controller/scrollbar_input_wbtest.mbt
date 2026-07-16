@@ -222,7 +222,7 @@ fn scrollbar_input_test_handler(
   hover_scrollable : @scrollbar.ScrollableElementDom,
 ) -> MouseHandler {
   let root = scrollbar_input_test_element()
-  MouseHandler::new({
+  MouseHandler({
     view_dom_node: root,
     lines_content_dom_node: scrollbar_input_test_element(),
     view_lines_dom_node: scrollbar_input_test_element(),
@@ -273,8 +273,8 @@ fn prepare_scrollbar_input_test_scrollable(
 ///|
 test "AbstractScrollbar gesture owns listeners, drag state, and reset branches" {
   install_scrollbar_input_test_browser()
-  let editor_scrollable = @scrollbar.ScrollableElementDom::new("editor")
-  let hover_scrollable = @scrollbar.ScrollableElementDom::new("hover")
+  let editor_scrollable = @scrollbar.ScrollableElementDom("editor")
+  let hover_scrollable = @scrollbar.ScrollableElementDom("hover")
   prepare_scrollbar_input_test_scrollable(editor_scrollable, 0.0)
   prepare_scrollbar_input_test_scrollable(hover_scrollable, 200.0)
   let handler = scrollbar_input_test_handler(
@@ -426,8 +426,8 @@ test "AbstractScrollbar gesture owns listeners, drag state, and reset branches" 
 test "DragScrolling disposal cancels and disables its pending animation frame" {
   install_scrollbar_input_test_browser()
   let root = scrollbar_input_test_element()
-  let editor_scrollable = @scrollbar.ScrollableElementDom::new("editor")
-  let hover_scrollable = @scrollbar.ScrollableElementDom::new("hover")
+  let editor_scrollable = @scrollbar.ScrollableElementDom("editor")
+  let hover_scrollable = @scrollbar.ScrollableElementDom("hover")
   let helper : PointerHandlerHelper = {
     view_dom_node: root,
     lines_content_dom_node: scrollbar_input_test_element(),
@@ -455,9 +455,9 @@ test "DragScrolling disposal cancels and disables its pending animation frame" {
     view_layout: () => None,
     schedule_render: () => (),
   }
-  let factory = MouseTargetFactory::new(helper)
+  let factory = MouseTargetFactory(helper)
   let mouse = scrollbar_input_test_non_element_mouse(0, 1, 77)
-  let editor_event = @editor_browser.EditorDomMouseEvent::new(mouse, true, root)
+  let editor_event = @editor_browser.EditorDomMouseEvent(mouse, true, root)
   let operation = DragScrollingOperation::new(
     TopBottom,
     helper,

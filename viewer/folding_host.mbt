@@ -34,7 +34,7 @@ fn Viewer::folding_on_model_changed(self : Viewer) -> Unit {
   controller.clear_local()
   let options = self.get_options()
   guard options.folding && self.get_model() is Some(model) else { return }
-  let decoration_provider = @folding_browser.FoldingDecorationProvider::new(
+  let decoration_provider = @folding_browser.FoldingDecorationProvider(
     model,
     owner_id=self.editor_id,
   )
@@ -43,12 +43,12 @@ fn Viewer::folding_on_model_changed(self : Viewer) -> Unit {
     show_folding_highlights=options.folding_highlight,
   )
   controller.folding_decoration_provider = Some(decoration_provider)
-  let folding_model = @folding_browser.FoldingModel::new(
+  let folding_model = @folding_browser.FoldingModel(
     model,
     decoration_provider.access(),
   )
   controller.folding_model = Some(folding_model)
-  let hidden_range_model = @folding_browser.HiddenRangeModel::new(folding_model)
+  let hidden_range_model = @folding_browser.HiddenRangeModel(folding_model)
   controller.hidden_range_model = Some(hidden_range_model)
   controller.local_to_dispose.push(
     hidden_range_model.on_did_change(hidden_ranges => {
@@ -101,7 +101,7 @@ fn Viewer::folding_range_provider(
   match controller.range_provider {
     Some(provider) => provider
     None => {
-      let indent_range_provider = @folding_browser.IndentRangeProvider::new(
+      let indent_range_provider = @folding_browser.IndentRangeProvider(
         editor_model,
         self.services.languages,
         {

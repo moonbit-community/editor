@@ -36,6 +36,8 @@ pub struct HitTestContext {
   last_render_data : PointerHandlerLastRenderData
   // private fields
 }
+#alias(new)
+pub fn HitTestContext::HitTestContext(@view_model.ViewModel, PointerHandlerHelper, PointerHandlerLastRenderData) -> Self
 pub fn HitTestContext::find_attribute(Self, @dom.Element, String) -> String?
 pub fn HitTestContext::get_current_scroll_left(Self) -> Double
 pub fn HitTestContext::get_current_scroll_top(Self) -> Double
@@ -49,7 +51,6 @@ pub fn HitTestContext::is_after_lines(Self, Double) -> Bool
 pub fn HitTestContext::is_in_bottom_padding(Self, Double) -> Bool
 pub fn HitTestContext::is_in_top_padding(Self, Double) -> Bool
 pub fn HitTestContext::is_rtl(Self, Int) -> Bool
-pub fn HitTestContext::new(@view_model.ViewModel, PointerHandlerHelper, PointerHandlerLastRenderData) -> Self
 pub fn HitTestContext::visible_range_for_position(Self, Int, Int) -> @view.HorizontalPosition?
 
 pub struct HitTestRequest {
@@ -62,6 +63,8 @@ pub struct HitTestRequest {
   mouse_content_horizontal_offset : Double
   // private fields
 }
+#alias(new)
+pub fn HitTestRequest::HitTestRequest(HitTestContext, @browser.EditorPagePosition, @browser.PageCoordinates, @browser.CoordinatesRelativeToEditor, @dom.Element?) -> Self
 pub fn HitTestRequest::fulfill_content_empty(Self, @common.Position, @browser.MouseTargetContentEmptyData) -> @browser.MouseTarget
 pub fn HitTestRequest::fulfill_content_text(Self, @common.Position, @common.Range?, @browser.MouseTargetContentTextData) -> @browser.MouseTarget
 pub fn HitTestRequest::fulfill_content_widget(Self, String) -> @browser.MouseTarget
@@ -70,7 +73,6 @@ pub fn HitTestRequest::fulfill_overlay_widget(Self, String) -> @browser.MouseTar
 pub fn HitTestRequest::fulfill_scrollbar(Self, @common.Position) -> @browser.MouseTarget
 pub fn HitTestRequest::fulfill_unknown(Self, position? : @common.Position) -> @browser.MouseTarget
 pub fn HitTestRequest::fulfill_view_zone(Self, @browser.MouseTargetType, @common.Position, @browser.MouseTargetViewZoneData) -> @browser.MouseTarget
-pub fn HitTestRequest::new(HitTestContext, @browser.EditorPagePosition, @browser.PageCoordinates, @browser.CoordinatesRelativeToEditor, @dom.Element?) -> Self
 pub fn HitTestRequest::switch_to_hit_test_target(Self) -> Unit
 pub fn HitTestRequest::target(Self) -> @dom.Element?
 pub fn HitTestRequest::target_path(Self) -> Bytes
@@ -95,13 +97,14 @@ pub(all) struct MouseDispatchData {
 pub struct MouseDownState {
   // private fields
 }
+#alias(new)
+pub fn MouseDownState::MouseDownState() -> Self
 pub fn MouseDownState::alt_key(Self) -> Bool
 pub fn MouseDownState::count(Self) -> Int
 pub fn MouseDownState::ctrl_key(Self) -> Bool
 pub fn MouseDownState::left_button(Self) -> Bool
 pub fn MouseDownState::meta_key(Self) -> Bool
 pub fn MouseDownState::middle_button(Self) -> Bool
-pub fn MouseDownState::new() -> Self
 pub fn MouseDownState::shift_key(Self) -> Bool
 pub fn MouseDownState::started_on_line_numbers(Self) -> Bool
 pub fn MouseDownState::try_set_count(Self, Int, @common.Position, now? : Double) -> Unit
@@ -109,21 +112,23 @@ pub fn MouseDownState::try_set_count(Self, Int, @common.Position, now? : Double)
 pub struct MouseHandler {
   // private fields
 }
+#alias(new)
+pub fn MouseHandler::MouseHandler(PointerHandlerHelper) -> Self
 pub fn MouseHandler::cancel_selection(Self) -> Unit
 pub fn MouseHandler::dispose(Self) -> Unit
 pub fn MouseHandler::get_target_at_client_point(Self, Double, Double) -> @browser.MouseTarget?
 pub fn MouseHandler::handle_editor_wheel(Self, @dom.Event, @dom.WheelEvent) -> Bool
 pub fn MouseHandler::hook_browser_desperate_reveal(Self) -> Unit
 pub fn MouseHandler::hook_scrollable_scrollbar_input(Self, @scrollbar.ScrollableElementDom, @scrollbar.ScrollableElementOwner) -> Unit
-pub fn MouseHandler::new(PointerHandlerHelper) -> Self
 
 pub struct MouseTargetFactory {
   // private fields
 }
+#alias(new)
+pub fn MouseTargetFactory::MouseTargetFactory(PointerHandlerHelper) -> Self
 pub fn MouseTargetFactory::create_mouse_target(Self, PointerHandlerLastRenderData, @browser.EditorPagePosition, @browser.PageCoordinates, @browser.CoordinatesRelativeToEditor, @dom.Element?) -> @browser.MouseTarget
 pub fn MouseTargetFactory::get_mouse_column(Self, @browser.CoordinatesRelativeToEditor) -> Int
 pub fn MouseTargetFactory::mouse_target_is_widget(Self, @browser.EditorDomMouseEvent) -> Bool
-pub fn MouseTargetFactory::new(PointerHandlerHelper) -> Self
 
 pub(all) enum NavigationCommandRevealType {
   Regular

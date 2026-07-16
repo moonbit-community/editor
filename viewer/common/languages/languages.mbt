@@ -63,7 +63,7 @@ fn[T] LanguageFeatureRegistry::snapshot_matching(
 /// Public language registry for tokenization and semantic language providers.
 /// Hosts normally use the process-wide `@languages.languages` value; tests and
 /// embedded viewers that need isolation can create a fresh registry and pass it
-/// through `ViewerServices::new(languages~)`.
+/// through `ViewerServices(languages~)`.
 pub struct Languages {
   priv hover_provider : LanguageFeatureRegistry[&@language.HoverProvider]
   priv document_symbol_provider : LanguageFeatureRegistry[
@@ -135,7 +135,7 @@ pub async fn LanguageHandle::hover_at(
 }
 
 ///|
-/// Default process-wide language registry used by `ViewerServices::new()`.
+/// Default process-wide language registry used by `ViewerServices()`.
 pub let languages : Languages = Languages()
 
 ///|

@@ -91,7 +91,7 @@ test "GlobalEditorPointerMoveMonitor releases keydown on restart, stop, and disp
   let editor_root = editor_pointer_monitor_test_element()
   let initial_element = editor_pointer_monitor_test_element()
   let stops = Ref(0)
-  let monitor = GlobalEditorPointerMoveMonitor::new(editor_root)
+  let monitor = GlobalEditorPointerMoveMonitor(editor_root)
 
   monitor.start_monitoring(initial_element, 17, 1, _ => (), _ => stops.val += 1)
   assert_eq(editor_pointer_monitor_test_document_listener_count("keydown"), 1)

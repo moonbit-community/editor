@@ -10,7 +10,8 @@ pub struct HoverParticipantRegistry {
 
 ///|
 /// Creates an empty hover participant registry.
-pub fn HoverParticipantRegistry::new() -> HoverParticipantRegistry {
+#alias(new)
+pub fn HoverParticipantRegistry::HoverParticipantRegistry() -> HoverParticipantRegistry {
   { entries: [] }
 }
 
@@ -68,7 +69,7 @@ pub let hover_participant_registry : HoverParticipantRegistry = make_default_hov
 
 ///|
 fn make_default_hover_participant_registry() -> HoverParticipantRegistry {
-  let registry = HoverParticipantRegistry::new()
+  let registry = HoverParticipantRegistry()
   register_default_hover_participants(registry)
   registry
 }
@@ -81,9 +82,9 @@ pub fn register_default_hover_participants(
   registry : HoverParticipantRegistry,
 ) -> Unit {
   registry.register(services => {
-    MarkerHoverParticipant::new(services.marker_decorations).hover_participant_handle()
+    MarkerHoverParticipant(services.marker_decorations).hover_participant_handle()
   })
   registry.register(services => {
-    MarkdownHoverParticipant::new(services.languages).hover_participant_handle()
+    MarkdownHoverParticipant(services.languages).hover_participant_handle()
   })
 }

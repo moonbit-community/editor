@@ -132,7 +132,7 @@ fn Viewer::Viewer(
 ) -> Viewer {
   let (services, owns_services) = match services {
     Some(services) => (services, false)
-    None => (ViewerServices::new(), true)
+    None => (ViewerServices(), true)
   }
   let font_info = @config.FontInfo::estimated(
     options.bare_font_info(pixel_ratio=@base_browser.device_pixel_ratio()),

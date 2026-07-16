@@ -17,7 +17,7 @@ fn dabs(value : Double) -> Double {
 
 ///|
 fn run_read_api_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("read_api")
+  let ctx = @support.BrowserTestContext("read_api")
   let done = Ref(false)
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",

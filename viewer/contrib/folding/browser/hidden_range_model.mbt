@@ -20,7 +20,10 @@ pub struct HiddenRangeModel {
 ///|
 /// The constructor (`hiddenRangeModel.ts:27`): subscribes to the folding
 /// model and derives the initial set.
-pub fn HiddenRangeModel::new(model : FoldingModel) -> HiddenRangeModel {
+#alias(new)
+pub fn HiddenRangeModel::HiddenRangeModel(
+  model : FoldingModel,
+) -> HiddenRangeModel {
   let hidden_range_model = {
     folding_model: model,
     hidden_ranges: [],

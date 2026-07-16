@@ -40,9 +40,9 @@ fn RootTestServiceBackings::new() -> RootTestServiceBackings {
   let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
-  let agent_feedback = @agent_feedback.AgentFeedbackService::new()
-  let quick_diff = @quick_diff.QuickDiffService::new()
-  let services = ViewerServices::new(
+  let agent_feedback = @agent_feedback.AgentFeedbackService()
+  let quick_diff = @quick_diff.QuickDiffService()
+  let services = ViewerServices(
     languages=languages.language_handle(log_service.log_handle()),
     markers=Decorations(marker_decorations.marker_decorations_handle()),
     agent_feedback=agent_feedback.agent_feedback_handle(),
@@ -208,7 +208,7 @@ test "explicit services stay borrowed after Viewer disposal" {
 ///|
 test "MarkerStore makes only its generated decorations bundle-owned" {
   let backings = RootTestServiceBackings::new()
-  let services = ViewerServices::new(
+  let services = ViewerServices(
     languages=backings.languages.language_handle(
       backings.log_service.log_handle(),
     ),
@@ -250,7 +250,7 @@ test "Decorations leaves every caller handle live after bundle disposal" {
   let marker_handle = backings.marker_decorations.marker_decorations_handle()
   let feedback_handle = backings.agent_feedback.agent_feedback_handle()
   let quick_diff_handle = backings.quick_diff.quick_diff_handle()
-  let services = ViewerServices::new(
+  let services = ViewerServices(
     languages=language_handle,
     markers=Decorations(marker_handle),
     agent_feedback=feedback_handle,

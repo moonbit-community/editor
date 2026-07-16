@@ -76,13 +76,14 @@ pub struct ContentHoverWidget {
   mut rendered_hover : RenderedContentHover?
   mut position_preference : @view.ContentWidgetPositionPreference?
 }
+#alias(new)
+pub fn ContentHoverWidget::ContentHoverWidget(ContentHoverWidgetHost) -> Self
 pub fn ContentHoverWidget::content_widget_handle(Self) -> @view.ContentWidgetHandle
 pub fn ContentHoverWidget::go_to_bottom(Self) -> Unit
 pub fn ContentHoverWidget::go_to_top(Self) -> Unit
 pub fn ContentHoverWidget::handle_contents_changed(Self) -> Unit
 pub fn ContentHoverWidget::hide(Self) -> Unit
 pub fn ContentHoverWidget::is_visible(Self) -> Bool
-pub fn ContentHoverWidget::new(ContentHoverWidgetHost) -> Self
 pub fn ContentHoverWidget::page_down(Self) -> Unit
 pub fn ContentHoverWidget::page_up(Self) -> Unit
 pub fn ContentHoverWidget::scroll_down(Self) -> Unit

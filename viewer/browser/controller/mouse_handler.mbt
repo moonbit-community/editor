@@ -145,8 +145,11 @@ pub struct MouseHandler {
 }
 
 ///|
-pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
-  let mouse_target_factory = MouseTargetFactory::new(view_helper)
+#alias(new)
+pub fn MouseHandler::MouseHandler(
+  view_helper : PointerHandlerHelper,
+) -> MouseHandler {
+  let mouse_target_factory = MouseTargetFactory(view_helper)
   let handler : MouseHandler = {
     view_helper,
     mouse_target_factory,
@@ -160,7 +163,7 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
     drag: None,
     disposed: false,
   }
-  let mouse_events = @editor_browser.EditorMouseEventFactory::new(
+  let mouse_events = @editor_browser.EditorMouseEventFactory(
     view_helper.view_dom_node,
   )
   handler.listeners.push(
@@ -183,7 +186,7 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
                 ) {
                 // went outside the editor!
                 handler.on_mouse_leave(
-                  @editor_browser.EditorDomMouseEvent::new(
+                  EditorDomMouseEvent(
                     mouse,
                     false,
                     handler.view_helper.view_dom_node,
@@ -442,7 +445,7 @@ fn MouseDownOperation::new(
   let operation : MouseDownOperation = {
     view_helper,
     mouse_target_factory,
-    mouse_move_monitor: @editor_browser.GlobalEditorPointerMoveMonitor::new(
+    mouse_move_monitor: GlobalEditorPointerMoveMonitor(
       view_helper.view_dom_node,
     ),
     top_bottom_drag_scrolling: DragScrolling::new(
@@ -457,7 +460,7 @@ fn MouseDownOperation::new(
       mouse_target_factory,
       (_position, _in_selection_mode, _reveal_type) => (),
     ),
-    mouse_state: MouseDownState::new(),
+    mouse_state: MouseDownState(),
     is_active_flag: false,
   }
   // The drag-scrolling dispatch closures need the operation itself; rebuild
@@ -790,7 +793,8 @@ pub struct MouseDownState {
 const CLEAR_MOUSE_DOWN_COUNT_TIME : Double = 400.0 // ms
 
 ///|
-pub fn MouseDownState::new() -> MouseDownState {
+#alias(new)
+pub fn MouseDownState::MouseDownState() -> MouseDownState {
   {
     alt_key_flag: false,
     ctrl_key_flag: false,

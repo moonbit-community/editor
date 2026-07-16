@@ -28,7 +28,8 @@ pub struct MouseWheelClassifier {
 }
 
 ///|
-pub fn MouseWheelClassifier::new() -> MouseWheelClassifier {
+#alias(new)
+pub fn MouseWheelClassifier::MouseWheelClassifier() -> MouseWheelClassifier {
   { capacity: 5, memory: [], front: -1, rear: -1 }
 }
 
@@ -152,7 +153,7 @@ fn MouseWheelClassifier::is_almost_int(
 }
 
 ///|
-let mouse_wheel_classifier_instance : MouseWheelClassifier = MouseWheelClassifier::new()
+let mouse_wheel_classifier_instance : MouseWheelClassifier = MouseWheelClassifier()
 
 ///|
 pub fn global_mouse_wheel_classifier() -> MouseWheelClassifier {

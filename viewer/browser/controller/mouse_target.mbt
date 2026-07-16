@@ -320,7 +320,8 @@ pub struct HitTestContext {
 }
 
 ///|
-pub fn HitTestContext::new(
+#alias(new)
+pub fn HitTestContext::HitTestContext(
   view_model : @view_model.ViewModel,
   view_helper : PointerHandlerHelper,
   last_render_data : PointerHandlerLastRenderData,
@@ -543,7 +544,7 @@ pub fn HitTestContext::get_current_scroll_left(self : HitTestContext) -> Double 
 ///|
 /// `BareHitTestRequest` + `HitTestRequest` (mouseTarget.ts:392-502),
 /// flattened (see the header). The coordinate-derived state is computed in
-/// `HitTestRequest::new`.
+/// `HitTestRequest::HitTestRequest`.
 pub struct HitTestRequest {
   priv ctx : HitTestContext
   editor_pos : @editor_browser.EditorPagePosition
@@ -562,7 +563,8 @@ pub struct HitTestRequest {
 }
 
 ///|
-pub fn HitTestRequest::new(
+#alias(new)
+pub fn HitTestRequest::HitTestRequest(
   ctx : HitTestContext,
   editor_pos : @editor_browser.EditorPagePosition,
   pos : @editor_browser.PageCoordinates,
@@ -825,7 +827,8 @@ pub struct MouseTargetFactory {
 }
 
 ///|
-pub fn MouseTargetFactory::new(
+#alias(new)
+pub fn MouseTargetFactory::MouseTargetFactory(
   view_helper : PointerHandlerHelper,
 ) -> MouseTargetFactory {
   { view_helper, }
@@ -870,8 +873,8 @@ pub fn MouseTargetFactory::create_mouse_target(
   guard (self.view_helper.view_model)() is Some(view_model) else {
     return @editor_browser.MouseTarget::create_unknown(target, 1, None)
   }
-  let ctx = HitTestContext::new(view_model, self.view_helper, last_render_data)
-  let request = HitTestRequest::new(ctx, editor_pos, pos, relative_pos, target)
+  let ctx = HitTestContext(view_model, self.view_helper, last_render_data)
+  let request = HitTestRequest(ctx, editor_pos, pos, relative_pos, target)
   create_mouse_target_for_request(ctx, request)
 }
 

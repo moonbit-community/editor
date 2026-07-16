@@ -22,6 +22,8 @@ pub struct BrowserTestContext {
   failures : Array[String]
   metrics : Map[String, Json]
 }
+#alias(new)
+pub fn BrowserTestContext::BrowserTestContext(String) -> Self
 pub fn BrowserTestContext::assert_true(Self, Bool, String) -> Unit
 pub fn BrowserTestContext::fail(Self, String) -> Unit
 pub fn BrowserTestContext::finish(Self) -> Unit
@@ -29,7 +31,6 @@ pub fn BrowserTestContext::metric(Self, String, Json) -> Unit
 pub fn BrowserTestContext::metric_int(Self, String, Int) -> Unit
 pub fn BrowserTestContext::metric_number(Self, String, Double) -> Unit
 pub fn BrowserTestContext::metric_string(Self, String, String) -> Unit
-pub fn BrowserTestContext::new(String) -> Self
 pub fn BrowserTestContext::to_json(Self) -> Json
 
 // Type aliases

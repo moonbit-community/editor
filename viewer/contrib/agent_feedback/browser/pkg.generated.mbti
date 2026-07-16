@@ -44,6 +44,8 @@ pub struct AgentFeedbackEditorWidget {
   mut disposed : Bool
   mut start_line : Int
 }
+#alias(new)
+pub fn AgentFeedbackEditorWidget::AgentFeedbackEditorWidget(AgentFeedbackEditorWidgetHost, String, Array[@agent_feedback.SessionEditorComment], Map[String, String], focused_reply? : String) -> Self
 pub fn AgentFeedbackEditorWidget::anchor_line(Self) -> Int
 pub fn AgentFeedbackEditorWidget::clear_focus(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::collapse(Self) -> Unit
@@ -58,7 +60,6 @@ pub fn AgentFeedbackEditorWidget::mark_disposed(Self) -> Unit
 pub fn AgentFeedbackEditorWidget::measured_header_height(Self) -> Double
 pub fn AgentFeedbackEditorWidget::measured_height(Self) -> Double
 pub fn AgentFeedbackEditorWidget::measured_width(Self) -> Double
-pub fn AgentFeedbackEditorWidget::new(AgentFeedbackEditorWidgetHost, String, Array[@agent_feedback.SessionEditorComment], Map[String, String], focused_reply? : String) -> Self
 pub fn AgentFeedbackEditorWidget::set_anchor_line(Self, Int) -> Unit
 pub fn AgentFeedbackEditorWidget::set_position(Self, Double, Double) -> Unit
 pub fn AgentFeedbackEditorWidget::widget_id(Self) -> String
@@ -92,6 +93,8 @@ pub struct AgentFeedbackInputWidget {
   action : @dom.Element
   mut showing_alt : Bool
 }
+#alias(new)
+pub fn AgentFeedbackInputWidget::AgentFeedbackInputWidget(AgentFeedbackInputWidgetHost) -> Self
 pub fn AgentFeedbackInputWidget::auto_size(Self) -> Unit
 pub fn AgentFeedbackInputWidget::clear_input(Self) -> Unit
 pub fn AgentFeedbackInputWidget::focus_input(Self) -> Unit
@@ -100,7 +103,6 @@ pub fn AgentFeedbackInputWidget::has_text(Self) -> Bool
 pub fn AgentFeedbackInputWidget::hide(Self) -> Unit
 pub fn AgentFeedbackInputWidget::measured_height(Self) -> Double
 pub fn AgentFeedbackInputWidget::measured_width(Self) -> Double
-pub fn AgentFeedbackInputWidget::new(AgentFeedbackInputWidgetHost) -> Self
 pub fn AgentFeedbackInputWidget::set_placeholder(Self, String) -> Unit
 pub fn AgentFeedbackInputWidget::set_position(Self, Double, Double) -> Unit
 pub fn AgentFeedbackInputWidget::show(Self) -> Unit

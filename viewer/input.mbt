@@ -11,7 +11,7 @@ fn Viewer::hook_view_input(
   self : Viewer,
   view : @view.View,
 ) -> @controller.MouseHandler {
-  let handler = @controller.MouseHandler::new(self.pointer_handler_helper(view))
+  let handler = @controller.MouseHandler(self.pointer_handler_helper(view))
   // View is the sole disposable owner. ModelBrowserData only retains this
   // reference so lifecycle commands can reach the live per-View handler.
   view.add_disposable(@base_common.Disposable::from(() => handler.dispose()))

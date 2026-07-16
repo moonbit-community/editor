@@ -82,7 +82,7 @@ fn render_invalidation_layout_json(viewer : @viewer.Viewer) -> String {
 
 ///|
 fn run_render_invalidation_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("render_invalidation")
+  let ctx = @support.BrowserTestContext("render_invalidation")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")
@@ -122,7 +122,7 @@ fn run_render_invalidation_test() -> Unit {
   |> ignore
   let log_service = @log.LogService()
   let log_handle = log_service.log_handle()
-  let services = @viewer.ViewerServices::new(
+  let services = @viewer.ViewerServices(
     languages=languages.language_handle(log_handle),
     log_service=log_handle,
   )

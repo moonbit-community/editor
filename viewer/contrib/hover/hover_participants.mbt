@@ -148,7 +148,8 @@ pub struct MarkerHoverParticipant {
 
 ///|
 /// Creates the marker hover participant over the marker decorations service.
-pub fn MarkerHoverParticipant::new(
+#alias(new)
+pub fn MarkerHoverParticipant::MarkerHoverParticipant(
   marker_decorations : @markers.MarkerDecorationsHandle,
 ) -> MarkerHoverParticipant {
   { marker_decorations, }
@@ -230,7 +231,8 @@ pub struct MarkdownHoverParticipant {
 
 ///|
 /// Creates the markdown hover participant over the language features registry.
-pub fn MarkdownHoverParticipant::new(
+#alias(new)
+pub fn MarkdownHoverParticipant::MarkdownHoverParticipant(
   languages : @languages.LanguageHandle,
 ) -> MarkdownHoverParticipant {
   { languages, }
@@ -304,7 +306,8 @@ pub struct ContentHoverComputer {
 /// Creates a content-hover computer, instantiating the registered default
 /// participants with the given services — Monaco's
 /// `ContentHoverWidgetWrapper._initializeHoverParticipants`.
-pub fn ContentHoverComputer::new(
+#alias(new)
+pub fn ContentHoverComputer::ContentHoverComputer(
   services : HoverParticipantServices,
 ) -> ContentHoverComputer {
   { participants: hover_participant_registry.build_all(services) }

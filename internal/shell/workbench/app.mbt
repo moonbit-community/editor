@@ -114,8 +114,8 @@ fn workbench_services() -> WorkbenchServices {
       let markers = @markers.MarkerService(
         schedule=@base_browser.queue_microtask,
       )
-      let agent_feedback = @agent_feedback.AgentFeedbackService::new()
-      let viewer = @viewer.ViewerServices::new(
+      let agent_feedback = @agent_feedback.AgentFeedbackService()
+      let viewer = @viewer.ViewerServices(
         languages=languages.language_handle(log_service.log_handle()),
         markers=MarkerStore(markers.marker_service_handle()),
         agent_feedback=agent_feedback.agent_feedback_handle(),

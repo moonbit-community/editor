@@ -136,7 +136,7 @@ struct AsyncModelFeatureTestServices {
 fn AsyncModelFeatureTestServices::new() -> AsyncModelFeatureTestServices {
   let log_service = @log.LogService()
   let languages = @languages.Languages()
-  let services = ViewerServices::new(
+  let services = ViewerServices(
     languages=languages.language_handle(log_service.log_handle()),
     log_service=log_service.log_handle(),
   )

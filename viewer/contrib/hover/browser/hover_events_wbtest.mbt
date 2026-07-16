@@ -54,7 +54,7 @@ test "find_anchor_candidates: a content-text hit yields the priority-0 range anc
 
 ///|
 test "find_anchor_candidates only calls present participant suggestions" {
-  let owner = @hover.HoverParticipantOwner::new()
+  let owner = @hover.HoverParticipantOwner()
   let without_suggestion = @hover.HoverParticipantHandle(10, _ctx => [])
   let with_suggestion = @hover.HoverParticipantHandle(20, _ctx => [], suggest_hover_anchor=(
     _injected_text,

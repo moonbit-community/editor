@@ -317,7 +317,7 @@ fn BrowserGeometryFixture::new(
   |> ignore
   let log_service = @log.LogService()
   let log_handle = log_service.log_handle()
-  let services = @viewer.ViewerServices::new(
+  let services = @viewer.ViewerServices(
     languages=languages.language_handle(log_handle),
     log_service=log_handle,
   )
@@ -454,7 +454,7 @@ fn browser_geometry_fixture_for(
 
 ///|
 fn run_browser_geometry_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("browser_geometry")
+  let ctx = @support.BrowserTestContext("browser_geometry")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")

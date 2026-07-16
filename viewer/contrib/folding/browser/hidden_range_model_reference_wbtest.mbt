@@ -21,11 +21,11 @@ test "hasRanges" {
     "/**", " * Comment", " */", "class A {", "  void foo() {", "    if (true) {",
     "      //hello", "    }", "  }", "}",
   ])
-  let folding_model = FoldingModel::new(
+  let folding_model = FoldingModel(
     text_model,
     TestDecorationProvider::{ model: text_model }.access(),
   )
-  let hidden_range_model = HiddenRangeModel::new(folding_model)
+  let hidden_range_model = HiddenRangeModel(folding_model)
   assert_false(hidden_range_model.has_ranges())
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)
@@ -84,11 +84,11 @@ test "adjustSelections moves endpoints out of hidden ranges" {
     "/**", " * Comment", " */", "class A {", "  void foo() {", "    if (true) {",
     "      //hello", "    }", "  }", "}",
   ])
-  let folding_model = FoldingModel::new(
+  let folding_model = FoldingModel(
     text_model,
     TestDecorationProvider::{ model: text_model }.access(),
   )
-  let hidden_range_model = HiddenRangeModel::new(folding_model)
+  let hidden_range_model = HiddenRangeModel(folding_model)
   folding_model.update(compute_ranges(text_model, false))
   guard folding_model.get_region_at_line(1) is Some(region1)
   folding_model.toggle_collapse_state([region1])

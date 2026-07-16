@@ -615,7 +615,7 @@ fn Viewer::make_hover_computer(self : Viewer) -> @hover.ContentHoverComputer {
     languages: self.services.languages,
     marker_decorations: self.services.marker_decorations,
   }
-  @hover.ContentHoverComputer::new(services)
+  ContentHoverComputer(services)
 }
 
 ///|

@@ -106,7 +106,8 @@ pub struct FoldingRegions {
 ///|
 /// The `FoldingRegions` constructor (`foldingRanges.ts:73`). Aborts on
 /// mismatched or oversized inputs like the source's `throw`.
-pub fn FoldingRegions::new(
+#alias(new)
+pub fn FoldingRegions::FoldingRegions(
   start_indexes : FixedArray[UInt],
   end_indexes : FixedArray[UInt],
   types? : Array[String?],
@@ -405,7 +406,7 @@ pub fn FoldingRegions::from_fold_ranges(
       got_types = true
     }
   }
-  let regions = FoldingRegions::new(
+  let regions = FoldingRegions(
     start_indexes,
     end_indexes,
     types?=if got_types { Some(types) } else { None },

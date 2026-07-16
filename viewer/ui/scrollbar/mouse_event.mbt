@@ -18,7 +18,10 @@ pub struct StandardWheelEvent {
 const DOM_DELTA_LINE : Int = 1
 
 ///|
-pub fn StandardWheelEvent::new(e : @rdom.WheelEvent) -> StandardWheelEvent {
+#alias(new)
+pub fn StandardWheelEvent::StandardWheelEvent(
+  e : @rdom.WheelEvent,
+) -> StandardWheelEvent {
   if e.get_delta_mode() == DOM_DELTA_LINE {
     { delta_x: -e.get_delta_x(), delta_y: -e.get_delta_y() }
   } else {

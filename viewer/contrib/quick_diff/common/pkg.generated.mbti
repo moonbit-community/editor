@@ -23,8 +23,9 @@ pub impl Show for ChangeType
 pub struct QuickDiffService {
   // private fields
 }
+#alias(new)
+pub fn QuickDiffService::QuickDiffService() -> Self
 pub fn QuickDiffService::get_original_content(Self, @moonbit-community/editor/base/common.Uri) -> String?
-pub fn QuickDiffService::new() -> Self
 pub fn QuickDiffService::on_did_change_original(Self, (@moonbit-community/editor/base/common.Uri) -> Unit) -> @moonbit-community/editor/base/common.Disposable
 pub fn QuickDiffService::quick_diff_handle(Self) -> @quick_diff_api.QuickDiffHandle
 pub fn QuickDiffService::set_original_content(Self, @moonbit-community/editor/base/common.Uri, String?) -> Unit

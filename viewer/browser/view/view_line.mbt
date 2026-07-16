@@ -140,8 +140,7 @@ fn ViewLine::get_dom_node(self : ViewLine) -> @rdom.Element? {
 ///|
 fn ViewLine::set_dom_node(self : ViewLine, dom_node : @rdom.Element) -> Unit {
   match self.rendered_view_line {
-    Some(rendered) =>
-      rendered.dom_node = Some(@scrollbar.CachedDomNode::new(dom_node))
+    Some(rendered) => rendered.dom_node = Some(CachedDomNode(dom_node))
     None => abort("I have no rendered view line to set the dom node to...")
   }
 }

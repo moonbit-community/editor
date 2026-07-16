@@ -10,7 +10,7 @@
 
 ///|
 fn run_agent_feedback_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("agent_feedback")
+  let ctx = @support.BrowserTestContext("agent_feedback")
   let done = Ref(false)
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
@@ -29,8 +29,8 @@ fn run_agent_feedback_test() -> Unit {
     Some((host, event_log)) => {
       // The page owns the concrete store for the lifetime of this interactive
       // fixture. Viewer receives only its narrowed callback capability.
-      let feedback = @feedback_contrib.AgentFeedbackService::new()
-      let services = @viewer.ViewerServices::new(
+      let feedback = @feedback_contrib.AgentFeedbackService()
+      let services = @viewer.ViewerServices(
         agent_feedback=feedback.agent_feedback_handle(),
       )
       let added = Ref(0)

@@ -71,7 +71,7 @@ fn seed_swap_diagnostic(
 
 ///|
 fn run_model_swap_test() -> Unit {
-  let ctx = @support.BrowserTestContext::new("model_swap")
+  let ctx = @support.BrowserTestContext("model_swap")
   let document = @rdom.document()
   guard document.query_selector("#app").to_option() is Some(app) else {
     ctx.fail("missing #app mount point")
@@ -91,7 +91,7 @@ fn run_model_swap_test() -> Unit {
     options=ViewerOptions(placeholder="dispose-placeholder"),
   )
   let markers = @markers.MarkerService(schedule=model_swap_queue_microtask)
-  let services = @viewer.ViewerServices::new(
+  let services = @viewer.ViewerServices(
     markers=MarkerStore(markers.marker_service_handle()),
   )
   let viewer = @viewer.Viewer::create(

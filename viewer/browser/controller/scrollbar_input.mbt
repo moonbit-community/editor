@@ -113,7 +113,7 @@ pub fn MouseHandler::handle_editor_wheel(
   guard (self.view_helper.view_layout)() is Some(view_layout) else {
     return false
   }
-  let standard_event = @scrollbar.StandardWheelEvent::new(wheel)
+  let standard_event = @scrollbar.StandardWheelEvent(wheel)
   let classifier = @scrollbar.global_mouse_wheel_classifier()
   classifier.accept_standard_wheel_event(standard_event)
   let (delta_left, delta_top) = @scrollbar.mouse_wheel_scroll_deltas(

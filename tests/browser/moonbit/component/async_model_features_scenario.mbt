@@ -291,7 +291,7 @@ fn run_async_model_features_test() -> Unit {
   let provider = DeferredAsyncFeatureProvider::{ harness, }
   let languages = @languages.Languages::new()
   languages.register_hover_provider(LanguageId("moonbit"), provider) |> ignore
-  let log_service = @log.LogService::new()
+  let log_service = @log.LogService()
   let log_handle = log_service.log_handle()
   let services = @viewer.ViewerServices::new(
     languages=languages.language_handle(log_handle),

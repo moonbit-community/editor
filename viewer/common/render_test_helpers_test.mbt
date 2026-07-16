@@ -3,10 +3,7 @@
 /// test models carry (the real lexers are registered by the shell, not the
 /// common tier). Idempotent; the registration lives for the test binary.
 fn register_plain_moonbit() -> Unit {
-  @syntax.tokenization_registry.register(
-    "moonbit",
-    @syntax.PlainTokenizer::new(),
-  )
+  @syntax.tokenization_registry.register("moonbit", @syntax.PlainTokenizer())
   |> ignore
 }
 

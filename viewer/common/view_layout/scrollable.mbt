@@ -466,7 +466,7 @@ pub fn Scrollable::new(
     state: ScrollState::new(force_integer_values~, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
     smooth_scrolling: None,
     operation_generation: 0,
-    on_scroll_emitter: @base_common.Emitter::new(),
+    on_scroll_emitter: Emitter(),
   }
 }
 
@@ -791,7 +791,7 @@ pub fn EditorScrollable::new(
       now~,
     ),
     editor_dimensions: EditorScrollDimensions::new(0.0, 0.0, 0.0, 0.0),
-    content_size_emitter: @base_common.Emitter::new(),
+    content_size_emitter: Emitter(),
   }
 }
 

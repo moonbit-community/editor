@@ -35,7 +35,7 @@ pub fn ViewerServices::new(
 ) -> ViewerServices {
   let log_service = match log_service {
     Some(handle) => handle
-    None => @log.LogService::new().log_handle()
+    None => @log.LogService().log_handle()
   }
   let languages = match languages {
     Some(handle) => handle

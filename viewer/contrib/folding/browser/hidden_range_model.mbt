@@ -25,7 +25,7 @@ pub fn HiddenRangeModel::new(model : FoldingModel) -> HiddenRangeModel {
     folding_model: model,
     hidden_ranges: [],
     folding_model_listener: None,
-    update_event_emitter: @base_common.Emitter::new(),
+    update_event_emitter: Emitter(),
   }
   hidden_range_model.folding_model_listener = Some(
     model.on_did_change(_ => hidden_range_model.update_hidden_ranges()),

@@ -153,7 +153,7 @@ pub fn MouseHandler::new(view_helper : PointerHandlerHelper) -> MouseHandler {
     mouse_down_operation: MouseDownOperation::new(
       view_helper, mouse_target_factory,
     ),
-    scrollbar_drag_monitor: @base_browser.GlobalPointerMoveMonitor::new(),
+    scrollbar_drag_monitor: GlobalPointerMoveMonitor(),
     last_mouse_leave_time: -1.0,
     mouse_leave_monitor: None,
     listeners: [],

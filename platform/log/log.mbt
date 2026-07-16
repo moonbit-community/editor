@@ -28,12 +28,14 @@ pub(open) trait Logger {
 
 ///|
 /// Logger sink that drops every entry.
-pub struct NullLogger(Unit)
+pub struct NullLogger {}
 
 ///|
 /// Creates a sink that ignores logs and flushes.
-pub fn NullLogger::new() -> NullLogger {
-  NullLogger(())
+#alias(new)
+#warnings("-unnecessary_annotation")
+pub fn NullLogger::NullLogger() -> NullLogger {
+  NullLogger::{  }
 }
 
 ///|
@@ -57,7 +59,8 @@ pub struct MemoryLogger {
 
 ///|
 /// Creates an empty in-memory log sink.
-pub fn MemoryLogger::new() -> MemoryLogger {
+#alias(new)
+pub fn MemoryLogger::MemoryLogger() -> MemoryLogger {
   { entries: [], flush_count: Ref(0) }
 }
 
@@ -93,7 +96,10 @@ pub struct MultiplexLogger {
 
 ///|
 /// Creates a logger fan-out over the supplied sinks.
-pub fn MultiplexLogger::new(loggers : Array[&Logger]) -> MultiplexLogger {
+#alias(new)
+pub fn MultiplexLogger::MultiplexLogger(
+  loggers : Array[&Logger],
+) -> MultiplexLogger {
   { loggers, }
 }
 
@@ -132,9 +138,10 @@ pub struct LogHandle {
 
 ///|
 /// Creates a log service with an optional threshold and sink.
-pub fn LogService::new(
+#alias(new)
+pub fn LogService::LogService(
   level? : LogLevel = Info,
-  logger? : &Logger = NullLogger::new(),
+  logger? : &Logger = NullLogger(),
 ) -> LogService {
   { level, logger }
 }

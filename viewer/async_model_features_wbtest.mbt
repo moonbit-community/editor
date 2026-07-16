@@ -134,7 +134,7 @@ struct AsyncModelFeatureTestServices {
 
 ///|
 fn AsyncModelFeatureTestServices::new() -> AsyncModelFeatureTestServices {
-  let log_service = @log.LogService::new()
+  let log_service = @log.LogService()
   let languages = @languages.Languages::new()
   let services = ViewerServices::new(
     languages=languages.language_handle(log_service.log_handle()),
@@ -493,7 +493,7 @@ test "hover request stamp rejects version identity generation and token drift" {
   let first = async_test_model("/hover-same.mbt", "first")
   let replacement = async_test_model("/hover-same.mbt", "replacement")
   let hover = shown_hover_controller()
-  let source = @language.CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let request = hover.request_stamp(first, source.token())
   assert_true(request.is_current(Some(first), hover.operation.token))
   assert_false(request.is_current(Some(replacement), hover.operation.token))

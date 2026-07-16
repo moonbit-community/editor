@@ -421,7 +421,7 @@ fn Viewer::after_hover_transition(
 
 ///|
 fn new_hover_cancellation_source() -> @language.CancellationTokenSource {
-  @language.CancellationTokenSource::new(schedule=callback => {
+  CancellationTokenSource(schedule=callback => {
     @base_browser.schedule_timeout(callback, 0)
   })
 }

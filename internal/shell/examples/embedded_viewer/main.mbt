@@ -322,7 +322,7 @@ fn main {
   // by import and registered through the viewer languages facade.
   @languages.languages.set_tokens_provider(
     "moonbit",
-    @lang_moonbit.MoonbitTokenizer::new(),
+    @lang_moonbit.MoonbitTokenizer(),
   )
   |> ignore
   let (_, cell) = @rabbita.cell_with_emit(

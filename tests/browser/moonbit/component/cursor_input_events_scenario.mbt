@@ -108,7 +108,7 @@ fn run_cursor_input_events_test() -> Unit {
 
   })
   |> ignore
-  let log_service = @log.LogService::new()
+  let log_service = @log.LogService()
   let log_handle = log_service.log_handle()
   let services = @viewer.ViewerServices::new(
     languages=languages.language_handle(log_handle),

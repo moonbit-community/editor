@@ -121,11 +121,12 @@ pub struct TokenizationRegistry {
 ///|
 /// Creates an empty tokenization registry with no color map, matching
 /// `vscode/src/vs/editor/common/tokenizationRegistry.ts:20-24`.
-pub fn TokenizationRegistry::new() -> TokenizationRegistry {
+#alias(new)
+pub fn TokenizationRegistry::TokenizationRegistry() -> TokenizationRegistry {
   {
     tokenizers: Map([]),
     next_id: Ref(0),
-    did_change: @base_common.Emitter::new(),
+    did_change: Emitter(),
     color_map: None,
   }
 }
@@ -262,7 +263,7 @@ pub fn TokenizationRegistry::on_did_change(
 /// The process-wide registry, Monaco's `export const TokenizationRegistry`
 /// singleton (`common/languages.ts`). `Languages::set_tokens_provider`
 /// (the `monaco.languages.setTokensProvider` analog) registers into it.
-pub let tokenization_registry : TokenizationRegistry = TokenizationRegistry::new()
+pub let tokenization_registry : TokenizationRegistry = TokenizationRegistry()
 
 ///|
 /// Whether `word` begins with an uppercase ASCII letter (`A`–`Z`), the shared

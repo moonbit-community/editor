@@ -59,7 +59,7 @@ fn WrappingCharacterClassifier::new(
   break_before : String,
   break_after : String,
 ) -> WrappingCharacterClassifier {
-  let classifier = @base_common.CharacterClassifier::new(CHARACTER_CLASS_NONE)
+  let classifier = @base_common.CharacterClassifier(CHARACTER_CLASS_NONE)
   for i in 0..<break_before.length() {
     classifier.set(break_before[i].to_int(), CHARACTER_CLASS_BREAK_BEFORE)
   }

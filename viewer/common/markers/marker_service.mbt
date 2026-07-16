@@ -269,10 +269,11 @@ pub struct MarkerService {
 /// `queueMicrotask`; the default here flushes inline — see the deviation note
 /// on `@base_common.MicrotaskEmitter`).
 pub fn MarkerService::new(schedule? : (() -> Unit) -> Unit) -> MarkerService {
-  let did_change_markers = match schedule {
-    Some(schedule) =>
-      @base_common.MicrotaskEmitter::new(merge=merge_changed_uris, schedule~)
-    None => @base_common.MicrotaskEmitter::new(merge=merge_changed_uris)
+  let did_change_markers : @base_common.MicrotaskEmitter[
+    Array[@base_common.Uri],
+  ] = match schedule {
+    Some(schedule) => MicrotaskEmitter(merge=merge_changed_uris, schedule~)
+    None => MicrotaskEmitter(merge=merge_changed_uris)
   }
   let service : MarkerService = {
     did_change_markers,

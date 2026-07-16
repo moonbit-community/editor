@@ -103,12 +103,7 @@ async test "hover forwards caller token and skips empty provider results" {
     good,
   )
   let token = @language.CancellationToken::new()
-  let hover = languages.hover_at(
-    test_model(),
-    3,
-    @log.LogService::new(),
-    token~,
-  )
+  let hover = languages.hover_at(test_model(), 3, LogService(), token~)
   assert_hover_text(hover, "good")
   assert_eq(empty_calls.val, 1)
   assert_eq(good_calls.val, 1)
@@ -139,12 +134,7 @@ async test "hover skips a provider None result and continues in order" {
     },
   )
   let token = @language.CancellationToken::new()
-  let hover = languages.hover_at(
-    test_model(),
-    3,
-    @log.LogService::new(),
-    token~,
-  )
+  let hover = languages.hover_at(test_model(), 3, LogService(), token~)
   assert_hover_text(hover, "after-none")
   assert_eq(none_calls.val, 1)
   assert_eq(good_calls.val, 1)
@@ -170,12 +160,7 @@ async test "hover pre-cancellation avoids provider launch" {
   )
   let token = @language.CancellationToken::new()
   token.cancel()
-  let hover = languages.hover_at(
-    test_model(),
-    3,
-    @log.LogService::new(),
-    token~,
-  )
+  let hover = languages.hover_at(test_model(), 3, LogService(), token~)
   assert_true(hover is None)
   assert_eq(calls.val, 0)
   registration.dispose()
@@ -195,8 +180,8 @@ async test "hover cancellation during await is silent and rejects late data" {
     LanguageId("moonbit"),
     provider,
   )
-  let memory = @log.MemoryLogger::new()
-  let log_service = @log.LogService::new(logger=memory)
+  let memory = @log.MemoryLogger()
+  let log_service = @log.LogService(logger=memory)
   let model = test_model()
   let token = @language.CancellationToken::new()
   @async.with_task_group() <| group => {
@@ -229,9 +214,7 @@ async test "hover rejects a registration disposed during await" {
   )
   let model = test_model()
   @async.with_task_group() <| group => {
-    let request = group.spawn(() => {
-      languages.hover_at(model, 3, @log.LogService::new())
-    })
+    let request = group.spawn(() => languages.hover_at(model, 3, LogService()))
     started.get() |> ignore
     registration.dispose()
     gate.put(())

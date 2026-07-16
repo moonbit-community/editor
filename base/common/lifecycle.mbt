@@ -49,7 +49,8 @@ pub struct Emitter[T] {
 
 ///|
 /// Creates an empty typed emitter.
-pub fn[T] Emitter::new() -> Emitter[T] {
+#alias(new)
+pub fn[T] Emitter::Emitter() -> Emitter[T] {
   { listeners: [], disposed: Ref(false), next_id: Ref(0) }
 }
 
@@ -135,11 +136,12 @@ pub struct MicrotaskEmitter[T] {
 
 ///|
 /// Creates a queueing emitter; `merge` collapses one flush's events into one.
-pub fn[T] MicrotaskEmitter::new(
+#alias(new)
+pub fn[T] MicrotaskEmitter::MicrotaskEmitter(
   merge? : (Array[T]) -> T,
   schedule? : (() -> Unit) -> Unit = run => run(),
 ) -> MicrotaskEmitter[T] {
-  { inner: Emitter::new(), queued_events: [], merge_fn: merge, schedule }
+  { inner: Emitter(), queued_events: [], merge_fn: merge, schedule }
 }
 
 ///|

@@ -10,10 +10,10 @@ import {
 // Errors
 
 // Types and methods
-pub enum MoonbitTokenizer {
-  MoonbitTokenizer
+pub struct MoonbitTokenizer {
 }
-pub fn MoonbitTokenizer::new() -> Self
+#alias(new)
+pub fn MoonbitTokenizer::MoonbitTokenizer() -> Self
 pub impl @syntax.LineTokenizer for MoonbitTokenizer
 
 // Type aliases

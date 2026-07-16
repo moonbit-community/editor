@@ -44,10 +44,10 @@ fn view_zones_branch_fixture_from_model(
   let emitted_changes = Ref(0)
   let view_model = @view_model.ViewModel::with_options(model, options)
   let view = View::View(view_zones_configuration_reader=() => configuration.val)
-  let memory = @log.MemoryLogger::new()
+  let memory = @log.MemoryLogger()
   view.install_view_zones_context(
     view_model,
-    @log.LogService::new(logger=memory).log_handle(),
+    @log.LogService(logger=memory).log_handle(),
     () => configuration.val,
     () => emitted_changes.val += 1,
   )

@@ -43,10 +43,10 @@ pub(all) struct LineToken {
   tag : HighlightTag
 } derive(Eq, @debug.Debug)
 
-pub enum PlainTokenizer {
-  PlainTokenizer
+pub struct PlainTokenizer {
 }
-pub fn PlainTokenizer::new() -> Self
+#alias(new)
+pub fn PlainTokenizer::PlainTokenizer() -> Self
 pub impl LineTokenizer for PlainTokenizer
 
 pub struct TokenizationChangedEvent {
@@ -57,12 +57,13 @@ pub struct TokenizationChangedEvent {
 pub struct TokenizationRegistry {
   // private fields
 }
+#alias(new)
+pub fn TokenizationRegistry::TokenizationRegistry() -> Self
 pub fn TokenizationRegistry::get(Self, String) -> &LineTokenizer?
 pub fn TokenizationRegistry::get_color_map(Self) -> Array[String]?
 pub fn TokenizationRegistry::get_default_background(Self) -> String?
 pub fn TokenizationRegistry::handle_change(Self, Array[String]) -> Unit
 pub fn TokenizationRegistry::is_resolved(Self, String) -> Bool
-pub fn TokenizationRegistry::new() -> Self
 pub fn TokenizationRegistry::on_did_change(Self, (TokenizationChangedEvent) -> Unit) -> @common.Disposable
 pub fn TokenizationRegistry::register(Self, String, &LineTokenizer) -> @common.Disposable
 pub fn TokenizationRegistry::set_color_map(Self, Array[String]) -> Unit

@@ -2,10 +2,7 @@
 /// Registers the fallback lexer for the `moonbit` fences (idempotent; the
 /// global registry lives for the test binary).
 fn register_hover_test_tokenizer() -> Unit {
-  @syntax.tokenization_registry.register(
-    "moonbit",
-    @syntax.PlainTokenizer::new(),
-  )
+  @syntax.tokenization_registry.register("moonbit", @syntax.PlainTokenizer())
   |> ignore
 }
 

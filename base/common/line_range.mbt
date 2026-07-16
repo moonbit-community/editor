@@ -81,10 +81,10 @@ pub fn LineRange::join_many(
   if line_ranges.length() == 0 {
     return []
   }
-  let mut result = LineRangeSet::new(normalized_ranges=line_ranges[0].copy())
+  let mut result = LineRangeSet(normalized_ranges=line_ranges[0].copy())
   for index in 1..<line_ranges.length() {
     result = result.get_union(
-      LineRangeSet::new(normalized_ranges=line_ranges[index].copy()),
+      LineRangeSet(normalized_ranges=line_ranges[index].copy()),
     )
   }
   result.ranges()
@@ -139,7 +139,8 @@ pub struct LineRangeSet {
 }
 
 ///|
-pub fn LineRangeSet::new(
+#alias(new)
+pub fn LineRangeSet::LineRangeSet(
   normalized_ranges? : Array[LineRange] = [],
 ) -> LineRangeSet {
   { normalized_ranges, }
@@ -260,7 +261,7 @@ pub fn LineRangeSet::get_union(
     Some(cur) => result.push(cur)
     None => ()
   }
-  LineRangeSet::new(normalized_ranges=result)
+  LineRangeSet(normalized_ranges=result)
 }
 
 ///|

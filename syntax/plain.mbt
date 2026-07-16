@@ -3,14 +3,14 @@
 /// original generic lexer (MoonBit-ish keywords, strings, numbers, line
 /// comments) re-expressed line by line. It is stateless; its state is a
 /// single value so every entry state compares equal.
-pub enum PlainTokenizer {
-  PlainTokenizer
-}
+pub struct PlainTokenizer {}
 
 ///|
 /// Creates the stateless fallback tokenizer.
-pub fn PlainTokenizer::new() -> PlainTokenizer {
-  PlainTokenizer
+#alias(new)
+#warnings("-unnecessary_annotation")
+pub fn PlainTokenizer::PlainTokenizer() -> PlainTokenizer {
+  PlainTokenizer::{  }
 }
 
 ///|

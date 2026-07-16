@@ -98,7 +98,7 @@ fn compile_external_viewer_api_contract(
   host : @rdom.Element,
   model : @model.TextModel,
 ) -> Unit {
-  let log_service = @log.LogService::new()
+  let log_service = @log.LogService()
   let languages = @languages.Languages::new()
   let markers = @markers.MarkerService::new()
   let marker_decorations = @markers.MarkerDecorationsService::new(

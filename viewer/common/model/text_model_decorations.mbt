@@ -102,7 +102,7 @@ struct DidChangeDecorationsEmitter {
 ///|
 fn DidChangeDecorationsEmitter::new() -> DidChangeDecorationsEmitter {
   {
-    actual: @base_common.Emitter::new(),
+    actual: Emitter(),
     deferred_cnt: 0,
     should_fire_deferred: false,
     affects_minimap: false,

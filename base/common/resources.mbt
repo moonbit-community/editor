@@ -26,7 +26,8 @@ pub struct ExtUri {
 }
 
 ///|
-pub fn ExtUri::new(ignore_path_casing : (Uri) -> Bool) -> ExtUri {
+#alias(new)
+pub fn ExtUri::ExtUri(ignore_path_casing : (Uri) -> Bool) -> ExtUri {
   { ignore_path_casing_fn: ignore_path_casing }
 }
 
@@ -375,14 +376,14 @@ pub fn ExtUri::add_trailing_path_separator(
 /// `extUri` (resources.ts:327): unbiased utility that takes uris "as they
 /// are" — interchangeable with `uri.to_string()` usages:
 /// `(a.to_string() == b.to_string()) == ext_uri.is_equal(a, b)`.
-pub let ext_uri : ExtUri = ExtUri::new(_uri => false)
+pub let ext_uri : ExtUri = ExtUri(_uri => false)
 
 ///|
 /// `extUriBiasedIgnorePathCase` (resources.ts:340): BIASED utility that
 /// _mostly_ ignores the case of uri paths — a file-scheme resource is on the
 /// same platform as the code, so case is ignored on non-Linux platforms.
 /// INCOMPATIBLE with `uri.to_string()` usages.
-pub let ext_uri_biased_ignore_path_case : ExtUri = ExtUri::new(uri => {
+pub let ext_uri_biased_ignore_path_case : ExtUri = ExtUri(uri => {
   if uri.scheme == schemas_file {
     !is_linux
   } else {
@@ -394,7 +395,7 @@ pub let ext_uri_biased_ignore_path_case : ExtUri = ExtUri::new(uri => {
 /// `extUriIgnorePathCase` (resources.ts:358): BIASED utility that always
 /// ignores the casing of uri paths. INCOMPATIBLE with `uri.to_string()`
 /// usages.
-pub let ext_uri_ignore_path_case : ExtUri = ExtUri::new(_uri => true)
+pub let ext_uri_ignore_path_case : ExtUri = ExtUri(_uri => true)
 
 // --- bound exports (resources.ts:360-375), delegating to `ext_uri`.
 // `dirname` and `isEqualOrParent` are omitted here — see the file header.

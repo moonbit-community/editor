@@ -96,7 +96,7 @@ test "tokenizer state equality detects convergence" {
 
 ///|
 test "registry lookup resolves registered languages only" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   assert_true(registry.get("toy") is None)
   registry.register("toy", BlockCommentToy::{  }) |> ignore
   assert_true(registry.get("toy") is Some(_))
@@ -105,7 +105,7 @@ test "registry lookup resolves registered languages only" {
 
 ///|
 test "registry handle_change preserves language order and subscriptions" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   let first_languages : Array[Array[String]] = []
   let first_color_flags : Array[Bool] = []
   let second_languages : Array[Array[String]] = []
@@ -131,7 +131,7 @@ test "registry handle_change preserves language order and subscriptions" {
 
 ///|
 test "registry replacement makes stale dispose inert and active dispose notifies" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   let changed_languages : Array[Array[String]] = []
   let color_flags : Array[Bool] = []
   let support_visible_when_registered = Ref(false)
@@ -164,7 +164,7 @@ test "registry replacement makes stale dispose inert and active dispose notifies
 
 ///|
 test "registry is_resolved is true without lazy factory state" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   assert_true(registry.is_resolved("missing"))
   registry.register("toy", BlockCommentToy::{  }) |> ignore
   assert_true(registry.is_resolved("toy"))
@@ -172,7 +172,7 @@ test "registry is_resolved is true without lazy factory state" {
 
 ///|
 test "registry color map retains CSS values and emits active languages" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   assert_true(registry.get_color_map() is None)
   let changed_languages : Array[Array[String]] = []
   let color_flags : Array[Bool] = []
@@ -207,7 +207,7 @@ test "registry color map retains CSS values and emits active languages" {
 
 ///|
 test "registry default background requires color index two" {
-  let registry = @syntax.TokenizationRegistry::new()
+  let registry = @syntax.TokenizationRegistry()
   assert_true(registry.get_default_background() is None)
   registry.set_color_map([])
   assert_true(registry.get_default_background() is None)
@@ -221,7 +221,7 @@ test "registry default background requires color index two" {
 test "plain tokenizer counts UTF-16 code units and keeps pairs whole" {
   // 𐍈 (U+10348) is two UTF-16 code units; the identifier after it must
   // start at offset 4 and the pair must stay one token.
-  let plain : &@syntax.LineTokenizer = @syntax.PlainTokenizer::new()
+  let plain : &@syntax.LineTokenizer = @syntax.PlainTokenizer()
   let (tokens, _) = plain.tokenize_line("a \u{10348}b", plain.initial_state())
   debug_inspect(
     tokens,

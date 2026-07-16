@@ -89,7 +89,7 @@ pub fn FoldingModel::new(
       FixedArray::make(0, 0U),
     ),
     editor_decoration_ids: [],
-    update_event_emitter: @base_common.Emitter::new(),
+    update_event_emitter: Emitter(),
   }
 }
 

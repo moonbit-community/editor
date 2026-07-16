@@ -53,7 +53,7 @@ test "None" {
 ///|
 test "cancel before token" {
   let scheduled : Array[ScheduledCancellation] = []
-  let source = CancellationTokenSource::new(
+  let source = @language.CancellationTokenSource(
     schedule=manual_cancellation_scheduler(scheduled),
   )
   assert_false(source.token().is_cancellation_requested())
@@ -70,7 +70,7 @@ test "cancel before token" {
 ///|
 test "cancel before first token read keeps shortcut scheduling" {
   let scheduled : Array[ScheduledCancellation] = []
-  let source = CancellationTokenSource::new(
+  let source = @language.CancellationTokenSource(
     schedule=manual_cancellation_scheduler(scheduled),
   )
   source.cancel()
@@ -88,7 +88,7 @@ test "cancel before first token read keeps shortcut scheduling" {
 
 ///|
 test "cancel happens only once" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let token = source.token()
   assert_false(token.is_cancellation_requested())
   let cancel_count = Ref(0)
@@ -106,7 +106,7 @@ test "cancel happens only once" {
 
 ///|
 test "cancel calls all listeners" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let order : Array[Int] = []
   let subscriptions : Array[@base_common.Disposable] = []
   source
@@ -131,7 +131,7 @@ test "cancel calls all listeners" {
 
 ///|
 test "token stays the same" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let token = source.token()
   assert_true(physical_equal(token, source.token()))
   source.cancel()
@@ -139,7 +139,7 @@ test "token stays the same" {
   source.cancel()
   assert_true(physical_equal(token, source.token()))
 
-  let canceled_before_read = CancellationTokenSource::new()
+  let canceled_before_read = @language.CancellationTokenSource()
   canceled_before_read.cancel()
   let canceled = canceled_before_read.token()
   assert_true(physical_equal(canceled, canceled_before_read.token()))
@@ -153,7 +153,7 @@ test "token stays the same" {
 
 ///|
 test "dispose calls no listeners" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let count = Ref(0)
   source.token().on_cancellation_requested(() => count.val += 1) |> ignore
   source.dispose()
@@ -163,7 +163,7 @@ test "dispose calls no listeners" {
 
 ///|
 test "dispose calls no listeners (unless told to cancel)" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let count = Ref(0)
   source.token().on_cancellation_requested(() => count.val += 1) |> ignore
   source.dispose(cancel=true)
@@ -173,7 +173,7 @@ test "dispose calls no listeners (unless told to cancel)" {
 ///|
 test "dispose with cancellation before first token read stays cancelled" {
   let scheduled : Array[ScheduledCancellation] = []
-  let source = CancellationTokenSource::new(
+  let source = @language.CancellationTokenSource(
     schedule=manual_cancellation_scheduler(scheduled),
   )
   source.dispose(cancel=true)
@@ -188,7 +188,7 @@ test "dispose with cancellation before first token read stays cancelled" {
 
 ///|
 test "dispose does not cancel" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   source.dispose()
   assert_false(source.token().is_cancellation_requested())
   source.cancel()
@@ -197,8 +197,8 @@ test "dispose does not cancel" {
 
 ///|
 test "parent cancels child" {
-  let parent = CancellationTokenSource::new()
-  let child = CancellationTokenSource::new(parent=parent.token())
+  let parent = @language.CancellationTokenSource()
+  let child = @language.CancellationTokenSource(parent=parent.token())
   let count = Ref(0)
   child.token().on_cancellation_requested(() => count.val += 1) |> ignore
   parent.cancel()
@@ -212,7 +212,7 @@ test "parent cancels child" {
 ///|
 test "late listener disposal suppresses scheduled delivery" {
   let scheduled : Array[ScheduledCancellation] = []
-  let source = CancellationTokenSource::new(
+  let source = @language.CancellationTokenSource(
     schedule=manual_cancellation_scheduler(scheduled),
   )
   let token = source.token()
@@ -227,7 +227,7 @@ test "late listener disposal suppresses scheduled delivery" {
 
 ///|
 test "listener closure captures context and bucket can dispose subscriptions" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let context = Ref("context:")
   let subscriptions : Array[@base_common.Disposable] = []
   source
@@ -246,8 +246,8 @@ test "listener closure captures context and bucket can dispose subscriptions" {
 
 ///|
 test "repeated dispose is harmless and detaches the parent" {
-  let parent = CancellationTokenSource::new()
-  let child = CancellationTokenSource::new(parent=parent.token())
+  let parent = @language.CancellationTokenSource()
+  let child = @language.CancellationTokenSource(parent=parent.token())
   let count = Ref(0)
   child.token().on_cancellation_requested(() => count.val += 1) |> ignore
   child.dispose()
@@ -272,7 +272,7 @@ test "compatibility token remains directly cancellable" {
 
 ///|
 test "source token cannot bypass its cancellation owner" {
-  let source = CancellationTokenSource::new()
+  let source = @language.CancellationTokenSource()
   let token = source.token()
   token.cancel()
   assert_false(token.is_cancellation_requested())

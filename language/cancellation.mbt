@@ -148,7 +148,7 @@ fn MutableCancellationToken::on_cancellation_requested(
   let emitter = match self.emitter {
     Some(emitter) => emitter
     None => {
-      let emitter : @base_common.Emitter[Unit] = @base_common.Emitter::new()
+      let emitter : @base_common.Emitter[Unit] = Emitter()
       self.emitter = Some(emitter)
       emitter
     }

@@ -3,7 +3,7 @@
 /// document offsets — lines split on `\n`, lexer state threaded line to line
 /// exactly as the tokenization part's whole-document sweep does.
 fn render_tokens(source : String) -> String {
-  let tokenizer : &@syntax.LineTokenizer = @lang_json.JsonTokenizer::new()
+  let tokenizer : &@syntax.LineTokenizer = @lang_json.JsonTokenizer()
   let rendered : Array[String] = []
   let mut state = tokenizer.initial_state()
   let mut line_start = 0
@@ -103,7 +103,7 @@ test "jsonc comments carry block state across lines" {
 
 ///|
 test "block comment state round-trips through TokenizerState" {
-  let lexer : &@syntax.LineTokenizer = @lang_json.JsonTokenizer::new()
+  let lexer : &@syntax.LineTokenizer = @lang_json.JsonTokenizer()
   let (_, open_state) = lexer.tokenize_line("{ /* open", lexer.initial_state())
   assert_true(open_state == TokenizerState("c"))
   let (_, closed_state) = lexer.tokenize_line("still */ }", open_state)

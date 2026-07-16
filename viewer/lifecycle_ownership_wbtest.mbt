@@ -33,8 +33,8 @@ struct RootTestServiceBackings {
 
 ///|
 fn RootTestServiceBackings::new() -> RootTestServiceBackings {
-  let log_output = @log.MemoryLogger::new()
-  let log_service = @log.LogService::new(level=Trace, logger=log_output)
+  let log_output = @log.MemoryLogger()
+  let log_service = @log.LogService(level=Trace, logger=log_output)
   let languages = @languages.Languages::new()
   let markers = @markers.MarkerService::new()
   let marker_decorations = @markers.MarkerDecorationsService::new(

@@ -73,7 +73,7 @@ fn TokenizationTextModelPart::new_with_support_resolver(
   let part : TokenizationTextModelPart = {
     model_state,
     backend,
-    did_change_tokens: @base_common.Emitter::new(),
+    did_change_tokens: Emitter(),
     backend_token_subscription: None,
     disposed: false,
   }

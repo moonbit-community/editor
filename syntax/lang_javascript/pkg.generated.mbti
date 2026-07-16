@@ -10,10 +10,10 @@ import {
 // Errors
 
 // Types and methods
-pub enum JavascriptTokenizer {
-  JavascriptTokenizer
+pub struct JavascriptTokenizer {
 }
-pub fn JavascriptTokenizer::new() -> Self
+#alias(new)
+pub fn JavascriptTokenizer::JavascriptTokenizer() -> Self
 pub impl @syntax.LineTokenizer for JavascriptTokenizer
 
 // Type aliases

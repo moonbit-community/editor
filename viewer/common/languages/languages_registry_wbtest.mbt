@@ -16,8 +16,8 @@ fn test_model() -> @model.TextModel {
 
 ///|
 async test "provider failures are logged and isolated" {
-  let memory = @log.MemoryLogger::new()
-  let log_service = @log.LogService::new(logger=memory)
+  let memory = @log.MemoryLogger()
+  let log_service = @log.LogService(logger=memory)
   let languages = Languages::new()
   languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
 
@@ -38,7 +38,7 @@ async test "provider failures are logged and isolated" {
 
 ///|
 async test "language handle prebinds logging and forwards the exact capability" {
-  let memory = @log.MemoryLogger::new()
+  let memory = @log.MemoryLogger()
   let languages = Languages::new()
   languages.set_language_configuration("moonbit", {
     folding_rules: Some({ off_side: true, markers: None }),
@@ -52,7 +52,7 @@ async test "language handle prebinds logging and forwards the exact capability" 
   })
   |> ignore
   let handle = languages.language_handle(
-    @log.LogService::new(logger=memory).log_handle(),
+    @log.LogService(logger=memory).log_handle(),
   )
   assert_true(
     handle.get_language_configuration("moonbit").folding_rules
@@ -69,11 +69,11 @@ test "token providers dispose only the active registration" {
   let languages = Languages::new()
   let first = languages.set_tokens_provider(
     "toy-dispose",
-    @syntax.PlainTokenizer::new(),
+    @syntax.PlainTokenizer(),
   )
   let second = languages.set_tokens_provider(
     "toy-dispose",
-    @syntax.PlainTokenizer::new(),
+    @syntax.PlainTokenizer(),
   )
   first.dispose()
   assert_true(@syntax.tokenization_registry.get("toy-dispose") is Some(_))
@@ -90,7 +90,7 @@ async test "language provider registrations preserve order after disposal" {
   let second = languages.register_hover_provider(LanguageId("moonbit"), NamedHoverProvider::{
     text: "second",
   })
-  let log_service = @log.LogService::new()
+  let log_service = @log.LogService()
   let model = test_model()
   assert_hover_text(languages.hover_at(model, 3, log_service), "first")
   first.dispose()

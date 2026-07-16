@@ -38,7 +38,10 @@ pub struct StandardMouseEvent {
 }
 
 ///|
-pub fn StandardMouseEvent::new(e : @rdom.MouseEvent) -> StandardMouseEvent {
+#alias(new)
+pub fn StandardMouseEvent::StandardMouseEvent(
+  e : @rdom.MouseEvent,
+) -> StandardMouseEvent {
   let detail = ui_event_detail(e)
   {
     browser_event: e,

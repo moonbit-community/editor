@@ -48,7 +48,7 @@ fn assert_flush_token_range_domains(
 test "flush visible token ranges stay valid in old and new projection domains" {
   let registration = @syntax.tokenization_registry.register(
     "flush-range-domain",
-    @syntax.PlainTokenizer::new(),
+    @syntax.PlainTokenizer(),
   )
   defer registration.dispose()
   // Growth keeps the old visible upper bound.

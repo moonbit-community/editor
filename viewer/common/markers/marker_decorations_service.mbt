@@ -57,7 +57,7 @@ pub fn MarkerDecorationsService::new(
     blocked_model_ids: Map([]),
     legacy_leases: Map([]),
     suppressed_ranges: Map([]),
-    did_change_marker_decorations: @base_common.Emitter::new(),
+    did_change_marker_decorations: Emitter(),
     subscription: None,
     disposed: false,
   }

@@ -105,11 +105,7 @@ priv struct AttachedViews {
 ///|
 /// Creates an empty attached-view manager.
 fn AttachedViews::AttachedViews() -> AttachedViews {
-  {
-    views: [],
-    next_id: Ref(0),
-    did_change_visible_ranges: @base_common.Emitter::new(),
-  }
+  { views: [], next_id: Ref(0), did_change_visible_ranges: Emitter() }
 }
 
 ///|
@@ -275,7 +271,7 @@ priv struct AbstractSyntaxTokenBackend {
 ///|
 /// Creates the shared backend contract.
 fn AbstractSyntaxTokenBackend::AbstractSyntaxTokenBackend() -> AbstractSyntaxTokenBackend {
-  { did_change_tokens: @base_common.Emitter::new() }
+  { did_change_tokens: Emitter() }
 }
 
 ///|
@@ -300,7 +296,7 @@ fn AbstractSyntaxTokenBackend::dispose(
 fn join_line_ranges(
   ranges : Array[@base_common.LineRange],
 ) -> Array[@base_common.LineRange] {
-  let set = @base_common.LineRangeSet::new()
+  let set = @base_common.LineRangeSet()
   for range in ranges {
     set.add_range(range)
   }

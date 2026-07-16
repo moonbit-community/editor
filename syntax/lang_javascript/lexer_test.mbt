@@ -3,7 +3,7 @@
 /// document offsets — lines split on `\n`, lexer state threaded line to line
 /// exactly as the tokenization part's whole-document sweep does.
 fn render_tokens(source : String) -> String {
-  let tokenizer : &@syntax.LineTokenizer = @lang_javascript.JavascriptTokenizer::new()
+  let tokenizer : &@syntax.LineTokenizer = @lang_javascript.JavascriptTokenizer()
   let rendered : Array[String] = []
   let mut state = tokenizer.initial_state()
   let mut line_start = 0
@@ -136,7 +136,7 @@ test "template literals span lines with interpolation" {
 
 ///|
 test "template state carries across lines through TokenizerState" {
-  let lexer : &@syntax.LineTokenizer = @lang_javascript.JavascriptTokenizer::new()
+  let lexer : &@syntax.LineTokenizer = @lang_javascript.JavascriptTokenizer()
   let (_, in_template) = lexer.tokenize_line(
     "const t = `open",
     lexer.initial_state(),

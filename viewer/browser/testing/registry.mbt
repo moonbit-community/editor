@@ -52,9 +52,9 @@ pub fn register_viewer(
     registration_id,
     has_model,
     set_hidden_areas,
-    did_build_view_model: @base_common.Emitter::new(),
-    did_render_model: @base_common.Emitter::new(),
-    did_resolve_hover: @base_common.Emitter::new(),
+    did_build_view_model: Emitter(),
+    did_render_model: Emitter(),
+    did_resolve_hover: Emitter(),
   }
   @base_common.Disposable::from(() => {
     unregister_if_current(viewer_id, registration_id)

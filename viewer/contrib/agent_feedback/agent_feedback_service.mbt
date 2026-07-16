@@ -44,11 +44,11 @@ pub struct AgentFeedbackService {
 /// Creates an empty feedback store.
 pub fn AgentFeedbackService::new() -> AgentFeedbackService {
   {
-    did_change_feedback: @base_common.Emitter::new(),
-    did_change_navigation: @base_common.Emitter::new(),
-    did_add_feedback: @base_common.Emitter::new(),
-    did_add_reply: @base_common.Emitter::new(),
-    did_submit_feedback: @base_common.Emitter::new(),
+    did_change_feedback: Emitter(),
+    did_change_navigation: Emitter(),
+    did_add_feedback: Emitter(),
+    did_add_reply: Emitter(),
+    did_submit_feedback: Emitter(),
     items_by_resource: Map([]),
     navigation_anchor_by_resource: Map([]),
     enabled_resources: Map([]),

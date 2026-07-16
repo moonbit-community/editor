@@ -17,7 +17,8 @@ pub struct GlobalPointerMoveMonitor {
 }
 
 ///|
-pub fn GlobalPointerMoveMonitor::new() -> GlobalPointerMoveMonitor {
+#alias(new)
+pub fn GlobalPointerMoveMonitor::GlobalPointerMoveMonitor() -> GlobalPointerMoveMonitor {
   {
     hooks: [],
     pointer_move_callback: None,

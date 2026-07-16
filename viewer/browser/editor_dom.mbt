@@ -9,7 +9,7 @@
 //   * `EditorMouseEvent extends StandardMouseEvent` ports as
 //     `EditorDomMouseEvent` and flattens the base fields
 //     into this struct (MoonBit has no inheritance); the constructor populates
-//     them from `@base_browser.StandardMouseEvent::new`.
+//     them from `@base_browser.StandardMouseEvent(...)`.
 //   * The single-window omission (see `base/browser/mouse_event.mbt`) drops
 //     every `targetWindow`/`getWindow` parameter.
 //
@@ -143,7 +143,7 @@ pub fn EditorDomMouseEvent::new(
   is_from_pointer_capture : Bool,
   editor_view_dom_node : @rdom.Element,
 ) -> EditorDomMouseEvent {
-  let base = @base_browser.StandardMouseEvent::new(e)
+  let base = @base_browser.StandardMouseEvent(e)
   {
     browser_event: base.browser_event,
     left_button: base.left_button,
@@ -343,7 +343,7 @@ pub fn GlobalEditorPointerMoveMonitor::new(
 ) -> GlobalEditorPointerMoveMonitor {
   {
     editor_view_dom_node,
-    global_pointer_move_monitor: @base_browser.GlobalPointerMoveMonitor::new(),
+    global_pointer_move_monitor: GlobalPointerMoveMonitor(),
     keydown_listener: None,
     disposed: false,
   }

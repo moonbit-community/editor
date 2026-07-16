@@ -1,7 +1,7 @@
 ///|
 test "log service filters by level" {
-  let memory = MemoryLogger::new()
-  let service = LogService::new(level=Warning, logger=memory)
+  let memory = @log.MemoryLogger()
+  let service = @log.LogService(level=Warning, logger=memory)
   service.info("test", "hidden")
   service.warn("test", "visible", details=[("key", "value")])
   service.error("test", "also visible")
@@ -14,7 +14,7 @@ test "log service filters by level" {
 
 ///|
 test "null logger accepts entries and flushes" {
-  let service = LogService::new(logger=NullLogger::new())
+  let service = @log.LogService(logger=@log.NullLogger())
   service.error("test", "ignored")
   service.flush()
   assert_true(true)
@@ -22,10 +22,10 @@ test "null logger accepts entries and flushes" {
 
 ///|
 test "multiplex logger fans out entries and flushes" {
-  let first = MemoryLogger::new()
-  let second = MemoryLogger::new()
-  let mux = MultiplexLogger::new([first, second])
-  let service = LogService::new(level=Trace, logger=mux)
+  let first = @log.MemoryLogger()
+  let second = @log.MemoryLogger()
+  let mux = @log.MultiplexLogger([first, second])
+  let service = @log.LogService(level=Trace, logger=mux)
   service.debug("test", "fanout")
   service.flush()
   assert_eq(first.entries().length(), 1)
@@ -36,8 +36,8 @@ test "multiplex logger fans out entries and flushes" {
 
 ///|
 test "log handle forwards only warnings and errors with exact details" {
-  let memory = MemoryLogger::new()
-  let service = LogService::new(level=Trace, logger=memory)
+  let memory = @log.MemoryLogger()
+  let service = @log.LogService(level=Trace, logger=memory)
   let handle = service.log_handle()
   handle.warn("handle", "warning", details=[("kind", "warn")])
   handle.error("handle", "error", details=[("kind", "error")])

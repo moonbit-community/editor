@@ -139,7 +139,7 @@ test "GlobalPointerMoveMonitor capture, fallback, stop, restart, and dispose lif
   let stopped = Ref(0)
   let changed_buttons_forwarded_event = Ref(false)
   let captured = pointer_monitor_test_element(false, false)
-  let monitor = GlobalPointerMoveMonitor::new()
+  let monitor = GlobalPointerMoveMonitor()
   monitor.start_monitoring(captured, 41, 1, _ => moved.val += 1, event => {
     stopped.val += 1
     changed_buttons_forwarded_event.val = event is Some(_)

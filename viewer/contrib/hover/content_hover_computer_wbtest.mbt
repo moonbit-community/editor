@@ -36,7 +36,7 @@ async test "content hover computer separates sync markers from async markdown" {
   })
   |> ignore
   let services : HoverParticipantServices = {
-    languages: languages.language_handle(@log.LogService::new().log_handle()),
+    languages: languages.language_handle(@log.LogService().log_handle()),
     marker_decorations: marker_decorations.marker_decorations_handle(),
   }
   let computer = ContentHoverComputer::new(services)
@@ -112,7 +112,7 @@ fn computer_services_with_languages(
     markers.marker_service_handle(),
   )
   {
-    languages: languages.language_handle(@log.LogService::new().log_handle()),
+    languages: languages.language_handle(@log.LogService().log_handle()),
     marker_decorations: marker_decorations.marker_decorations_handle(),
   }
 }

@@ -10,10 +10,10 @@ import {
 // Errors
 
 // Types and methods
-pub enum JsonTokenizer {
-  JsonTokenizer
+pub struct JsonTokenizer {
 }
-pub fn JsonTokenizer::new() -> Self
+#alias(new)
+pub fn JsonTokenizer::JsonTokenizer() -> Self
 pub impl @syntax.LineTokenizer for JsonTokenizer
 
 // Type aliases

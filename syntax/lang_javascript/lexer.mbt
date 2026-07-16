@@ -12,14 +12,14 @@
 /// Quoted strings never span lines; regex literals are not detected
 /// (the `/` ambiguity needs token-history heuristics) and lex as
 /// operators.
-pub enum JavascriptTokenizer {
-  JavascriptTokenizer
-}
+pub struct JavascriptTokenizer {}
 
 ///|
 /// Creates the JavaScript tokenizer.
-pub fn JavascriptTokenizer::new() -> JavascriptTokenizer {
-  JavascriptTokenizer
+#alias(new)
+#warnings("-unnecessary_annotation")
+pub fn JavascriptTokenizer::JavascriptTokenizer() -> JavascriptTokenizer {
+  JavascriptTokenizer::{  }
 }
 
 ///|

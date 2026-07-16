@@ -82,7 +82,7 @@ fn run_viewer_api_test() -> Unit {
   let model_line_count = component_model_line_count()
   match mount_host() {
     Some(host) => {
-      let log_service = @log.LogService::new()
+      let log_service = @log.LogService()
       let log_handle = log_service.log_handle()
       let languages = @languages.Languages::new()
       let markers = @markers.MarkerService::new(
@@ -93,10 +93,7 @@ fn run_viewer_api_test() -> Unit {
         markers=MarkerStore(markers.marker_service_handle()),
         log_service=log_handle,
       )
-      languages.set_tokens_provider(
-        "moonbit",
-        @lang_moonbit.MoonbitTokenizer::new(),
-      )
+      languages.set_tokens_provider("moonbit", @lang_moonbit.MoonbitTokenizer())
       |> ignore
       let provider = ComponentHoverProvider::new()
       languages.register_hover_provider(LanguageId("moonbit"), provider)

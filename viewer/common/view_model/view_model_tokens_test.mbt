@@ -4,10 +4,7 @@
 /// tier). Idempotent; the registration lives for the test binary. Shared by
 /// the view-model test files in this package.
 fn register_plain_moonbit() -> Unit {
-  @syntax.tokenization_registry.register(
-    "moonbit",
-    @syntax.PlainTokenizer::new(),
-  )
+  @syntax.tokenization_registry.register("moonbit", @syntax.PlainTokenizer())
   |> ignore
 }
 

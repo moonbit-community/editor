@@ -87,8 +87,8 @@ fn run_view_zones_test() -> Unit {
     "view-zones-rev-1",
     view_zones_source(),
   )
-  let memory = @log.MemoryLogger::new()
-  let log_service = @log.LogService::new(level=Trace, logger=memory)
+  let memory = @log.MemoryLogger()
+  let log_service = @log.LogService(level=Trace, logger=memory)
   let services = @viewer.ViewerServices::new(
     log_service=log_service.log_handle(),
   )

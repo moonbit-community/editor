@@ -27,7 +27,10 @@ pub struct CharacterClassifier {
 }
 
 ///|
-pub fn CharacterClassifier::new(default_value : Int) -> CharacterClassifier {
+#alias(new)
+pub fn CharacterClassifier::CharacterClassifier(
+  default_value : Int,
+) -> CharacterClassifier {
   let dv = to_uint8(default_value)
   { ascii_map: Array::make(256, dv), map: Map([]), default_value: dv }
 }
@@ -78,8 +81,9 @@ pub struct CharacterSet {
 }
 
 ///|
-pub fn CharacterSet::new() -> CharacterSet {
-  { actual: CharacterClassifier::new(0) }
+#alias(new)
+pub fn CharacterSet::CharacterSet() -> CharacterSet {
+  { actual: CharacterClassifier(0) }
 }
 
 ///|

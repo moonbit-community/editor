@@ -3,14 +3,14 @@
 /// the trivial two-state machine. State "n" is normal; state "c" is
 /// inside a `/* ... */` block comment, the one construct that carries
 /// across lines.
-pub enum JsonTokenizer {
-  JsonTokenizer
-}
+pub struct JsonTokenizer {}
 
 ///|
 /// Creates the JSON/JSONC tokenizer.
-pub fn JsonTokenizer::new() -> JsonTokenizer {
-  JsonTokenizer
+#alias(new)
+#warnings("-unnecessary_annotation")
+pub fn JsonTokenizer::JsonTokenizer() -> JsonTokenizer {
+  JsonTokenizer::{  }
 }
 
 ///|

@@ -286,14 +286,14 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
       }
       if !position_matches_edge || cannot_scroll_anymore {
         mouse_target = if outside_position is Above {
-          create_outside_editor(
+          @editor_browser.MouseTarget::create_outside_editor(
             self.position.mouse_column(),
             Position(edge_line_number, 1),
             Above,
             outside_distance,
           )
         } else {
-          create_outside_editor(
+          @editor_browser.MouseTarget::create_outside_editor(
             self.position.mouse_column(),
             Position(
               edge_line_number,
@@ -326,14 +326,14 @@ fn DragScrollingOperation::execute(self : DragScrollingOperation) -> Unit {
       // of the mouse
       let probed = self.probe_mouse_target(layout_info)
       let mouse_target = if outside_position is Left {
-        create_outside_editor(
+        @editor_browser.MouseTarget::create_outside_editor(
           probed.mouse_column(),
           Position(edge_line_number, probed.mouse_column()),
           Left,
           outside_distance,
         )
       } else {
-        create_outside_editor(
+        @editor_browser.MouseTarget::create_outside_editor(
           probed.mouse_column(),
           Position(edge_line_number, probed.mouse_column()),
           Right,

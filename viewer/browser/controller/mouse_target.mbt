@@ -7,9 +7,8 @@
 // bridging.
 //
 // Shape notes:
-//   * The `MouseTarget` static factories are package-level `create_*`
-//     functions — the enum is owned by `viewer/browser`, and MoonBit forbids
-//     methods on foreign types.
+//   * The `MouseTarget` static factories are package-private local methods on
+//     the foreign enum owned by `viewer/browser`.
 //   * `BareHitTestRequest`/`HitTestRequest` flatten into one struct (no
 //     inheritance); `doHitTest` takes the full request.
 //   * `Lazy(() => doHitTest(...))` is a `mut` option cache
@@ -103,7 +102,7 @@ fn deduce_rage(
 
 ///|
 /// `MouseTarget.createUnknown` (mouseTarget.ts:81-83).
-pub fn create_unknown(
+fn @editor_browser.MouseTarget::create_unknown(
   element : @rdom.Element?,
   mouse_column : Int,
   position : @base_common.Position?,
@@ -119,7 +118,7 @@ pub fn create_unknown(
 ///|
 /// `MouseTarget.createMargin` (mouseTarget.ts:87-89). `type_` is one of the
 /// three gutter margin types.
-pub fn create_margin(
+fn @editor_browser.MouseTarget::create_margin(
   type_ : @editor_browser.MouseTargetType,
   element : @rdom.Element?,
   mouse_column : Int,
@@ -133,7 +132,7 @@ pub fn create_margin(
 ///|
 /// `MouseTarget.createViewZone` (mouseTarget.ts:90-92). `type_` is
 /// `GutterViewZone` or `ContentViewZone`.
-pub fn create_view_zone(
+fn @editor_browser.MouseTarget::create_view_zone(
   type_ : @editor_browser.MouseTargetType,
   element : @rdom.Element?,
   mouse_column : Int,
@@ -152,7 +151,7 @@ pub fn create_view_zone(
 
 ///|
 /// `MouseTarget.createContentText` (mouseTarget.ts:93-95).
-pub fn create_content_text(
+fn @editor_browser.MouseTarget::create_content_text(
   element : @rdom.Element?,
   mouse_column : Int,
   position : @base_common.Position,
@@ -170,7 +169,7 @@ pub fn create_content_text(
 
 ///|
 /// `MouseTarget.createContentEmpty` (mouseTarget.ts:96-98).
-pub fn create_content_empty(
+fn @editor_browser.MouseTarget::create_content_empty(
   element : @rdom.Element?,
   mouse_column : Int,
   position : @base_common.Position,
@@ -187,7 +186,7 @@ pub fn create_content_empty(
 
 ///|
 /// `MouseTarget.createContentWidget` (mouseTarget.ts:99-101).
-pub fn create_content_widget(
+fn @editor_browser.MouseTarget::create_content_widget(
   element : @rdom.Element?,
   mouse_column : Int,
   detail : String,
@@ -197,7 +196,7 @@ pub fn create_content_widget(
 
 ///|
 /// `MouseTarget.createScrollbar` (mouseTarget.ts:102-104).
-pub fn create_scrollbar(
+fn @editor_browser.MouseTarget::create_scrollbar(
   element : @rdom.Element?,
   mouse_column : Int,
   position : @base_common.Position,
@@ -212,7 +211,7 @@ pub fn create_scrollbar(
 
 ///|
 /// `MouseTarget.createOverlayWidget` (mouseTarget.ts:105-107).
-pub fn create_overlay_widget(
+fn @editor_browser.MouseTarget::create_overlay_widget(
   element : @rdom.Element?,
   mouse_column : Int,
   detail : String,
@@ -222,7 +221,7 @@ pub fn create_overlay_widget(
 
 ///|
 /// `MouseTarget.createOutsideEditor` (mouseTarget.ts:108-110).
-pub fn create_outside_editor(
+fn @editor_browser.MouseTarget::create_outside_editor(
   mouse_column : Int,
   position : @base_common.Position,
   outside_position : @editor_browser.OutsidePosition,
@@ -241,7 +240,8 @@ pub fn create_outside_editor(
 /// `ElementPath` (mouseTarget.ts:157-235): predicates over the root-first
 /// fingerprint path bytes `PartFingerprint::collect` produces. The numeric
 /// byte values are `PartFingerprint::to_int` (`view_part.mbt`).
-pub(all) struct ElementPath {}
+#warnings("-struct_never_constructed")
+priv struct ElementPath {}
 
 ///|
 fn fp(fingerprint : @view.PartFingerprint) -> Byte {
@@ -249,62 +249,59 @@ fn fp(fingerprint : @view.PartFingerprint) -> Byte {
 }
 
 ///|
-pub fn ElementPath::is_text_area(path : Bytes) -> Bool {
+#warnings("-unused_value")
+fn ElementPath::is_text_area(path : Bytes) -> Bool {
   path.length() == 2 && path[0] == fp(OverflowGuard) && path[1] == fp(TextArea)
 }
 
 ///|
-pub fn ElementPath::is_child_of_view_lines(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_view_lines(path : Bytes) -> Bool {
   path.length() >= 4 && path[0] == fp(OverflowGuard) && path[3] == fp(ViewLines)
 }
 
 ///|
-pub fn ElementPath::is_strict_child_of_view_lines(path : Bytes) -> Bool {
+fn ElementPath::is_strict_child_of_view_lines(path : Bytes) -> Bool {
   path.length() > 4 && path[0] == fp(OverflowGuard) && path[3] == fp(ViewLines)
 }
 
 ///|
-pub fn ElementPath::is_child_of_scrollable_element(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_scrollable_element(path : Bytes) -> Bool {
   path.length() >= 2 &&
   path[0] == fp(OverflowGuard) &&
   path[1] == fp(ScrollableElement)
 }
 
 ///|
-pub fn ElementPath::is_child_of_minimap(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_minimap(path : Bytes) -> Bool {
   path.length() >= 2 && path[0] == fp(OverflowGuard) && path[1] == fp(Minimap)
 }
 
 ///|
-pub fn ElementPath::is_child_of_content_widgets(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_content_widgets(path : Bytes) -> Bool {
   path.length() >= 4 &&
   path[0] == fp(OverflowGuard) &&
   path[3] == fp(ContentWidgets)
 }
 
 ///|
-pub fn ElementPath::is_child_of_overflow_guard(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_overflow_guard(path : Bytes) -> Bool {
   path.length() >= 1 && path[0] == fp(OverflowGuard)
 }
 
 ///|
-pub fn ElementPath::is_child_of_overflowing_content_widgets(
-  path : Bytes,
-) -> Bool {
+fn ElementPath::is_child_of_overflowing_content_widgets(path : Bytes) -> Bool {
   path.length() >= 1 && path[0] == fp(OverflowingContentWidgets)
 }
 
 ///|
-pub fn ElementPath::is_child_of_overlay_widgets(path : Bytes) -> Bool {
+fn ElementPath::is_child_of_overlay_widgets(path : Bytes) -> Bool {
   path.length() >= 2 &&
   path[0] == fp(OverflowGuard) &&
   path[1] == fp(OverlayWidgets)
 }
 
 ///|
-pub fn ElementPath::is_child_of_overflowing_overlay_widgets(
-  path : Bytes,
-) -> Bool {
+fn ElementPath::is_child_of_overflowing_overlay_widgets(path : Bytes) -> Bool {
   path.length() >= 1 && path[0] == fp(OverflowingOverlayWidgets)
 }
 
@@ -352,7 +349,7 @@ pub fn HitTestContext::get_zone_at_coord(
 /// static `HitTestContext.getZoneAtCoord` (mouseTarget.ts:269-308) — the
 /// target is either a view zone or the empty space after the last view line.
 /// Takes the view model directly (Monaco takes its `ViewContext`).
-pub fn hit_test_get_zone_at_coord(
+fn hit_test_get_zone_at_coord(
   view_model : @view_model.ViewModel,
   mouse_vertical_offset : Double,
 ) -> @editor_browser.MouseTargetViewZoneData? {
@@ -694,7 +691,11 @@ pub fn HitTestRequest::fulfill_unknown(
   self : HitTestRequest,
   position? : @base_common.Position,
 ) -> @editor_browser.MouseTarget {
-  create_unknown(self.target(), self.get_mouse_column(position?), position)
+  @editor_browser.MouseTarget::create_unknown(
+    self.target(),
+    self.get_mouse_column(position?),
+    position,
+  )
 }
 
 ///|
@@ -705,7 +706,7 @@ pub fn HitTestRequest::fulfill_margin(
   range : @base_common.Range,
   detail : @editor_browser.MouseTargetMarginData,
 ) -> @editor_browser.MouseTarget {
-  create_margin(
+  @editor_browser.MouseTarget::create_margin(
     type_,
     self.target(),
     self.get_mouse_column(position~),
@@ -723,7 +724,7 @@ pub fn HitTestRequest::fulfill_view_zone(
   detail : @editor_browser.MouseTargetViewZoneData,
 ) -> @editor_browser.MouseTarget {
   // Always return the usual mouse column for a view zone.
-  create_view_zone(
+  @editor_browser.MouseTarget::create_view_zone(
     type_,
     self.target(),
     self.get_mouse_column(),
@@ -739,7 +740,7 @@ pub fn HitTestRequest::fulfill_content_text(
   range : @base_common.Range?,
   detail : @editor_browser.MouseTargetContentTextData,
 ) -> @editor_browser.MouseTarget {
-  create_content_text(
+  @editor_browser.MouseTarget::create_content_text(
     self.target(),
     self.get_mouse_column(position~),
     position,
@@ -754,7 +755,7 @@ pub fn HitTestRequest::fulfill_content_empty(
   position : @base_common.Position,
   detail : @editor_browser.MouseTargetContentEmptyData,
 ) -> @editor_browser.MouseTarget {
-  create_content_empty(
+  @editor_browser.MouseTarget::create_content_empty(
     self.target(),
     self.get_mouse_column(position~),
     position,
@@ -767,7 +768,11 @@ pub fn HitTestRequest::fulfill_content_widget(
   self : HitTestRequest,
   detail : String,
 ) -> @editor_browser.MouseTarget {
-  create_content_widget(self.target(), self.get_mouse_column(), detail)
+  @editor_browser.MouseTarget::create_content_widget(
+    self.target(),
+    self.get_mouse_column(),
+    detail,
+  )
 }
 
 ///|
@@ -775,7 +780,11 @@ pub fn HitTestRequest::fulfill_scrollbar(
   self : HitTestRequest,
   position : @base_common.Position,
 ) -> @editor_browser.MouseTarget {
-  create_scrollbar(self.target(), self.get_mouse_column(position~), position)
+  @editor_browser.MouseTarget::create_scrollbar(
+    self.target(),
+    self.get_mouse_column(position~),
+    position,
+  )
 }
 
 ///|
@@ -783,7 +792,11 @@ pub fn HitTestRequest::fulfill_overlay_widget(
   self : HitTestRequest,
   detail : String,
 ) -> @editor_browser.MouseTarget {
-  create_overlay_widget(self.target(), self.get_mouse_column(), detail)
+  @editor_browser.MouseTarget::create_overlay_widget(
+    self.target(),
+    self.get_mouse_column(),
+    detail,
+  )
 }
 
 ///|
@@ -855,7 +868,7 @@ pub fn MouseTargetFactory::create_mouse_target(
   target : @rdom.Element?,
 ) -> @editor_browser.MouseTarget {
   guard (self.view_helper.view_model)() is Some(view_model) else {
-    return create_unknown(target, 1, None)
+    return @editor_browser.MouseTarget::create_unknown(target, 1, None)
   }
   let ctx = HitTestContext::new(view_model, self.view_helper, last_render_data)
   let request = HitTestRequest::new(ctx, editor_pos, pos, relative_pos, target)
@@ -1245,7 +1258,7 @@ pub fn MouseTargetFactory::get_mouse_column(
 
 ///|
 /// static `MouseTargetFactory._getMouseColumn` (mouseTarget.ts:866-872).
-pub fn get_mouse_column_static(
+fn get_mouse_column_static(
   mouse_content_horizontal_offset : Double,
   typical_halfwidth_character_width : Double,
 ) -> Int {

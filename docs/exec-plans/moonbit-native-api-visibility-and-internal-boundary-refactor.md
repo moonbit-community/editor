@@ -1,6 +1,6 @@
 # MoonBit-Native API, Visibility, and Internal-Boundary Refactor
 
-Status: proposed
+Status: in progress
 Date: 2026-07-16
 Toolchain baseline: `moon 0.1.20260713`, `moonc v0.10.4`
 Oracle: current checkout; checked-in `vscode` only for already-ported behavior
@@ -195,6 +195,48 @@ wave candidates:
 The fixed first-wave entries may still be blocked if semantic references prove
 that external struct-literal construction is an intentional contract not
 covered by an existing constructor.
+
+### Gate A Result
+
+Gate A completed on 2026-07-16 with no material unresolved scope, API, or
+behavior choice. The complete reviewed ledgers, semantic consumer
+classifications, constructor inventory, package/import snapshots, generated
+interface line counts, and asset hashes are recorded in
+`moonbit-native-api-visibility-and-internal-boundary-refactor-gate-a.md`.
+
+The authoritative baseline required one checked analyzer run before the
+requested `--no-check` snapshot. An unrefreshed `moon ide analyze --no-check`
+reported 152 stale items, including obsolete folding declarations. After
+`moon ide analyze`, the repeated `moon ide analyze --no-check` result was the
+planned 133 annotations across 26 packages.
+
+Reviewed terminal visibility dispositions:
+
+| Disposition | Count |
+|---|---:|
+| `NARROW_PUBLIC` | 116 |
+| `KEEP_ALL` | 10 |
+| `KEEP_OPEN` | 2 |
+| `MAKE_PRIVATE` | 5 |
+| `SEAL_TRAIT` | 0 |
+| `MOVE_INTERNAL_THEN_REVIEW` | 0 |
+
+The constructor regex in the frozen baseline missed generic declarations.
+The current checkout has 96 public `Type::new` declarations:
+
+| Disposition | Count |
+|---|---:|
+| `CANONICALIZE_ALIAS` | 92 |
+| `KEEP_ALTERNATE` | 1 |
+| `VIEW_PRIMARY_COMPAT` | 2 |
+| `TEST_SUPPORT` | 1 |
+
+The move inventory covers 69 production files, 3 black-box tests, 39
+white-box tests, 12 manifests/interfaces, 1,639 generated-interface lines, and
+20 CSS/font assets. All current consumers are inside
+`moonbit-community/editor`, so module-root `internal/viewer/**` accepts current
+root, workbench, and scenario consumers while closing the packages to outside
+modules. The baseline `just check` and the focused controller tests were green.
 
 ## Target Internal Package Map
 

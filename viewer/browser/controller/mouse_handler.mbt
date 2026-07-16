@@ -588,7 +588,7 @@ fn MouseDownOperation::get_position_outside_editor(
         match self.help_position_jump_over_view_zone(view_zone_data) {
           Some(new_position) =>
             return Some(
-              create_outside_editor(
+              @editor_browser.MouseTarget::create_outside_editor(
                 mouse_column,
                 new_position,
                 Above,
@@ -601,7 +601,7 @@ fn MouseDownOperation::get_position_outside_editor(
     }
     let above_line_number = view_layout.line_at_vertical_offset(vertical_offset)
     return Some(
-      create_outside_editor(
+      @editor_browser.MouseTarget::create_outside_editor(
         mouse_column,
         Position(above_line_number, 1),
         Above,
@@ -618,7 +618,7 @@ fn MouseDownOperation::get_position_outside_editor(
         match self.help_position_jump_over_view_zone(view_zone_data) {
           Some(new_position) =>
             return Some(
-              create_outside_editor(
+              @editor_browser.MouseTarget::create_outside_editor(
                 mouse_column,
                 new_position,
                 Below,
@@ -631,7 +631,7 @@ fn MouseDownOperation::get_position_outside_editor(
     }
     let below_line_number = view_layout.line_at_vertical_offset(vertical_offset)
     return Some(
-      create_outside_editor(
+      @editor_browser.MouseTarget::create_outside_editor(
         mouse_column,
         Position(
           below_line_number,
@@ -650,7 +650,7 @@ fn MouseDownOperation::get_position_outside_editor(
   if e.relative_pos().x <= x_left_boundary {
     let outside_distance = x_left_boundary - e.relative_pos().x
     return Some(
-      create_outside_editor(
+      @editor_browser.MouseTarget::create_outside_editor(
         mouse_column,
         Position(possible_line_number, 1),
         Left,
@@ -663,7 +663,7 @@ fn MouseDownOperation::get_position_outside_editor(
   if e.relative_pos().x >= x_right_boundary {
     let outside_distance = e.relative_pos().x - x_right_boundary
     return Some(
-      create_outside_editor(
+      @editor_browser.MouseTarget::create_outside_editor(
         mouse_column,
         Position(
           possible_line_number,
@@ -705,7 +705,9 @@ fn MouseDownOperation::find_mouse_position(
       match self.help_position_jump_over_view_zone(detail) {
         Some(new_position) =>
           return Some(
-            create_view_zone(type_, element, mouse_column, new_position, detail),
+            @editor_browser.MouseTarget::create_view_zone(
+              type_, element, mouse_column, new_position, detail,
+            ),
           )
         None => ()
       }

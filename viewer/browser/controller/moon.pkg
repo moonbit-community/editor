@@ -14,6 +14,6 @@ import {
 
 import {
   "moonbit-community/editor/syntax",
-} for "test"
+} for "wbtest"
 
 supported_targets = "js"

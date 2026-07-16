@@ -465,7 +465,12 @@ test "DragScrolling disposal cancels and disables its pending animation frame" {
     (_position, _in_selection_mode, _reveal_type) => {
       abort("disposed rAF dispatched")
     },
-    create_outside_editor(1, Position(1, 1), Below, 20.0),
+    @editor_browser.MouseTarget::create_outside_editor(
+      1,
+      Position(1, 1),
+      Below,
+      20.0,
+    ),
     editor_event,
   )
   assert_true(operation.animation_frame_id is Some(_))

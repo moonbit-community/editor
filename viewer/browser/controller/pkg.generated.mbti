@@ -15,27 +15,6 @@ import {
 }
 
 // Values
-pub fn create_content_empty(@dom.Element?, Int, @common.Position, @browser.MouseTargetContentEmptyData) -> @browser.MouseTarget
-
-pub fn create_content_text(@dom.Element?, Int, @common.Position, @common.Range?, @browser.MouseTargetContentTextData) -> @browser.MouseTarget
-
-pub fn create_content_widget(@dom.Element?, Int, String) -> @browser.MouseTarget
-
-pub fn create_margin(@browser.MouseTargetType, @dom.Element?, Int, @common.Position, @common.Range, @browser.MouseTargetMarginData) -> @browser.MouseTarget
-
-pub fn create_outside_editor(Int, @common.Position, @browser.OutsidePosition, Double) -> @browser.MouseTarget
-
-pub fn create_overlay_widget(@dom.Element?, Int, String) -> @browser.MouseTarget
-
-pub fn create_scrollbar(@dom.Element?, Int, @common.Position) -> @browser.MouseTarget
-
-pub fn create_unknown(@dom.Element?, Int, @common.Position?) -> @browser.MouseTarget
-
-pub fn create_view_zone(@browser.MouseTargetType, @dom.Element?, Int, @common.Position, @browser.MouseTargetViewZoneData) -> @browser.MouseTarget
-
-pub fn get_mouse_column_static(Double, Double) -> Int
-
-pub fn hit_test_get_zone_at_coord(@view_model.ViewModel, Double) -> @browser.MouseTargetViewZoneData?
 
 // Errors
 
@@ -53,19 +32,6 @@ pub(all) enum DragScrollingDirection {
   TopBottom
   LeftRight
 } derive(Eq, @debug.Debug)
-
-pub(all) struct ElementPath {
-}
-pub fn ElementPath::is_child_of_content_widgets(Bytes) -> Bool
-pub fn ElementPath::is_child_of_minimap(Bytes) -> Bool
-pub fn ElementPath::is_child_of_overflow_guard(Bytes) -> Bool
-pub fn ElementPath::is_child_of_overflowing_content_widgets(Bytes) -> Bool
-pub fn ElementPath::is_child_of_overflowing_overlay_widgets(Bytes) -> Bool
-pub fn ElementPath::is_child_of_overlay_widgets(Bytes) -> Bool
-pub fn ElementPath::is_child_of_scrollable_element(Bytes) -> Bool
-pub fn ElementPath::is_child_of_view_lines(Bytes) -> Bool
-pub fn ElementPath::is_strict_child_of_view_lines(Bytes) -> Bool
-pub fn ElementPath::is_text_area(Bytes) -> Bool
 
 pub struct HitTestContext {
   view_model : @view_model.ViewModel

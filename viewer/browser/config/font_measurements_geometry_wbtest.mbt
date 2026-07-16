@@ -1,6 +1,6 @@
 // White-box deterministic source-derived tests for
 // `vscode/src/vs/editor/browser/config/fontMeasurements.ts` at vscode
-// submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in submodule.
 // Multi-window, persistence, and disposal cases are intentionally absent owner
 // seams; this file covers the approved single-window folded cache and complete
 // request/measurement behavior.

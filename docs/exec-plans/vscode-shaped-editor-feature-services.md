@@ -1,6 +1,6 @@
 # VS Code-Shaped Editor Feature Services
 
-Status: implemented in `17ae776`, with host startup log flag wiring deferred.
+Status: implemented in recorded milestone, with host startup log flag wiring deferred.
 Date: 2026-06-16
 
 Superseding note (2026-06-18): public language registration moved from

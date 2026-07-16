@@ -1,6 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/selections/selections.ts`
-// (`SelectionsOverlay`), vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd. The `ContentViewOverlays` row
+// (`SelectionsOverlay`), checked-in vscode submodule. The `ContentViewOverlays` row
 // shell lives in `view_overlays.mbt`, mirroring Monaco's `viewOverlays.ts`;
 // this source unit owns the selection dynamic overlay. Its lifecycle wiring
 // lives beside the package-private rendering context.

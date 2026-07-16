@@ -1,7 +1,7 @@
 # Aligning the External-Consumer Import Rule with Monaco's Workbench Rules
 
 Status: implemented — 2026-07-03 (proposed the same day).
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 
 ## Context
 

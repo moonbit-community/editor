@@ -6,7 +6,7 @@ Date: 2026-07-10
 
 Implemented: 2026-07-12
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -178,7 +178,7 @@ Total                                                          563
 
 ### Source evidence and closed boundaries
 
-Oracle: `b18492a288de038fbc7643aae6de8247029d11bd`.
+Oracle: checked-in source.
 
 | File | Lines | SHA-256 |
 |---|---:|---|
@@ -1012,7 +1012,7 @@ effects; the 563-row ledger, not this matrix, is the denominator.
 ### Gate B local-state audit (historical baseline)
 
 Everything in this subsection describes the pre-implementation tree reviewed
-at documentation-only commit `bff07db`. It is retained as the evidence that
+at documentation-only milestone. It is retained as the evidence that
 authorized the work; the final contract is the terminal ledger and closing
 execution record below.
 
@@ -1295,7 +1295,7 @@ tokenization, geometry, reveal, and theme boundaries without duplicate rows.
 No product or test file changed. This child is at **STOP FOR REVIEW**; Gate B
 has not passed and implementation is not authorized.
 
-### 2026-07-12 — Gate B rejected inventory commit `23b7200`
+### 2026-07-12 — Gate B rejected inventory milestone
 
 Independent review rejected the 509-row milestone. The denominator omitted the
 35 generic view-queue/collector atoms frozen cursor had explicitly handed to
@@ -1303,7 +1303,7 @@ render invalidation, `EditorConfiguration` setter/digit-count atoms, and
 the readonly/generic-option atoms. It also counted three geometry helper atoms
 inside RVMI, collapsed the scheduler callback, used unsupported N-A/DEFERRED
 classifications, left generic dependency reasons, and did not close every
-ViewPart sibling boundary. Commit `23b7200` remains the historical docs-only
+ViewPart sibling boundary. The milestone remains the historical docs-only
 rejected milestone; no product or test work was authorized from it.
 
 ### 2026-07-12 — Gate B amendment ready
@@ -1319,14 +1319,14 @@ and the explicit complete-snapshot API deviation. All fourteen pinned source
 hashes were recomputed successfully; no product or test file changed. This
 amendment is at **STOP FOR FRESH REVIEW** and Gate B has not passed.
 
-### 2026-07-12 — Gate B rejected amendment commit `69f33f3`
+### 2026-07-12 — Gate B rejected amendment milestone
 
 Fresh review rejected the 559-row amendment. It omitted the source-owned
 ViewLines `createLine` callback and `getExtraEditorClassName` helper, retained a
 duplicate cursor-cardinality umbrella instead of the reused `pauseAnimation`
 constant, and overclaimed collector/scheduler branches. Theme payload typing
 also lacked an explicit `IColorTheme`→`String` identity deviation. Commit
-`69f33f3` remains the historical docs-only rejected amendment; it authorized
+recorded milestone remains the historical docs-only rejected amendment; it authorized
 no product or test work.
 
 ### 2026-07-12 — second Gate B amendment ready
@@ -1344,7 +1344,7 @@ is at **STOP FOR FRESH REVIEW** and Gate B has not passed.
 ### 2026-07-12 — Gate B approved
 
 Independent ViewPart, event/propagation, and configuration reviews approved
-documentation-only inventory commit `bff07db`. The fixed denominator is
+documentation-only inventory milestone. The fixed denominator is
 **563/563 TODO rows** with **247 proposed TESTED, 92 PORTED, 64 DEFERRED, and
 160 N-A**; the child-plan SHA-256 is
 `95d326a81000c368ac9cf9ac6d783f5cd9d2fcf21daf6cbf9a8fb7ec477c0d5a`.
@@ -1355,7 +1355,7 @@ implementation is authorized.
 
 ### 2026-07-12 — implementation, Gate D remediation, and freeze
 
-Product/test commit `14ed3c1` replaces frame snapshot diffs with the typed
+Product/test milestone replaces frame snapshot diffs with the typed
 15-variant ViewEvent union, nested/reentrant FIFO collection, source-time root
 events, exact payloads, and accumulated ViewPart delivery. It ports retained
 ViewLine/ViewLines invalidation, complete locally applicable ViewLineOptions

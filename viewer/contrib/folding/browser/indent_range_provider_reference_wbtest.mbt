@@ -5,7 +5,7 @@
 //   vscode/src/vs/editor/contrib/folding/test/browser/indentFold.test.ts
 //   plus the `computeRanges`-backed cases of foldingRanges.test.ts
 //   (`test max folding regions`, `findRange`, `setCollapsed`).
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From the checked-in vscode submodule.
 //
 // The suites' `/^\s*#region\b/`-style `RegExp` markers become predicate
 // helpers (leading whitespace skip + keyword + word-boundary check); the

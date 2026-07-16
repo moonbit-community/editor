@@ -1,7 +1,7 @@
 ///| Conformance slice for the retained `RangePriorityQueueImpl` operations.
 ///
 /// Source: `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`. The applicable upstream test
+/// checked-in source. The applicable upstream test
 /// keeps its original name; the incremental-resize case is explicitly skipped
 /// below. Branch-derived cases cover the queue operations retained by current
 /// tokenization state tracking.

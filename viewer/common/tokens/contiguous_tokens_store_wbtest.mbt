@@ -1,7 +1,7 @@
 ///| Branch-derived conformance coverage for Monaco's `ContiguousTokensStore`.
 ///
 /// Source: `vscode/src/vs/editor/common/tokens/contiguousTokensStore.ts` at
-/// oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in oracle.
 
 ///|
 fn store_test_codec() -> @services.LanguageIdCodec {

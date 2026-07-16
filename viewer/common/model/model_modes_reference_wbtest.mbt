@@ -1,6 +1,6 @@
 ///| Conformance port from
 /// `vscode/src/vs/editor/test/common/model/model.modes.test.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in source.
 
 ///|
 fn model_modes_part(calls : Array[String]) -> TokenizationTextModelPart {

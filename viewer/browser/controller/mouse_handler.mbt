@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/controller/mouseHandler.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd):
+// (checked-in vscode submodule):
 // `IPointerHandlerHelper`, `MouseHandler`, `MouseDownOperation` and
 // `MouseDownState`. The handler registers its own DOM listeners through
 // `EditorMouseEventFactory` on the view DOM node, exactly like the source —

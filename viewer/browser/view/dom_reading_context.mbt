@@ -1,6 +1,6 @@
 // Ported from
 // `vscode/src/vs/editor/browser/viewParts/viewLines/domReadingContext.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // lazy client-rect cache shared by one batch of DOM reads off the view-lines
 // node. `end_node` is the source's `_textRangeRestingSpot`, the detached span
 // `RangeUtil` parks DOM ranges on between reads.

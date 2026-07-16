@@ -1,5 +1,4 @@
-///| Port of `vscode/src/vs/base/common/uri.ts` (pinned submodule commit
-/// b18492a288d): the `URI` class, percent encoder/decoder, and `uriToFsPath`.
+///| Port of `vscode/src/vs/base/common/uri.ts` (checked-in submodule): the `URI` class, percent encoder/decoder, and `uriToFsPath`.
 ///
 /// Deviations (see docs/exec-plans/monaco-uri-system-port.md):
 /// - D3: the RFC3986 appendix-B regex and `_rEncodedAsHex` become hand-rolled

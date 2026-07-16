@@ -1,7 +1,6 @@
 ///| Conformance ports and readonly adaptations from
-/// `vscode/src/vs/editor/test/browser/viewModel/viewModelImpl.test.ts` at
-/// pinned vscode commit
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// `vscode/src/vs/editor/test/browser/viewModel/viewModelImpl.test.ts` in the
+/// checked-in vscode source.
 
 ///|
 fn view_model_impl_reference_model(
@@ -17,7 +16,7 @@ fn view_model_impl_reference_model(
     path,
     "view-model-impl-reference",
     1,
-    "b18492a",
+    "reference-revision",
     text,
   )
 }

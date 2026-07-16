@@ -1,5 +1,5 @@
 ///| Faithful port of vscode's `model/utils.ts` helpers (pinned `vscode/`
-/// submodule, commit 294fb350). Currently only `computeIndentLevel`; the rest
+/// checked-in submodule). Currently only `computeIndentLevel`; the rest
 /// of `utils.ts` is ported on demand.
 
 ///|

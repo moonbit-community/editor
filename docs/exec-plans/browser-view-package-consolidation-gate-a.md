@@ -6,12 +6,12 @@ Date: 2026-07-14
 
 Parent plan: `browser-view-package-consolidation.md`
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
 This is a documentation-only pre-implementation snapshot. No browser product
 source, test, manifest, generated interface, README, CSS asset, build script,
 or generated web output changed while producing it. The local browser tree is
-the state at parent commit `6877037`.
+the state at parent milestone.
 
 ## Scope and Counting Rule
 
@@ -53,7 +53,7 @@ does not rewrite those bodies. Tests are a separate exact-name denominator.
 The ordered `src`-relative path, `wc -l`, and SHA-256 tab-separated manifest
 below hashes to
 `0a4962eaa7e96c724520c7d9c0c862981cb8d218767712b36f1fb8b82912b535`.
-Every listed file was read at the pinned submodule revision; directory
+Every listed file was read from the checked-in submodule; directory
 discovery was used only to close the file set.
 
 | Source file | Lines | SHA-256 |

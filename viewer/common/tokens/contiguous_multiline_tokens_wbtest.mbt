@@ -3,7 +3,7 @@
 /// - `vscode/src/vs/editor/common/tokens/contiguousMultilineTokensBuilder.ts`
 /// - `vscode/src/vs/editor/common/tokens/contiguousMultilineTokens.ts`
 ///
-/// Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// Oracle: checked-in reference tree.
 
 ///|
 fn assert_words(actual : Array[UInt], expected : Array[UInt]) -> Unit raise {

@@ -1,7 +1,6 @@
 ///|
 /// Faithful 1:1 port of Monaco's `LinesLayout` (and `EditorWhitespace`) from
-/// `vscode/src/vs/editor/common/viewLayout/linesLayout.ts` at submodule commit
-/// b18492a288de038fbc7643aae6de8247029d11bd.
+/// `vscode/src/vs/editor/common/viewLayout/linesLayout.ts` in the checked-in submodule.
 ///
 /// Layouts objects that take vertical space (lines and the whitespaces between
 /// them, i.e. view zones). Lines are addressed with Monaco's 1-based line

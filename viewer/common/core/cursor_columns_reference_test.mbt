@@ -1,7 +1,7 @@
 // Conformance port of Monaco/VS Code's CursorColumns suite.
 //
 // Ports: vscode/src/vs/editor/test/common/core/cursorColumns.test.ts
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From the checked-in vscode submodule.
 
 ///|
 test "visibleColumnFromColumn" {

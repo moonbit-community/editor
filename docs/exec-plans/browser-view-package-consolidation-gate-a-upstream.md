@@ -2,7 +2,7 @@
 
 Status: inventory ready — STOP FOR REVIEW
 Date: 2026-07-14
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 Parent plan: `docs/exec-plans/browser-view-package-consolidation.md`
 
 This companion is the complete upstream half of Gate A. It is a review artifact only and authorizes no product move.

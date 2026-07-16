@@ -1,5 +1,5 @@
 // Source-derived slow-rendered-line tests for pinned `viewLine.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd. Fast/zoom/WebKit/GPU rows remain
+// checked-in source. Fast/zoom/WebKit/GPU rows remain
 // explicitly deferred by the approved geometry ledger.
 
 ///|

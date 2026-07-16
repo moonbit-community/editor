@@ -2,7 +2,7 @@
 // between view-line indexes and accumulated heights.
 //
 // Source: vscode/src/vs/editor/common/model/prefixSumComputer.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (checked-in vscode submodule).
 
 ///|
 /// Result of `PrefixSumComputer::get_index_of`: the index whose range contains

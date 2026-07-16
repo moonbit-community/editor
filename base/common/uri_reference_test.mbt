@@ -1,5 +1,5 @@
-// Conformance port of `vs/base/test/common/uri.test.ts` (pinned vscode/
-// submodule, commit b18492a288d), suite "URI".
+// Conformance port of `vs/base/test/common/uri.test.ts` in the checked-in
+// vscode source, suite "URI".
 //
 // `isWindows`-gated suites run under the D8 `set_is_windows_for_testing`
 // seam instead of being skipped; URIs are always created *after* setting the

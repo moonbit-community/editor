@@ -24,7 +24,7 @@ the backend-neutral render-frame model.
 ## Rabbita Capability Check
 
 Checked against `moonbit-community/rabbita` `main` at commit
-`1b56fbcf48196ed4465967c72aa6ab8be3b9fc69` on 2026-06-10.
+checked-in source on 2026-06-10.
 
 Relevant capabilities:
 

@@ -3,7 +3,7 @@
 Status: in progress — Date: 2026-06-23. Companion to the plan in
 `monaco-port-fidelity-and-deadcode-review.md`.
 
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 
 Findings are tagged **Faithful** / **Deviation-documented** / **Drift** /
 **Dead**. `Drift` = diverges with no recorded decision (actionable);
@@ -102,7 +102,7 @@ internally and the deleted method had no callers. The pre-existing `+73`
 `unnecessary_annotation` warnings (`input.mbt`, `view_controller.mbt`,
 `single_cursor_state_test.mbt`) are unrelated to this change.
 
-## A3 — in-port module fidelity (done; oracle `294fb350`)
+## A3 — in-port module fidelity (done; oracle checked-in source)
 
 Diffed each port-introduced module against its Monaco source.
 

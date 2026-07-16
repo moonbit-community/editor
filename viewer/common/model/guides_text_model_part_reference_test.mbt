@@ -1,6 +1,6 @@
 ///| Faithful conformance port of the `TextModel.getLineIndentGuide` suite in
-/// `vscode/src/vs/editor/test/common/model/textModelWithTokens.test.ts`, pinned
-/// at submodule commit b18492a288de038fbc7643aae6de8247029d11bd. Ports the
+/// `vscode/src/vs/editor/test/common/model/textModelWithTokens.test.ts` in the
+/// checked-in vscode source. Ports the
 /// indent-guide subset of that file (18 cases, including the `tweaks` and
 /// `issue #...` cases) against the `GuidesTextModelPart` port.
 ///

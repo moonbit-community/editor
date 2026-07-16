@@ -1,6 +1,6 @@
 # Monaco `setPosition`/`setSelection` (Single-Selection) 1:1 Port
 
-Status: landed — Date: 2026-07-02 (implemented 2026-07-02). Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: landed — Date: 2026-07-02 (implemented 2026-07-02). Oracle: checked-in reference tree.
 
 Follows `_PORT_PLAYBOOK.md` (inventory-first; copy don't invent; exit gate).
 
@@ -51,7 +51,7 @@ backing chain through `common/viewModel/viewModelImpl.ts` →
 
 ## Inventory (Phase 1) — the denominator
 
-Full member list of the scoped cluster, read at the oracle commit:
+Full member list of the scoped cluster, read at the checked-in source:
 
 1. `setPosition(position, source='api')` — `codeEditorWidget.ts:670-682`
 2. `setSelection` (5 TS overload signatures + 1 implementation) —

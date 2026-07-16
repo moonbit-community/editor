@@ -1,6 +1,6 @@
 // Source-derived ViewZones layout matrices for Monaco
 // `vs/editor/common/viewLayout/{linesLayout,viewLayout}.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in source.
 
 ///|
 priv suberror WhitespaceCallbackFailure {

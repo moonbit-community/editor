@@ -2,7 +2,7 @@
 
 Status: **implemented** — Date: 2026-07-03 (proposed and landed the same day;
 tracks A–F committed individually in plan order).
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 
 Landing notes against the combined exit criteria: A, B, C, D, F landed in
 full (each track's inventory pasted below before its port code; state
@@ -26,13 +26,13 @@ never scheduled for closure. This plan is the schedule.
 Deviations closed recently and therefore **not** in this plan:
 
 - `@view_layout.ViewRange` duplicate → deleted, `@base_common.Range` is the
-  single line/column range on both axes (`fc09b34`, 2026-07-03).
+  single line/column range on both axes (recorded milestone, 2026-07-03).
 - `render_whitespace` / `render_control_characters` not plumbed → plumbed via
   `ViewerOptions` (render-whitespace-control-options port).
 - Diagnostics fidelity gaps (no Hint severity, no marker tags, no zIndex, no
   `showIfCollapsed`) → closed by the marker-render + decoration-system ports.
 - Comments-port fixable deviations (public mouse events, gutter-drag creation,
-  `StableEditorScrollState`, ResizeObserver, vendored codicons) → `5fb4f5e`.
+  `StableEditorScrollState`, ResizeObserver, vendored codicons) → recorded milestone.
 
 This plan follows `_PORT_PLAYBOOK.md`: each track that ports source behavior
 starts with an inventory phase whose output is pasted back into this file, and

@@ -1,5 +1,5 @@
-// Conformance port of `vs/base/test/common/resources.test.ts` (pinned
-// vscode/ submodule, commit b18492a288d), suite "Resources".
+// Conformance port of `vs/base/test/common/resources.test.ts` in the checked-in
+// vscode source, suite "Resources".
 // `distinctParents` covers a DEFERRED member and is not transcribed.
 //
 // The `isWindows` branches run under the D8 seam (both ways where the JS

@@ -1,6 +1,5 @@
 // The decoration half of `vscode/src/vs/workbench/contrib/scm/browser/
-// quickDiffDecorator.ts` (vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971): `QuickDiffDecorator.
+// quickDiffDecorator.ts` (checked-in vscode submodule): `QuickDiffDecorator.
 // createDecoration` and the change→decoration mapping of `onDidChange`.
 //
 // Structural deviation (the foreign-method rule, like the folding contrib):

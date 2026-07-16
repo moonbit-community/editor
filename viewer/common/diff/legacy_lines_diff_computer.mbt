@@ -1,6 +1,5 @@
 // The `IChange` result contract from `vscode/src/vs/editor/common/diff/
-// legacyLinesDiffComputer.ts` (vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971). Only the contract is ported:
+// legacyLinesDiffComputer.ts` (checked-in vscode submodule). Only the contract is ported:
 // the quick-diff contrib consumes changes in this shape (as VS Code's
 // `quickDiffModel.ts` does after `toLineChanges`).
 //

@@ -6,7 +6,7 @@ Date: 2026-07-13
 
 Parent plan: `inline-decorations-view-model-package-merge.md`
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
 At this Gate A snapshot, no product code, package manifest, generated
 interface, test, or README had changed. The user explicitly approved this
@@ -54,7 +54,7 @@ meaningful constant, or owned DOM/CSS item.
 | `test/common/viewModel/inlineDecorations.test.ts` | 491 | `dfa5235bd89420858c279b9dbfcc78ce8a838adf9693d374127ad0a877b8f772` |
 
 The old pin named by the local source is
-`294fb350837dbaee37b949533fead4df4e0e8971`. Git blob and SHA-256 comparison,
+checked-in source. Git blob and SHA-256 comparison,
 plus an empty `git diff --exit-code`, prove that all three scoped files are
 byte-for-byte identical at the old and current pins. There is no API, branch,
 constant, test, or behavioral drift to reconcile; only source citations must

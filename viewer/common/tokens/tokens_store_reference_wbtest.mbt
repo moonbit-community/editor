@@ -1,6 +1,6 @@
 // Conformance disposition for:
 // vscode/src/vs/editor/test/common/model/tokensStore.test.ts
-// Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+// Oracle: checked-in reference tree
 //
 // The source file is a sparse semantic-token and incremental-edit suite. Those
 // behaviors remain owned by viewer-semantic-token-acquisition-application-parity.md;

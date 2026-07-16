@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/config/fontMeasurements.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in source.
 // Single-window: Monaco's per-window cache map (keyed by `getWindowId`)
 // collapses to one cache. The `serializeFontInfo`/`restoreFontInfo`
 // persistence channel is not ported.

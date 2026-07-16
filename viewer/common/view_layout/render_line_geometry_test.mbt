@@ -1,6 +1,6 @@
 // Source-derived geometry matrix for the font-sensitive branches of
 // `vscode/src/vs/editor/common/viewLayout/viewLineRenderer.ts` at vscode
-// submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in submodule.
 
 ///|
 fn geometry_render_input(

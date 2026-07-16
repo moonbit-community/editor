@@ -1,8 +1,7 @@
 ///|
 /// Faithful 1:1 port of Monaco's viewModel/inlineDecorations.ts
 /// (InlineDecoration, InlineDecorationType, InlineModelDecorationsComputer,
-/// InjectedTextInlineDecorationsComputer) from vscode submodule commit
-/// b18492a288de038fbc7643aae6de8247029d11bd.
+/// InjectedTextInlineDecorationsComputer) from checked-in vscode submodule.
 ///
 /// Production uses the package's concrete TextModel, CoordinatesConverter,
 /// ModelDecorationOptions, and ModelDecoration types. The white-box reference

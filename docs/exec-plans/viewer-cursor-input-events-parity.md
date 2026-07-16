@@ -6,7 +6,7 @@ Date: 2026-07-10
 
 Implemented: 2026-07-12
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -154,10 +154,10 @@ product or test file changed.
 
 #### Cursor core Phase 1 inventory (normalized, read-only)
 
-Oracle: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in source
 
 All 2,055 lines of the five assigned source files were read at the pinned
-submodule commit. This revision uses the normalized atom rule: one row per
+submodule revision. This revision uses the normalized atom rule: one row per
 declared member/field/property, behavior-changing branch or early return,
 independently reused/control-flow magic constant, and source-owned callback.
 Straight-line statements remain on their owning constructor/method row.
@@ -535,7 +535,7 @@ sibling units: multi-cursor and marker atoms are ledgered as N-A/DEFERRED.
 
 #### Cursor movement Phase 1 inventory — normalized
 
-Oracle: `vscode` at `b18492a288de038fbc7643aae6de8247029d11bd` (verified with `git -C vscode rev-parse HEAD`). Both named files were read completely.
+Oracle: `vscode` in the checked-in source (verified with `git -C vscode rev-parse HEAD`). Both named files were read completely.
 
 ##### Normalization rule
 
@@ -820,7 +820,7 @@ Reason codes: `N1` single-cursor cardinality; `N2` add/translate-cursor only; `N
 
 #### Cursor browser/public/event inventory (read-only)
 
-Oracle: VS Code `b18492a288de038fbc7643aae6de8247029d11bd` (the checked-out `vscode/` submodule was verified at this exact commit).
+Oracle: the checked-out `vscode/` submodule.
 
 Assigned source units were read from line 1 through EOF:
 
@@ -1413,9 +1413,9 @@ the frozen implementation recorded later in this plan.
 ### Historical Gate B target topology
 
 The following approved topology is retained as the implementation design
-record. Product commits `1525ed932acb4e2c3300a401ab2a329d1b5fdbaf` and
-`07d2e8a9664e068c7cf43c6a9a841274ed756630` realized it, with final contract
-wording corrected by `3c8b25277b3508b31eb8c146bc8f5578631bd688`.
+record. Product commits recorded milestone and
+recorded milestone realized it, with final contract
+wording corrected by recorded milestone.
 
 1. **Movement owners.** Port the source-shaped movement functions into
    `viewer/common/view_model/cursor_move_operations.mbt` and
@@ -1486,7 +1486,7 @@ wording corrected by `3c8b25277b3508b31eb8c146bc8f5578631bd688`.
 
 ### Combined mechanical audit
 
-- Pinned Oracle: `b18492a288de038fbc7643aae6de8247029d11bd`.
+- Oracle: checked-in source.
 - Source rows: **802**; every active prefix ID is unique and every row has a
   terminal status. CUR/COL/ONE/CCM/CEV/CMC/CMO/VC/CEW/VED/VMI are contiguous;
   CORE has the explicitly retired non-denominator IDs recorded above.
@@ -1556,7 +1556,7 @@ only the ten reviewed terminal dispositions recorded above.
 
 ### Cursor child implementation test matrix
 
-Oracle: `vscode` at `b18492a288de038fbc7643aae6de8247029d11bd`.
+Oracle: `vscode` in the checked-in source.
 
 Authority rule: a test copied/adapted from either named VS Code file must retain its exact upstream label, source path, and pin in a `*_reference_test.mbt`/`*_reference_wbtest.mbt` file. Viewer event-spine, DOM-key, real-pointer, focus, and default-prevention tests are ordinary integration/browser tests because no exact case for those observable seams exists in the two named sources.
 
@@ -1798,7 +1798,7 @@ Negative controls:
 
 | Evidence | Closed behavior |
 |---|---|
-| `viewer/common/view_model/cursor_reference_wbtest.mbt` + `viewer/cursor_reference_wbtest.mbt` | All approved 59 exact `cursor.test.ts` labels, split 48 + 11 by package owner, retain the pinned path/commit. The files also retain the exact buffer, grapheme, token-aware punctuation, and readonly-excluded `SKIPPED` accounting listed above. |
+| `viewer/common/view_model/cursor_reference_wbtest.mbt` + `viewer/cursor_reference_wbtest.mbt` | All approved 59 exact `cursor.test.ts` labels, split 48 + 11 by package owner, retain the exact source paths. The files also retain the exact buffer, grapheme, token-aware punctuation, and readonly-excluded `SKIPPED` accounting listed above. |
 | `viewer/common/view_model/cursor_move_command_reference_wbtest.mbt` | All 10 approved exact `cursorMoveCommand.test.ts` labels plus explicit HalfLine, generic direction, model-line, viewport, blank-line, and folded-line `SKIPPED` labels. |
 | `viewer/common/view_model/cursor_move_operations_wbtest.mbt`, `cursor_navigation_matrix_wbtest.mbt`, and `cursor_move_command_shape_wbtest.mbt` | Movement branches, dynamic/zero/positive page sizes, empty and wrapped targets, command shape, and deferred-direction no-mutation gates. |
 | `viewer/cursor_command_shape_wbtest.mbt`, `cursor_input_wbtest.mbt`, and `cursor_navigation_matrix_wbtest.mbt` | Source IDs, static arguments, all primary key/Shift variants, Home/End/Page boundaries, handled/no-model/chord behavior, reveal source, and registration precedence. |
@@ -1929,7 +1929,7 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-10 — normalized Phase 1–2 inventory milestone
 
 - Verified the read-only Oracle at
-  `b18492a288de038fbc7643aae6de8247029d11bd` and reread every closed source
+  checked-in source and reread every closed source
   file/cluster named above.
 - Fixed the source denominator at **799/799 TODO rows** under the uniform atom
   rule: CUR 68, COL 49, ONE 27, CCM 50, CEV 18, CMC 154, CMO 62, CORE 186,
@@ -1947,7 +1947,7 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-10 — first Gate B rejection and inventory amendment
 
 - The documentation-only inventory commit is
-  `7c0a3b340333c7dcc35c12140fb53ef23849b914`; its committed child-plan
+  recorded milestone; its committed child-plan
   SHA-256 is
   `d41162d2a03d4e50086630e4bb83dba69e8c8775466eec5be4967694c1198df9`.
 - Three independent reviews rejected Gate B before product work. Confirmed
@@ -1972,7 +1972,7 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-10 — second Gate B rejection and validation amendment
 
 - The first amendment commit is
-  `805dad49b61df087bdf27810e3b6145dec5b46e0`; its committed child-plan
+  recorded milestone; its committed child-plan
   SHA-256 is
   `11d61984838e710f0bc3823051755d2920162c03c3f48e241082936822ac57fb`.
 - Fresh browser/public/event and cursor-core rereads passed, but the independent
@@ -1991,7 +1991,7 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-10 — Gate B approval
 
 - Final approved inventory commit:
-  `fc9a28b5b86cfdf848f5ed4f51adbb5cd981ab89`; committed child-plan SHA-256:
+  recorded milestone; committed child-plan SHA-256:
   `205db5d342e172bcbfaf1be463f4b6f1d43a057989756fffcf705634f4bdd402`.
 - Independent source reviews approved the 431 cursor/movement rows and 371
   browser/public/event rows after driving both validation corrections. The
@@ -2006,13 +2006,13 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-12 — product and conformance implementation
 
 - Product/test milestone:
-  `1525ed932acb4e2c3300a401ab2a329d1b5fdbaf` (`feat(viewer): port cursor
+  recorded milestone (`feat(viewer): port cursor
   input and event parity`). It introduced the source-shaped movement and
   command units, one cursor transition result, outgoing ViewModel dispatcher,
   root delivery FIFO/content barrier, API/keyboard/pointer/flush routing, and
   the exact-label plus ordinary/browser conformance suites.
 - The reference files contain all **59 + 10 = 69** approved exact upstream
-  labels with their source paths and Oracle pin. They retain the explicit
+  labels with their source paths and Oracle source. They retain the explicit
   `SKIPPED` labels for buffer commands, full grapheme breaking, token-aware
   punctuation, HalfLine/generic/model-line movement, viewport placement,
   blank-line movement, folded-line movement, and readonly-excluded editing or
@@ -2026,14 +2026,14 @@ remain row-local deferred/N-A boundaries.
 ### 2026-07-12 — closing Gate D remediation and freeze
 
 - Audit remediation commit:
-  `07d2e8a9664e068c7cf43c6a9a841274ed756630` (`fix(viewer): close cursor
+  recorded milestone (`fix(viewer): close cursor
   parity audit gaps`). It closed command-object and static-argument gaps,
   LineStart/LineEnd objects, exact source propagation, single-listener
   recursion versus multi-listener queueing, physical-model content barriers,
   the primary-only collection normalization early return, page empty/wrapped
   cases, pointer modifier/projection cases, and README contract corrections.
 - Final contract-comment correction:
-  `3c8b25277b3508b31eb8c146bc8f5578631bd688` (`docs(viewer): correct
+  recorded milestone (`docs(viewer): correct
   cursor contract comments`). It corrected SelectionStartKind continuation and
   equality-anchor prose without changing behavior.
 - Independent closing source/ledger/diff/test audits accepted the fixed

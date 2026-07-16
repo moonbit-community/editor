@@ -3,7 +3,7 @@
 // Source: vscode/src/vs/editor/common/core/cursorColumns.ts
 //   with isFullWidthCharacter / isEmojiImprecise / getNextCodePoint from
 //   vscode/src/vs/base/common/strings.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (checked-in vscode submodule).
 //
 // A "visible column" is a rough horizontal screen position: tabs advance to the
 // next tab stop, full-width/emoji code points count as two, everything else as

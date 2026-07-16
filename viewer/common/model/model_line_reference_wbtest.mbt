@@ -1,6 +1,6 @@
 ///| Faithful conformance port of
-/// `vscode/src/vs/editor/test/common/model/model.line.test.ts`, pinned at
-/// submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+/// `vscode/src/vs/editor/test/common/model/model.line.test.ts` in the checked-in
+/// vscode source.
 ///
 /// Readonly-subset triage of the file's 53 cases: only the single
 /// `ModelLine - getIndentLevel` case is in scope. It exercises `model/utils.ts`

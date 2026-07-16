@@ -3,7 +3,7 @@
 // Source: vscode/src/vs/editor/common/core/ranges/lineRange.ts
 //   with the monotonic binary-search helpers from
 //   vscode/src/vs/base/common/arraysFind.ts
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd).
+// (checked-in vscode submodule).
 //
 // Adaptation: upstream's constructor throws on `startLineNumber >
 // endLineNumberExclusive`; this port stores the values without validating

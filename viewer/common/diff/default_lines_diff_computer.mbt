@@ -1,7 +1,6 @@
 // The viewer's `DefaultLinesDiffComputer` — the API of
 // `vscode/src/vs/editor/common/diff/defaultLinesDiffComputer/
-// defaultLinesDiffComputer.ts` (vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971) over a different engine.
+// defaultLinesDiffComputer.ts` (checked-in vscode submodule) over a different engine.
 //
 // DEVIATION (by decision, 2026-07-09): the computation is delegated to the
 // `moonbit-community/piediff` library (a GNU-diffutils-style bidirectional

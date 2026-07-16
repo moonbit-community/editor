@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/common/diff/linesDiffComputer.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the computer
+// checked-in submodule): the computer
 // options and result shape. The sole local engine is exposed concretely from
 // `default_lines_diff_computer.mbt` instead of retaining the source interface
 // as an unused runtime abstraction.

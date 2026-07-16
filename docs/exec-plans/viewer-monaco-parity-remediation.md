@@ -4,9 +4,9 @@ Status: implemented and frozen — all eight P1 children closed
 
 Date: 2026-07-10
 
-Viewer baseline: 84326d48437bc71267f5f9b0e45395b63e7c6511
+Viewer baseline: recorded repository state
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 This is the coordination plan for the current Viewer-versus-Monaco audit. It
 does not replace or rewrite any implemented execution plan. Implemented plans
@@ -343,19 +343,19 @@ The independent closing task is:
   marker multiplicity, finalization/dispose ordering, evidence precision, and
   malformed rows. Final gates pass: check, JS 880/880, native 690/690, build,
   and browser 41/41. The portfolio proceeds to the async-model-features child.
-- 2026-07-10: async inventory commit `5721b8e` was rejected at Gate B. Its 581
+- 2026-07-10: async inventory milestone was rejected at Gate B. Its 581
   rows were mechanically contiguous but umbrella rows compressed declared
   members/branches/CSS facts and two derived notes were counted as source.
   No product/test file changed.
-- 2026-07-10: corrected inventory commit `811e1a2` was also rejected at Gate B.
+- 2026-07-10: corrected inventory milestone was also rejected at Gate B.
   Its 759 rows still compressed nested callbacks, interface/object properties,
   DOM/CSS/custom properties, and exact arithmetic. No product/test file changed.
-- 2026-07-10: third inventory commit `d34b20a` was rejected at Gate B. Its
+- 2026-07-10: third inventory milestone was rejected at Gate B. Its
   924 rows split source-owned callbacks and CSS facts, but also counted
   straight-line statement ordering and property arithmetic separately from the
   owning member/property, contrary to the uniform atom rule. No product/test
   file changed.
-- 2026-07-10: normalized async-model-features inventory commit `e108586` has
+- 2026-07-10: normalized async-model-features inventory milestone has
   810/810 TODO rows: 232 inlay-controller, 49 inlay-fragment, 448 hover, and
   81 model-version/cancellation members, plus the separate 87-row current-
   MoonBit ownership/test-authority audit and branch-derived matrix. Independent
@@ -364,7 +364,7 @@ The independent closing task is:
   N-A. At that milestone Gate B passed and async product/test implementation
   was authorized.
 - 2026-07-10: the async-model-features child is implemented and frozen. Product
-  commit `5c2bf13` owns cancellation sources, physical-model/internal-version/
+  milestone owns cancellation sources, physical-model/internal-version/
   generation request stamps, provider snapshot/liveness checks, clearable
   hover timers, and guarded inlay/hover apply boundaries. Its 810-row ledger
   closes as 331 TESTED, 7 PORTED, 371 DEFERRED, and 101 N-A, with zero
@@ -381,7 +381,7 @@ The independent closing task is:
   the CodeEditorWidget cursor relay is inherited instead of duplicated. No
   product/test file changed; the portfolio stops for independent Gate B review.
 - 2026-07-10: three independent reviews rejected cursor Gate B at inventory
-  commit `7c0a3b3`. The docs-only amendment now has 802/802 TODO rows: 213
+  milestone. The docs-only amendment now has 802/802 TODO rows: 213
   cursor state/event, 218 movement, and 371 browser/public/event atoms; its
   proposed map is 337 TESTED, 71 PORTED, 213 DEFERRED, and 181 N-A. It splits
   collapsed callbacks and mixed key registrations, retires scroll/reveal
@@ -397,16 +397,16 @@ The independent closing task is:
   DEFERRED, and 181 N-A; local model-side reprojection remains ordinary
   reduced-seam evidence. No product/test file changed; final Gate B review is
   still required.
-- 2026-07-10: cursor Gate B passed at inventory commit `fc9a28b`. The approved
+- 2026-07-10: cursor Gate B passed at inventory milestone. The approved
   fixed denominator is 802/802 TODO rows with 334 planned TESTED, 71 PORTED,
   216 DEFERRED, and 181 N-A; the child-plan hash is `205db5d…bdd402`.
   Independent reviews confirmed the cursor/movement and browser/event halves,
   the outgoing FIFO topology, exact 59 + 10 test authority, and both distinct
   dual-side validation call paths. Product/test implementation is authorized.
 - 2026-07-12: the cursor/input-events child is implemented and frozen. Product
-  commit `1525ed932acb4e2c3300a401ab2a329d1b5fdbaf`, independent-audit remediation
-  commit `07d2e8a9664e068c7cf43c6a9a841274ed756630`, and contract correction commit
-  `3c8b25277b3508b31eb8c146bc8f5578631bd688` close the cursor state/event
+  milestone, independent-audit remediation
+  milestone, and contract-correction milestone
+  close the cursor state/event
   spine, source-shaped command objects,
   readonly key and pointer gestures, exact reveal/source propagation, physical-
   model content barriers, and listener-level reentrant delivery. The 802-row
@@ -426,7 +426,7 @@ The independent closing task is:
   token-range, geometry-helper, reveal, and theme seams without duplication,
   and records the cross-part/current-state/test matrices. No product or test
   file changed; the portfolio stops for independent Gate B review.
-- 2026-07-12: Gate B rejected docs-only inventory commit `23b7200`. Its 509
+- 2026-07-12: Gate B rejected docs-only inventory milestone. Its 509
   rows omitted the frozen cursor plan's 35-row generic queue/collector handoff,
   `EditorConfiguration` setters/helpers, and readonly/generic option atoms;
   it also retained geometry-owned RVMI rows and insufficient boundary/status
@@ -439,7 +439,7 @@ The independent closing task is:
   and registers the complete-snapshot `update_options` API deviation with a
   `viewer/README.md` requirement. No product or test file changed; the
   portfolio stops for fresh independent Gate B review.
-- 2026-07-12: Gate B rejected docs-only amendment commit `69f33f3`. Its 559
+- 2026-07-12: Gate B rejected docs-only amendment milestone. Its 559
   rows omitted the ViewLines factory callback and platform extra-class helper,
   retained a duplicate cursor umbrella, overclaimed collector/scheduler
   branches, and did not register the theme payload type reduction. The commit
@@ -452,7 +452,7 @@ The independent closing task is:
   declaration/dispatch-only deviation. No product or test file changed; the
   portfolio stops for fresh independent Gate B review.
 - 2026-07-12: render-invalidation Gate B passed at documentation-only inventory
-  commit `bff07db`. The approved fixed denominator is 563/563 TODO rows with
+  milestone. The approved fixed denominator is 563/563 TODO rows with
   247 planned TESTED, 92 PORTED, 64 DEFERRED, and 160 N-A; the child-plan
   SHA-256 is
   `95d326a81000c368ac9cf9ac6d783f5cd9d2fcf21daf6cbf9a8fb7ec477c0d5a`.
@@ -461,7 +461,7 @@ The independent closing task is:
   another inventory gap. No product or test edit preceded approval;
   implementation is authorized.
 - 2026-07-12: the render-invalidation child is implemented and frozen. Product
-  commit `14ed3c1` lands source-time typed ViewEvents, a nested/reentrant FIFO
+  milestone lands source-time typed ViewEvents, a nested/reentrant FIFO
   dispatcher, retained ViewLine/ViewLines invalidation, exact configuration,
   decoration, focus, scroll, token, mapping, and zone propagation, retained
   ContentWidget/current-line caches, and platform root classes. Repeated
@@ -481,7 +481,7 @@ The independent closing task is:
   making applicable GPU/experimental seams explicit. No product or test file
   changed; the portfolio stops for independent Gate B review.
 - 2026-07-12: three independent Gate B reviews rejected browser-geometry
-  inventory commit `fa145e3`. The 633-row proposal omitted four declared Group
+  inventory milestone. The 633-row proposal omitted four declared Group
   A members and two owner-window fallback branches, duplicated one overflow
   gate, misclassified GPU/fixed-option/multi-window/folded-cache terminals, and
   lacked strategy, iframe/window, renderer/font identity, cache-order, and
@@ -492,7 +492,7 @@ The independent closing task is:
   Gate B correction sets are integrated without product/test edits; the
   portfolio stops for fresh independent Gate B review.
 - 2026-07-12: browser-geometry Gate B passed at documentation-only amendment
-  commit `b4dfeb9`. The approved fixed denominator is 639/639 TODO rows with
+  milestone. The approved fixed denominator is 639/639 TODO rows with
   425 planned TESTED, 96 PORTED, 80 DEFERRED, and 38 N-A; the child-plan
   SHA-256 is
   `16a5e943fef417443f4cdbd3078c4491a1a0f3e64caa2f1adddb21609230258f`.
@@ -500,11 +500,11 @@ The independent closing task is:
   proposed terminals, matrices, and combined mechanics. No product or test
   edit preceded approval; implementation is authorized.
 - 2026-07-12: the browser-geometry child is implemented and frozen. Product
-  commits `226f071`, `abd8ce8`, and `b74e512` land source-shaped RangeUtil and
+  commits recorded milestone, recorded milestone, and recorded milestone land source-shaped RangeUtil and
   rendered-line measurement, retained width scheduling and max-width feedback,
   ContentWidget placement/focus/owner-window behavior, RenderingContext range
   tuples, ViewLayout content dimensions, renderer font facts, and browser font
-  measurement. Test commit `b99e946` closes the deterministic source-branch
+  measurement. Test milestone closes the deterministic source-branch
   matrices, including real normal/overflow iframe evidence and root
   current-frame render rescheduling. Closing review reclassifies `GVLay-044`
   from TESTED to N-A because that threshold only selects an absent right-side
@@ -523,7 +523,7 @@ The independent closing task is:
   explicit. No product or test file changed; the portfolio stops for
   independent Gate B review.
 - 2026-07-12: three independent reviews rejected ViewZones inventory commit
-  `50d3905` (child SHA-256
+  recorded milestone (child SHA-256
   `3f93dcb568ece6a8857c4dbd28f22c2fd0c0e85c3a5ff7e844cf334706563991`).
   The correction removes seven frozen sibling-mount atoms, transfers
   lifecycle's historical CEW-043/127 and the StableViewport/LinesLayout
@@ -537,7 +537,7 @@ The independent closing task is:
   matrices are explicit. No product/test file changed; stop for fresh Gate B
   review.
 - 2026-07-12: fresh reviews also rejected documentation-only correction
-  `be2a127` (child SHA-256
+  recorded milestone (child SHA-256
   `5d8864ecc77f889b246bad1c6b3cf8a95d9d2bf9450acdb3f0c212b3422f2449`).
   The owner-id audit proved projected hidden decorations require their own
   disposal atom; the editor-owner lifecycle sweep is not equivalent. The next
@@ -551,7 +551,7 @@ The independent closing task is:
   and 14 outgoing, with 287 proposed TESTED, 41 PORTED, 8 DEFERRED, and 10
   N-A. No product/test file changed; stop for another fresh Gate B review.
 - 2026-07-12: ViewZones Gate B passed at documentation-only inventory commit
-  `1c83995`. The approved fixed denominator is 346/346 TODO rows with 287
+  recorded milestone. The approved fixed denominator is 346/346 TODO rows with 287
   planned TESTED, 41 PORTED, 8 DEFERRED, and 10 N-A; the child-plan SHA-256 is
   `a556095eee067bee7d32ffb31406c1e9de5407b2f66a7aa1dff45bcbe97b1790`.
   Three independent reviews approved source completeness, the transferred
@@ -559,7 +559,7 @@ The independent closing task is:
   No product/test edit preceded approval; ViewZones implementation is now
   authorized.
 - 2026-07-12: the ViewZones child is implemented and frozen. Product commit
-  `2cbec2a` lands the complete mutable zone/accessor API, generated IDs,
+  recorded milestone lands the complete mutable zone/accessor API, generated IDs,
   model-scoped lifetime, source-ordered whitespace/layout transactions,
   projected visibility, outgoing event, browser DOM/margin ownership, safe
   callbacks, width/visibility/render cadence, and mouse suppression. The
@@ -576,7 +576,7 @@ The independent closing task is:
   existing BOM-as-content contract, and `getLineCharCode` EOL/EOF gap. No
   product or test file changed; the portfolio stops for independent Gate B.
 - 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
-  `672a64f` (child SHA-256
+  recorded milestone (child SHA-256
   `cfb826ef6790c3892dadccfd7a95411b822b6736d619179bf6407a6af3324269`).
   The candidate had a malformed regex row, incomplete PieceTreeBase delegated
   read closure, collapsed line-char branches, missing TextModel line/EOL,
@@ -592,7 +592,7 @@ The independent closing task is:
   boundaries explicit. No product/test file changed; stop for fresh Gate B
   re-review.
 - 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
-  `2b99a7e` (child SHA-256
+  recorded milestone (child SHA-256
   `4a0246801929fcd58b752167925a85e970dc0338b224bbc6a14db4b6367b2cae`).
   They found duplicate builder ownership, five missing source atoms, an
   overbroad PieceTreeBase scope, two async-owned provider rows, two
@@ -605,7 +605,7 @@ The independent closing task is:
   four equality exits, and the parent-authorized PR-EOL-002/004 boundary are
   explicit. No product/test file changed; stop for fresh Gate B review.
 - 2026-07-12: three independent Gate B reviews rejected EOL inventory commit
-  `5834c6f` (child SHA-256
+  recorded milestone (child SHA-256
   `fe6e9e55295d6d16728660b0d9ccd4ce1b477bb92942c97701a66899d6184bfd`).
   They corrected the terminal line-char source behavior from an apparent but
   unreachable zero return to the real truthy-sentinel failure, found an
@@ -618,7 +618,7 @@ The independent closing task is:
   sequence-N-A boundary, and Flush-only event scope are explicit. No
   product/test file changed; stop for fresh Gate B review.
 - 2026-07-12: builder/base and combined Gate B reviews rejected EOL inventory
-  commit `6634aaf` (child SHA-256
+  milestone (child SHA-256
   `6772a3101ab170d2a2e1ce65237a48de33823b53146ef2d532f66f236d788cc8`);
   model/events passed. The candidate omitted the complete node lookup/
   traversal/content private closure and TreeNode constructor/leftmost facts,
@@ -631,7 +631,7 @@ The independent closing task is:
   explicit; only the exact unobservable SearchCache helper body remains an
   excluded sibling. No product/test file changed; stop for fresh Gate B.
 - 2026-07-12: two independent Gate B reviews rejected EOL inventory commit
-  `2bd49e9` (child SHA-256
+  recorded milestone (child SHA-256
   `b1f27e21fb7e5c35d245ba487c0101ee537bc191d84dbfe81326aca376d39774`).
   They found one duplicate combination row, incomplete SearchCache call-site
   wording, and the unmapped pinned singleton held-unit duplication. No
@@ -642,7 +642,7 @@ The independent closing task is:
   behavior once, all cache call sites are exact, and ORACLE-001 records the
   pinned singleton duplication versus the approved `N(s)` single-unit result.
   No product/test file changed; stop for fresh Gate B review.
-- 2026-07-12: private-closure Gate B passed EOL inventory commit `48eaff8`
+- 2026-07-12: private-closure Gate B passed EOL inventory milestone
   (child SHA-256
   `3ee78d59c266d6ccb6617669f8766c6b9e6c7ea514b5fa6fa7af39ae6635704d`),
   while model/matrix and combined reviews rejected it. ORACLE-001 omitted BOM-
@@ -656,7 +656,7 @@ The independent closing task is:
   frozen TMV-016–018 handoff with explicit EOL-child N-A dispositions because
   Gate A exposes no setEOL mutation surface. No product/test file changed;
   stop for fresh Gate B review.
-- 2026-07-12: combined Gate B passed EOL inventory commit `a652cd7` (child
+- 2026-07-12: combined Gate B passed EOL inventory milestone (child
   SHA-256 `440d5bf01338fb30ae71bab9574fc8d626bd5523e0f1bfedbcacef252c93c071`),
   while model/matrix and private-closure reviews rejected only incomplete
   ORACLE-001 cache-carrier citations. Behavior, denominator, and ownership all
@@ -665,7 +665,7 @@ The independent closing task is:
   584 source + 11 REF + one ORACLE and proposed 212 TESTED / 34 PORTED / zero
   DEFERRED / 350 N-A. The held-unit oracle now cites and maps its complete
   EBB/EFB/ETB source chain. No product/test file changed; stop for fresh Gate B.
-- 2026-07-12: model/matrix Gate B passed EOL inventory commit `6be96e2`
+- 2026-07-12: model/matrix Gate B passed EOL inventory milestone
   (child SHA-256
   `2f9b511101bdbc27e871c5f4f238868ac57e558481c53cac4c275b1517c87211`),
   while private-closure and combined reviews rejected only incomplete
@@ -676,7 +676,7 @@ The independent closing task is:
   LineStarts/StringBuffer, and ETB cache/getter chain and maps the existing PB
   rows without duplication. No product/test file changed; stop for fresh Gate B.
 - 2026-07-12: private-closure and model/matrix Gate B passed EOL inventory
-  commit `5b0a631` (child SHA-256
+  milestone (child SHA-256
   `c522536d5c053131dd76f1e502a4d0356a8d916fce8da0df2d111649fa0c1d94`);
   combined review rejected only one missing citation to existing LineStarts
   constructor row PB-106. No behavior/count/ownership issue remained.
@@ -684,16 +684,16 @@ The independent closing task is:
   212/34/0/350; ORACLE-001 now maps PB-106 as well as its previously complete
   producer chain. No product/test file changed; stop for fresh Gate B review.
 - 2026-07-12: text-buffer EOL Gate B passed at documentation-only commit
-  `a518b08`; the approved child SHA-256 is
+  recorded milestone; the approved child SHA-256 is
   `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`.
   Three independent reviews approved the fixed 596-row denominator (584
   source + 11 REF + one ORACLE), 212 TESTED / 34 PORTED / 350 N-A target map,
   all hashes, closures, deviations, ownership handoffs, and matrices. No
   product/test edit preceded approval; EOL implementation is authorized.
 - 2026-07-12: the text-buffer EOL child is implemented and frozen. Product
-  commit `ad4c2a9` lands coherent LF-only storage/reads/events and the complete
+  milestone lands coherent LF-only storage/reads/events and the complete
   cross-boundary matrix; Gate D then found a lone-low-surrogate StringView
-  panic plus four test/contract evidence gaps. Corrective commit `a4ff33a`
+  panic plus four test/contract evidence gaps. Corrective milestone
   switches the scoped line/value/range/normalizer slices to raw UTF-16 code-
   unit semantics, adds D800/DBFF/DC00/DFFF and remote-client regressions, and
   corrects raw DocumentSnapshot versus normalized TextSnapshot contracts.
@@ -721,14 +721,14 @@ The independent closing task is:
   producer, and cycle-safe font payload ownership. No product or test file
   changed; Gate B still has not passed and requires a fresh review.
 - 2026-07-13: the second formal tokenization Gate-B round kept source
-  completeness PASS but REJECTED `af952ac` on incomplete SKIPPED/owner and
+  completeness PASS but REJECTED recorded milestone on incomplete SKIPPED/owner and
   viewport/telemetry evidence plus five boundary seams: ViewModel callback
   ownership, semantic-enum numeric ABI, optional scheduler epochs, Color/CSS
   payloads, and the maximum-line sentinel. The docs-only candidate still has
   1043/1043 TODO rows = 946 source + 97 tests; dispositions are now 463 TESTED,
   201 PORTED, 206 DEFERRED, and 173 N-A. No product/test file changed; Gate B
   has not passed and requires another fresh review.
-- 2026-07-13: the third formal tokenization Gate-B round REJECTED `e8c7e63` on
+- 2026-07-13: the third formal tokenization Gate-B round REJECTED recorded milestone on
   the missing DOM/CSS-none declaration, three exact evidence destinations, and
   an unowned `ModelTokensChangedEvent` outgoing seam. The correction explicitly
   transfers only that nine-row kind/wrapper/private-arm/listener widening to
@@ -738,7 +738,7 @@ The independent closing task is:
   N-A, with 21 uncounted LOC rows. No product/test file changed; Gate B still
   requires a fresh review.
 - 2026-07-13: the fourth formal tokenization Gate-B round independently PASSed
-  clean commit `d70d967` in source completeness, boundary/package/API, and test
+  clean milestone in source completeness, boundary/package/API, and test
   evidence/matrix lanes. The approved denominator is 1052 TODO rows = 955
   source + 97 exact tests, proposed as 466 TESTED, 206 PORTED, 206 DEFERRED,
   and 174 N-A, plus 21 LOC rows. All 38 pins match and no product/test edit
@@ -762,9 +762,8 @@ The independent closing task is:
   `just test-browser` **82/82**. The source-relative scroll oracle preserved
   its 12 cells, three repetitions, and 1 ms threshold and passed without
   consuming its one fresh-worker host-jitter retry.
-- 2026-07-13: the required post-P1 audit PASSed against current Viewer HEAD
-  `ca3bd296472533fe23f6748e35ff69b8208b34f6` and pinned oracle
-  `b18492a288de038fbc7643aae6de8247029d11bd` in three isolated lanes:
+- 2026-07-13: the required post-P1 audit PASSed against the recorded Viewer
+  milestone and checked-in oracle source in three isolated lanes:
   P1-01..05 lifecycle/async/cursor ownership and later dispatcher widenings;
   P1-06..10 invalidation/DOM geometry/ViewZones and later token projection;
   P1-11..12 bounded tokenization plus coherent LF-only/raw-UTF-16 coordinates.

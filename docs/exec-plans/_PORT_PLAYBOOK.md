@@ -4,14 +4,14 @@ Use this protocol for Monaco/VS Code or CodeMirror ports. A port is complete
 only when it accounts for the whole named source unit, not merely the code
 needed for one observed symptom.
 
-Reference maps: `docs/references/{monaco,codemirror}.md`. Reference-test rules:
-`docs/quality.md`. Reference trees are read-only research inputs.
+Reference maps: `docs/references/{monaco,codemirror}.md`. Reference trees are
+read-only research inputs.
 
 ## Phase 0: Close the Scope
 
 Name complete source files/classes. A smaller scope must be a complete method
 cluster and explicitly name excluded sibling clusters. Scope by source unit,
-not bug symptom. Record the pinned source commit.
+not bug symptom.
 
 ## Phase 1: Inventory the Denominator
 
@@ -59,8 +59,8 @@ research the source behavior.
   combinations, boundaries, and orthogonal axes.
 - Run the harness across configurations such as viewport, content shape,
   options, platform, or target where they affect behavior.
-- Prefer porting the corresponding upstream unit tests under the conformance
-  rules in `docs/quality.md`.
+- Prefer porting the corresponding upstream unit tests while preserving their
+  source labels and branch coverage.
 
 One passing happy path proves neither the source branches nor 1:1 parity.
 
@@ -87,7 +87,6 @@ merge gates; this reconciliation is the additional 1:1 gate.
 
 Status: proposed
 Date: <YYYY-MM-DD>
-Oracle commit: <submodule SHA>
 
 ## Scope (Phase 0)
 

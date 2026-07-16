@@ -195,7 +195,7 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   `line_number`, columns one-based, plus Monaco's `Position` methods (`with_`,
   `delta`, `equals`, `is_before`/`is_before_or_equal`, `compare`, `clone`,
   `to_string`) with a local `position_test.mbt` (vscode has no standalone
-  `position.test.ts` at the pinned commit — `Position` is covered indirectly by
+  `position.test.ts` in the checked-in source tree — `Position` is covered indirectly by
   `range.test.ts`). The ~17 consumers (snapshots, projection converter,
   injected-text bucketing, cursor/selection, view_controller word/line select,
   mouse hit-testing, view-model decoration adapters) were re-plumbed; the
@@ -215,7 +215,7 @@ Phase 0 and the bulk of Phase 1 are landed (all green on `--target all`):
   `delta_start`/`delta_end`, `equals`, `to_string`, and the
   `from_to`/`of_length`/`of_start_and_length`/`empty_at`/`try_create`
   constructors), with a local `offset_range_test.mbt` (no upstream
-  `offsetRange.test.ts` at the pinned commit). Deviation recorded: the
+  `offsetRange.test.ts` in the checked-in source tree). Deviation recorded: the
   constructor normalizes inverted input instead of throwing. Consumers
   re-plumbed (`.end` → `.end_exclusive` across snapshots, render-frame span
   building, tokenized-document, markers, decorations, hover, selection

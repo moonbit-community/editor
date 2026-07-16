@@ -1,6 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/decorations/decorations.ts`
-// (`DecorationsOverlay`), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971. A dynamic overlay of
+// (`DecorationsOverlay`), checked-in vscode submodule. A dynamic overlay of
 // `browser/view`'s `ContentViewOverlays` rows, registered after the
 // current-line and selection overlays — Monaco's registration order
 // (`view.ts:218-221`: CurrentLine, Selections, [IndentGuides — unported],

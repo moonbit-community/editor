@@ -2,7 +2,7 @@
 ///
 /// Source: `vscode/src/vs/editor/common/model/tokens/tokenizationTextModelPart.ts`
 /// and `vscode/src/vs/editor/common/tokenizationTextModelPart.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`. Semantic, dynamic-language,
+/// checked-in source. Semantic, dynamic-language,
 /// embedded-language, bracket, and editable prediction arms remain the
 /// explicitly deferred/N-A ledger rows; the syntactic lifecycle below keeps
 /// source event order and per-line validation/demand.

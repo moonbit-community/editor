@@ -1,7 +1,7 @@
 ///| A source-shaped in-process port of Monaco's `ContiguousMultilineTokens`.
 ///
 /// Source: `vscode/src/vs/editor/common/tokens/contiguousMultilineTokens.ts`
-/// at oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`, consumed
+/// at checked-in oracle, consumed
 /// closure lines 17 and 35-80. Serialization and incremental editing are not
 /// part of the readonly Viewer boundary.
 

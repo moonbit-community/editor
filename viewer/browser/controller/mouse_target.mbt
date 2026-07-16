@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/controller/mouseTarget.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // DOM-fingerprint mouse hit test — `HitTestResult`,
 // `PointerHandlerLastRenderData`, the `MouseTarget` static factories,
 // `ElementPath`, `HitTestContext`, `BareHitTestRequest`/`HitTestRequest`,

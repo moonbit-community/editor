@@ -1,8 +1,7 @@
 ///|
 /// Faithful 1:1 conformance port of Monaco's `LinesLayout` unit suite,
 /// `vscode/src/vs/editor/test/common/viewLayout/linesLayout.test.ts`
-/// (`suite('Editor ViewLayout - LinesLayout')`) at submodule commit
-/// b18492a288de038fbc7643aae6de8247029d11bd. Test names are preserved verbatim.
+/// (`suite('Editor ViewLayout - LinesLayout')`) in the checked-in submodule. Test names are preserved verbatim.
 ///
 /// Every case constructs the layout with uniform line heights (Monaco's
 /// `customLineHeightData` argument is always `[]`), matching this port's

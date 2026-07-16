@@ -1,7 +1,6 @@
 // The folding-rules slice of Monaco's language configuration
 // (`vs/editor/common/languages/languageConfiguration.ts` +
-// `languageConfigurationRegistry.ts`, vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971): `FoldingMarkers`,
+// `languageConfigurationRegistry.ts`, checked-in vscode submodule): `FoldingMarkers`,
 // `FoldingRules`, and a per-language registration on `Languages` standing in
 // for `ILanguageConfigurationService.getLanguageConfiguration(languageId)`.
 // Only the folding rules are in scope — brackets, comments, auto-closing

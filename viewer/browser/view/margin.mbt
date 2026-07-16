@@ -1,6 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/view/viewOverlays.ts`
 // (`MarginViewOverlays`) and `viewParts/margin/margin.ts`, vscode submodule
-// commit b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in source.
 
 ///|
 /// `MarginViewOverlays` (`viewOverlays.ts:236`): the margin-side rows

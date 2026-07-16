@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/base/browser/globalPointerMoveMonitor.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd).
+// (checked-in vscode submodule).
 //
 // Binding note:
 //   * The vendored `@rdom` has no pointer-capture bindings, so the two narrow

@@ -19,7 +19,7 @@ Status: completed — Date: 2026-06-26.
 > (424 js + 434 native, 0 failures), and the full browser suite
 > (component/smoke/conformance/perf) green.
 
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 Std pin: `moonbitlang/core` at the toolchain in use (`moon 0.1.20260618`).
 
 Follows `production-line-tokens-pipeline.md`, which made production rendering

@@ -3,9 +3,8 @@
 Status: inventory ready — STOP FOR REVIEW; no product implementation has started
 Date: 2026-07-14
 Plan: `docs/exec-plans/editor-contribution-single-ownership.md`
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
-Local baseline: repository `HEAD` `b26a95f`
+Oracle: checked-in `vscode` submodule
+Local baseline: recorded repository state
 
 This companion is the complete local-state half of Gate A. It freezes the
 current root registry, five registrations, four feature-local instance maps,

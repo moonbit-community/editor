@@ -2,8 +2,7 @@
 
 Status: completed — implemented and validated 2026-07-14
 Date: 2026-07-14
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 ## Goal
 
@@ -406,7 +405,7 @@ It contains two values, five opaque types, 104 methods, no public fields or
 variants, and no aliases. Nineteen generated interfaces changed from baseline:
 the corrected 15-file existing-interface denominator plus the four packages
 that Gate A recorded as absent. All nine executable/UI sentinels remain
-byte-identical to `e5beb1c`.
+byte-identical to recorded milestone.
 
 ### Closing root API diff
 
@@ -447,7 +446,7 @@ not claims of upstream public API parity.
 - The corrected frozen denominators reproduce as 15 existing interfaces / 3,079
   lines, 32 dependency-edge manifests / 341 lines / 192 imports, and nine
   executable/UI sentinels / 231 lines. All nine sentinels remain byte-identical
-  to `e5beb1c`; the 15 existing interfaces plus four new owner packages account
+  to recorded milestone; the 15 existing interfaces plus four new owner packages account
   for every generated-interface change.
 - The final root interface reproduces the 155-line / 9,849-byte hash recorded
   above. The architecture guard also enforces the opacity of `Viewer` and its

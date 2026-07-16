@@ -3,10 +3,9 @@
 Status: inventory ready — STOP FOR REVIEW
 Date: 2026-07-14
 Plan: docs/exec-plans/browser-view-package-consolidation.md
-Oracle commit: vscode submodule at
-b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in `vscode` submodule
 Local baseline: repository HEAD
-687703763adfd44de08f15f5b5b8161f3e999f4f
+at inventory time
 
 This docs-only companion is the test, behavior-variable, CSS, and mechanical
 validation half of Gate A. It does not authorize a product, package, test, or

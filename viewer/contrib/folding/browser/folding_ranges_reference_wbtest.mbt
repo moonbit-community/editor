@@ -1,7 +1,7 @@
 // Conformance port of Monaco/VS Code's FoldingRanges suite.
 //
 // Ports: vscode/src/vs/editor/contrib/folding/test/browser/foldingRanges.test.ts
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From the checked-in vscode submodule.
 //
 // The `computeRanges`-backed cases of the suite (`test max folding regions`,
 // `findRange`, `setCollapsed`) live with the indent-range-provider port in

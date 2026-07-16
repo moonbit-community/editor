@@ -1,5 +1,5 @@
 // The DOM-free half of Monaco's
-// `viewParts/currentLineHighlight/currentLineHighlight.ts` (oracle 294fb350):
+// `viewParts/currentLineHighlight/currentLineHighlight.ts` (oracle checked-in source):
 // the abstract overlay's should-render predicates, the two concrete class
 // builders, and the wrapped-line span helper. The canonical option enum lives
 // in `viewer/common/editor_api`. The DOM overlays that consume these are in

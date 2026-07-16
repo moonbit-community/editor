@@ -1,5 +1,5 @@
 // The editor-side half of `vscode/src/vs/workbench/contrib/scm/browser/
-// quickDiffDecorator.ts` (vscode submodule commit 294fb350): what
+// quickDiffDecorator.ts` (checked-in vscode submodule): what
 // `QuickDiffDecorator` does with its `codeEditor` — own a decorations
 // collection and refill it from the quick-diff changes. Per the
 // foreign-method rule the `Viewer`-touching body lives here as `Viewer::`

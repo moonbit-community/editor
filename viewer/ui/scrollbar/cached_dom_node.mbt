@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/base/browser/fastDomNode.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd. This is the scrolling geometry
+// checked-in source. This is the scrolling geometry
 // cluster only: the cached width/height/top/left/line-height, layer-hint and
 // contain writes used by editor view layers.
 

@@ -5,7 +5,7 @@ interfaces, and all repository gates complete
 
 Date: 2026-07-13
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
 ## Scope (Phase 0)
 
@@ -200,7 +200,7 @@ Ledger total: **32 rows = 32 inventoried members**. Final status:
 7. Update current package documentation and generated interfaces; do not edit
    historical implemented plans.
 
-Implementation milestone: `4340d29` (`refactor(view-model): close coordinates
+Implementation milestone: recorded milestone (`refactor(view-model): close coordinates
 converter representation`).
 
 ## Deviations (Phase 3)
@@ -289,8 +289,8 @@ Validation evidence on 2026-07-13:
 
 Closing reconciliation: the complete
 `editor/common/coordinatesConverter.ts` file and projected
-`viewModelLines.ts:1073-1119` class were reread at oracle commit
-`b18492a288de038fbc7643aae6de8247029d11bd`. All 32 inventoried members remain
+`viewModelLines.ts:1073-1119` class were reread at checked-in source
+checked-in source. All 32 inventoried members remain
 represented by exactly one ledger row; the nine representation rows are
 tested, and the other 23 retain their explicit large-file or absent-surface
 deferral reasons. The five shipped enum methods preserve the projected

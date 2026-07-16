@@ -1,6 +1,5 @@
 // Source-derived white-box platform matrix for
-// `vscode/src/vs/editor/common/config/fontInfo.ts` at vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd.
+// `vscode/src/vs/editor/common/config/fontInfo.ts` at checked-in vscode submodule.
 
 ///|
 test "EDITOR_FONT_DEFAULTS platform matrix" {

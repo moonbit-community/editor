@@ -1,6 +1,6 @@
 ///|
 /// `PartFingerprint` (`vscode/src/vs/editor/browser/view/viewPart.ts:34-46`,
-/// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd). The
+/// checked-in vscode submodule). The
 /// numeric values are load-bearing: they are written into `data-mprt`
 /// attributes and compared by index in `ElementPath`'s predicates, so the
 /// enum order must never change. `TextArea`, `Minimap` and `ViewLinesGpu`

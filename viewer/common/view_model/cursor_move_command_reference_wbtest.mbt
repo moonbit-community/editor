@@ -1,6 +1,6 @@
 ///| Faithful selected ports from
-/// `vscode/src/vs/editor/test/browser/controller/cursorMoveCommand.test.ts` at
-/// pinned vscode commit `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// `vscode/src/vs/editor/test/browser/controller/cursorMoveCommand.test.ts` in
+/// the checked-in vscode source.
 ///
 /// All 10 labels in the approved exact-label set are present verbatim. These
 /// cases exercise `CursorMoveCommands.simpleMove` count/unit routing through

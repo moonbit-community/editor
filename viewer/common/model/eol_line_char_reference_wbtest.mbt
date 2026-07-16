@@ -1,6 +1,6 @@
 ///| Branch-derived conformance tests from
 /// `vscode/src/vs/editor/test/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer.test.ts`,
-/// pinned at submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+/// in the checked-in vscode source.
 
 ///|
 fn assert_line1_line2_char_codes(snapshot : TextSnapshot) -> Unit raise {

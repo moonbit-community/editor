@@ -58,7 +58,7 @@ its `vscode/...` counterpart.
 
 | Step | Method |
 | --- | --- |
-| A1 | Pin the Monaco source files per subsystem (the audit table and `docs/references/monaco.md` give the paths). Record the `vscode` submodule commit so findings are reproducible. |
+| A1 | Use the checked-in Monaco source files per subsystem (the audit table and `docs/references/monaco.md` give the paths). Record exact source paths and line ranges so findings are reproducible. |
 | A2 | For each `Faithful`/`Subset` row (coordinate conversion, line renderer, scrollbar, hover, view layout, view-model lines), diff control flow against Monaco. Flag algorithmic re-derivations, renamed/merged responsibilities, and helpers with **no Monaco counterpart** on the cursor/selection/hit-test/decoration path (the port's rule #1). |
 | A3 | For each module ported in this effort (`viewer/core` `Selection`, `viewer/cursor/*`, `viewer/view_controller.mbt`, `viewer/view_events.mbt`, `view_overlays.mbt` `SelectionsOverlay`, `view_model/view_model_decorations.mbt`, `view_line_data.mbt`), verify the class/method decomposition, names, and algorithm match Monaco. |
 | A4 | **Coordinate-model invariant** (the port's most important rule). Triage the offset round-trips listed in "A live lead" above: legitimate boundary, dead code (hand to Workstream B), or acceptance-criteria violation. |
@@ -91,7 +91,7 @@ helpers, document or remove the remaining offset round-trips, delete an orphaned
 
 ## Sequencing & effort
 
-1. **Setup** (small): pin the submodule commit, draft the report skeleton from
+1. **Setup** (small): use the checked-in submodule, draft the report skeleton from
    the audit table, run the B1 compiler pass to seed Workstream B.
 2. **Per-subsystem fidelity** (bulk): A2/A3 row by row — start with the in-port
    modules (cursor, selection, overlay, decorations, view-controller,

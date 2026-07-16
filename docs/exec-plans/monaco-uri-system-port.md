@@ -1,6 +1,6 @@
 # Monaco URI System 1:1 Port (uri.ts + path.ts + extpath.ts + resources.ts)
 
-Status: implemented — Date: 2026-07-08 (proposed and landed same day). Oracle commit: b18492a288d (vscode submodule).
+Status: implemented — Date: 2026-07-08 (proposed and landed same day). Oracle: checked-in reference tree (vscode submodule).
 
 Follows `_PORT_PLAYBOOK.md`. This plan replaces the homegrown `base/common/uri.mbt`
 (opaque-string `Uri` with `scheme()`/`path()` substring extraction, `UriResult`
@@ -228,7 +228,7 @@ in place during implementation.
 | Source member (file:line) | Arithmetic / transition | MoonBit symbol | Status |
 |---|---|---|---|
 | `strings.ts:343 compare` | charwise `<`/`>` lexicographic on code units | `strings.mbt compare` — required because MoonBit `String` compare is length-first (see `moonbit-string-gotchas`) | PASS |
-| `strings.ts:436 equalsIgnoreCase` | length gate + `compareSubstringIgnoreCase` (the pinned commit has no `doEqualsIgnoreCase` helper); non-ASCII falls back to lower-cased `compare_substring` (D9) | `equals_ignore_case` | PASS |
+| `strings.ts:436 equalsIgnoreCase` | length gate + `compareSubstringIgnoreCase` (the checked-in source has no `doEqualsIgnoreCase` helper); non-ASCII falls back to lower-cased `compare_substring` (D9) | `equals_ignore_case` | PASS |
 | `strings.ts:444 startsWithIgnoreCase` | length gate + prefix case-fold | `starts_with_ignore_case` | PASS |
 | `network.ts:44/18/48 Schemas.file/inMemory/untitled` | `"file"` / `"inmemory"` / `"untitled"` | `network.mbt` `schemas_file` / `schemas_in_memory` / `schemas_untitled` | PASS |
 | `process.ts:26-29 (node) / 38-43 (web)` `cwd`/`env` | node: `VSCODE_CWD` ∥ `process.cwd()`; web: `'/'`, `{}` | `process.mbt` `cwd()` / `env(key) -> String?`, target-gated like `platform_js.mbt` | PASS |
@@ -353,7 +353,7 @@ the re-grep found extra sites beyond the original list, noted inline):
 
 ## Test matrix (Phase 4)
 
-Oracle transcriptions (conformance ports per `docs/quality.md`):
+Reference transcriptions:
 
 - `path_reference_test.mbt` ← `vs/base/test/common/path.test.ts` (822 lines).
   Its tables call `posix.*`/`win32.*` explicitly → transcribe against

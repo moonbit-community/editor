@@ -1,7 +1,7 @@
 ///| Ordinary source-derived PageUp/PageDown coverage.
 ///
-/// Neither `cursor.test.ts` nor `cursorMoveCommand.test.ts` at vscode commit
-/// `b18492a288de038fbc7643aae6de8247029d11bd` contains a Page label, so these
+/// Neither `cursor.test.ts` nor `cursorMoveCommand.test.ts` in the checked-in
+/// vscode source contains a Page label, so these
 /// tests deliberately remain outside the reference files and do not invent
 /// upstream names.
 

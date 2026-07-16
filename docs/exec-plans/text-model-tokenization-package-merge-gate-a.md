@@ -6,7 +6,7 @@ Date: 2026-07-13
 
 Parent plan: `text-model-tokenization-package-merge.md`
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
 At this Gate A snapshot, no product code, package manifest, generated interface,
 test, or README had changed. The user's explicit implementation request approved

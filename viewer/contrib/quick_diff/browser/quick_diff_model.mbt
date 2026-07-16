@@ -1,6 +1,5 @@
 // The diff-computation half of `vscode/src/vs/workbench/contrib/scm/browser/
-// quickDiffModel.ts` (vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971), reduced to a pure function: the
+// quickDiffModel.ts` (checked-in vscode submodule), reduced to a pure function: the
 // viewer's text models are immutable and the service stores one original per
 // resource, so the source's reference-counted per-resource model (throttled
 // recompute, provider merge, `compareChanges` sort) collapses to

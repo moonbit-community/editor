@@ -1,5 +1,5 @@
 // The hidden-areas slice of Monaco's `codeEditorWidget.ts` (vscode submodule
-// commit b18492a288de038fbc7643aae6de8247029d11bd): `setHiddenAreas` (:637).
+// checked-in source): `setHiddenAreas` (:637).
 // The folding contrib is the producer; hidden lines fold out of the view
 // axis entirely.
 

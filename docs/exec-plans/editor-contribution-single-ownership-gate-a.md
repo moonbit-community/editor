@@ -6,9 +6,9 @@ Date: 2026-07-14
 
 Parent plan: `editor-contribution-single-ownership.md`
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
-Local baseline: `b26a95f61ebf8a0d640b61dc33bffe9b3c7a5c21`
+Local baseline: recorded repository state
 
 This is a documentation-only pre-implementation snapshot. No contribution,
 Viewer, manifest, generated interface, README, test, browser scenario, or

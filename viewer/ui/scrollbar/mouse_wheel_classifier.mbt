@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/base/browser/ui/scrollbar/scrollableElement.ts`
-// at b18492a288de038fbc7643aae6de8247029d11bd, lines 23-152.
+// in the checked-in source, lines 23-152.
 
 ///|
 pub(all) struct MouseWheelClassifierItem {

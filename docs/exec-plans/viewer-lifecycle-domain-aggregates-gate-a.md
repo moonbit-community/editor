@@ -7,12 +7,12 @@ Date: 2026-07-15
 
 Parent plan: `viewer-lifecycle-domain-aggregates.md`
 
-Product baseline: `87467b1be9a7b143434cc64e772e15d2780ca7a0`
+Product baseline: recorded repository state
 
-Plan commit inspected before this artifact:
-`bdd2139be5905a23df3fc7ceeaaf79915d7b2e0e`
+Plan artifact inspected before this inventory:
+`viewer-lifecycle-domain-aggregates.md`
 
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 
 This is the mandatory documentation-only pre-implementation snapshot. No
 MoonBit product source, test, package manifest, README, generated interface,
@@ -61,13 +61,12 @@ Product edits remain blocked until these decisions are reviewed.
 
 ## Baseline and Pinned Source Evidence
 
-`bdd2139` has parent `87467b1`, and
-`git diff --name-status 87467b1..bdd2139` contains only
-`docs/exec-plans/viewer-lifecycle-domain-aggregates.md`. Excluding that path
-produces an empty product diff. Both the root and `vscode` worktrees were clean
-before this Gate A document was created.
+Before this Gate A inventory, the only change from the recorded product
+baseline was `docs/exec-plans/viewer-lifecycle-domain-aggregates.md`.
+Excluding that path produced an empty product diff. Both the root and `vscode`
+worktrees were clean before this Gate A document was created.
 
-The root gitlink and the checked-out `vscode` `HEAD` are both the oracle commit
+The root gitlink and the checked-out `vscode` `HEAD` are both the checked-in source
 above. All hashes match the parent plan exactly:
 
 | Source | SHA-256 |
@@ -92,10 +91,8 @@ The closing owner-cluster reread found the same source facts:
 Reproduction:
 
 ```sh
-git rev-parse HEAD HEAD^
-git diff --name-status 87467b1be9a7b143434cc64e772e15d2780ca7a0..HEAD
-git -C vscode rev-parse HEAD
-git ls-tree HEAD vscode
+git status --short
+git -C vscode status --short
 shasum -a 256 \
   vscode/src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts \
   vscode/src/vs/editor/test/browser/testCodeEditor.ts \

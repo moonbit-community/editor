@@ -2,7 +2,7 @@
 
 Status: known, intentional divergence (2026-06-29). Surfaced while landing
 Track A of `docs/exec-plans/monaco-arch-divergence-closeout.md` (the 1-based
-view-line-number rebase). Oracle pin: `vscode` submodule at `294fb350`.
+view-line-number rebase). Oracle: checked-in `vscode` submodule.
 
 ## The divergence
 

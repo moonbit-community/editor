@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/indentRangeProvider.ts`
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the
+// (checked-in vscode submodule): the
 // indentation-based folding-range computation — `IndentRangeProvider`,
 // `RangesCollector`, `computeRanges`.
 //

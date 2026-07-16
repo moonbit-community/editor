@@ -1,5 +1,5 @@
-///| Faithful ports of a few `base/common/strings.ts` helpers (pinned `vscode/`
-/// submodule, commit 294fb350) needed by the model read APIs. Kept here, the
+///| Faithful ports of a few `base/common/strings.ts` helpers from the
+/// checked-in vscode source. Kept here, the
 /// lowest-level shared package, so model/view code shares one definition.
 
 ///|

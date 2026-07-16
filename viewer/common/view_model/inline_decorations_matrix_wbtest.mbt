@@ -1,7 +1,7 @@
 ///|
 /// Branch-derived completion matrix for Monaco's
-/// `src/vs/editor/common/viewModel/inlineDecorations.ts` at vscode commit
-/// b18492a288de038fbc7643aae6de8247029d11bd. The exact upstream test labels
+/// `src/vs/editor/common/viewModel/inlineDecorations.ts` in the checked-in
+/// vscode source. The exact upstream test labels
 /// remain in `inline_decorations_reference_wbtest.mbt`; these additional cases
 /// close behavior-variable combinations that upstream's suite does not name.
 

@@ -7,7 +7,7 @@ there is no `View` without an attached model, and a model swap disposes and
 replaces the complete per-model instance.
 
 The implementation is pinned to the `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`. Files preserve Monaco source-unit
+checked-in source. Files preserve Monaco source-unit
 responsibilities inside one MoonBit compilation unit; filenames organize the
 code but do not create child packages.
 

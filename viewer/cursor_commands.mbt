@@ -1,6 +1,6 @@
 // The readonly cursor-key subset of Monaco's `CoreNavigationCommands`
 // (`coreCommands.ts:651-890,987-1163`) at
-// b18492a288de038fbc7643aae6de8247029d11bd. The 16 required primary
+// checked-in source. The 16 required primary
 // registrations deliberately come after contribution registrations; see
 // `editor_extensions.mbt` for the local weight/context-expression seam.
 

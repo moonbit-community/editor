@@ -1,6 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/view/viewLayer.ts`
 // `VisibleLinesCollection.renderLines`, `IRendererContext`, and the complete
-// `ViewLayerRenderer` class at b18492a288de038fbc7643aae6de8247029d11bd.
+// `ViewLayerRenderer` class in the checked-in source.
 
 ///|
 /// The mutable renderer context copied at the beginning of every render and

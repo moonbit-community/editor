@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/foldingModel.ts`
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the
+// (checked-in vscode submodule): the
 // `FoldingModel` (regions + their tracking editor decorations + the change
 // emitter) and the collapse-state helper functions the commands drive.
 //

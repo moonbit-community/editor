@@ -2,8 +2,7 @@
 
 Status: complete — Gate A approved and implementation validated 2026-07-14
 Date: 2026-07-13
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 Gate A is recorded as a four-document, documentation-only artifact set:
 
@@ -316,10 +315,10 @@ The implemented local denominator is:
 | Final 18-artifact package-contract manifest | `a5d4c9c9e8fc3764278c99b6601b33cb7186bd69712db022dcd94d03afdf415a` |
 
 Milestone B introduced the private closed entry representation and migrated
-quick diff in `23a5566`, with direct widget-payload teardown corrected in
-`29190ea`. Hover migrated in `ca0abf7` and its construction spelling was
-cleaned in `964715f`; folding migrated in `841adf9`; feedback input and widgets
-migrated separately in `dccc983` and `43ecf92`. Each milestone was validated
+quick diff in recorded milestone, with direct widget-payload teardown corrected in
+recorded milestone. Hover migrated in recorded milestone and its construction spelling was
+cleaned in recorded milestone; folding migrated in recorded milestone; feedback input and widgets
+migrated separately in recorded milestone and recorded milestone. Each milestone was validated
 before the next shared registry/host edit began.
 
 Construction is now duplicate-first-wins before side effects, followed by bare

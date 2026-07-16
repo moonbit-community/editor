@@ -1,7 +1,6 @@
 ///| Conformance ports from
 /// `vscode/src/vs/editor/test/browser/viewModel/modelLineProjection.test.ts`
-/// at pinned vscode commit
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// from the checked-in vscode source.
 ///
 /// The upstream helper only executes its first (all-needed) bit mask. These
 /// ports additionally run all-needed, none-needed, and sparse masks so the
@@ -47,7 +46,7 @@ fn projection_reference_model(language_id : String) -> @model.TextModel {
     "projection.mbt",
     language_id,
     1,
-    "b18492a",
+    "reference-revision",
     projection_reference_text.join("\n"),
   )
 }

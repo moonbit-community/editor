@@ -4,7 +4,7 @@ Status: implemented
 
 Date: 2026-07-10
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -97,7 +97,7 @@ apply, and dispose path.
 
 ### Closed source boundaries and seams
 
-The source denominator is closed at the pinned commit. Line ranges below are
+The source denominator is closed at the checked-in source. Line ranges below are
 inclusive. A sibling cluster outside these boundaries is not silently omitted:
 it is named here with its seam reason.
 
@@ -1454,7 +1454,7 @@ above so a future terminal status cannot overclaim those unrepresentable arms.
 - [x] Corrected inventory was committed separately; only then was product/test
   implementation allowed to begin.
 
-**Review gate passed:** independent reviews approved inventory commit `e108586`
+**Review gate passed:** independent reviews approved inventory milestone
 and the exhaustive target/disposition map above. At that milestone,
 product/test implementation was authorized without changing the fixed source
 denominator.
@@ -1573,7 +1573,7 @@ render-position tests outside this async implementation scope.
 
 ### 2026-07-10 — rejected first inventory milestone
 
-- Commit `5721b8e` recorded 581 mechanically contiguous rows, but fresh Gate B
+- The milestone recorded 581 mechanically contiguous rows, but fresh Gate B
   review rejected it: several excluded-sibling rows bundled many declared
   members/branches/CSS facts, two derived lifecycle notes were counted as
   source, and the matrix covered P1 races rather than the full denominator.
@@ -1582,7 +1582,7 @@ render-position tests outside this async implementation scope.
 
 ### 2026-07-10 — rejected second inventory milestone
 
-- Commit `811e1a2` expanded the denominator to 759 and added the branch matrix,
+- The milestone expanded the denominator to 759 and added the branch matrix,
   but its fresh reread still found umbrella rows for nested callbacks,
   interface/object properties, DOM/CSS/custom properties, and exact arithmetic.
 - No product or test file changed in that second documentation milestone.
@@ -1590,7 +1590,7 @@ render-position tests outside this async implementation scope.
 
 ### 2026-07-10 — rejected third inventory milestone
 
-- Commit `d34b20a` recorded 924 mechanically contiguous rows and expanded the
+- The milestone recorded 924 mechanically contiguous rows and expanded the
   nested-callback and DOM/CSS coverage, but a fresh semantic reread rejected
   it. Straight-line statement ordering and exact property arithmetic were
   counted separately from their owning member/property, contrary to the
@@ -1601,10 +1601,10 @@ render-position tests outside this async implementation scope.
 
 ### 2026-07-10 — normalized Phase 1–2 inventory and Gate B approval
 
-- Inventory commit `e108586` is fixed at SHA-256
+- Inventory milestone is fixed at SHA-256
   `ded2c74abc9be5193a379ccff63f42fd86b36b67b77a80dd97a53033116749bf`.
 - Verified the read-only VS Code oracle at
-  `b18492a288de038fbc7643aae6de8247029d11bd`.
+  checked-in source.
 - Re-read every closed source unit/cluster under the uniform rule recorded
   above. Excluded siblings, source-owned callbacks, and DOM/CSS/custom
   properties remain atomic rows rather than prose-only or umbrella exclusions.
@@ -1637,8 +1637,8 @@ until implementation evidence supported the terminal source ledger above.
 
 ### 2026-07-10 — cancellable request ownership and freshness implementation
 
-- Commits `960164d`, `4a3968a`, and `1bcc1e6` established the cancellation,
-  language-request, and hover-operation foundations. Product commit `5c2bf13`
+- Commits recorded milestone, recorded milestone, and recorded milestone established the cancellation,
+  language-request, and hover-operation foundations. Product milestone
   completed the Viewer integration, contracts, deterministic fixtures, and
   browser-visible race scenario.
 - `CancellationTokenSource` now owns parent subscriptions, exact-once listener

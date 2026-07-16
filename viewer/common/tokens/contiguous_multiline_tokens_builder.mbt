@@ -2,7 +2,7 @@
 ///
 /// Source:
 /// `vscode/src/vs/editor/common/tokens/contiguousMultilineTokensBuilder.ts`
-/// at oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`, consumed
+/// at checked-in oracle, consumed
 /// closure lines 9 and 21-41. Worker serialization remains outside the
 /// readonly Viewer boundary.
 

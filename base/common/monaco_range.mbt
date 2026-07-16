@@ -1,7 +1,7 @@
 // 1:1 port of Monaco/VS Code's line/column `Range`.
 //
 // Source: vscode/src/vs/editor/common/core/range.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (checked-in vscode submodule).
 //
 // `(startLineNumber, startColumn)` is normalized to be <= `(endLineNumber,
 // endColumn)`. Endpoints are held as `Position` (1-based `line_number`/`column`,

@@ -1,6 +1,6 @@
 ///| Faithful movement-state ports from
-/// `vscode/src/vs/editor/test/browser/controller/cursor.test.ts` at pinned
-/// vscode commit `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// `vscode/src/vs/editor/test/browser/controller/cursor.test.ts` in the
+/// checked-in vscode source.
 ///
 /// This file owns the 48 movement-relevant labels in the approved 59-label
 /// `cursor.test.ts` set: absolute MoveTo, LTR Left/Right, wrapped vertical

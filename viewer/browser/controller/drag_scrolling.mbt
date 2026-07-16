@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/controller/dragScrolling.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // edge auto-scroll that keeps a selection drag going while the pointer sits
 // outside the editor.
 //

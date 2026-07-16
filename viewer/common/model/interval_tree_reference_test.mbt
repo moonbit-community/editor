@@ -1,5 +1,5 @@
 ///| Faithful conformance port of vscode's `intervalTree.test.ts` (pinned
-/// `vscode/` submodule, commit 294fb350):
+/// `vscode/` checked-in submodule):
 /// `vscode/src/vs/editor/test/common/model/intervalTree.test.ts`.
 ///
 /// Ported members: the op-driven harness (`Oracle`, `TestState`,

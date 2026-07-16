@@ -1,5 +1,5 @@
 ///| Faithful port of vscode's `common/languages/textToHtmlTokenizer.ts` (pinned
-/// `vscode/` submodule, commit 294fb350): the two pure HTML emitters
+/// `vscode/` checked-in submodule): the two pure HTML emitters
 /// `tokenizeLineToHTML` and `_tokenizeToString`, consuming the ported
 /// `@tokens.LineTokens`/`ViewLineTokens` (as in Monaco, where this file
 /// imports `tokens/lineTokens`).

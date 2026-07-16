@@ -1,7 +1,6 @@
 // Ported from `vscode/src/vs/editor/browser/view/viewOverlays.ts`
 // (`ViewOverlays`, `ViewOverlayLine`, `ContentViewOverlays`) and
-// `dynamicViewOverlay.ts` (`DynamicViewOverlay`), vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd. Replaces the flat-overlay
+// `dynamicViewOverlay.ts` (`DynamicViewOverlay`), checked-in vscode submodule. Replaces the flat-overlay
 // deviation: overlays now render per-line HTML strings composed into one
 // absolutely positioned row div per rendered view line, exactly Monaco's
 // shape (rows recycled the way `ViewLines` recycles text lines —

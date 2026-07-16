@@ -1,7 +1,7 @@
 ///| Source-shaped readonly port of Monaco's `ContiguousTokensStore`.
 ///
 /// Source: `vscode/src/vs/editor/common/tokens/contiguousTokensStore.ts` at
-/// oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in oracle.
 ///
 /// The local representation keeps Monaco's three observable store states:
 /// `Missing` is an uninitialized sparse slot, `Empty` is the compact empty-line

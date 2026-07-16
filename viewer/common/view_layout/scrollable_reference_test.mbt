@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/base/test/common/scrollable.test.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd. Test names and six checkpoints
+// checked-in source. Test names and six checkpoints
 // are kept source-identical.
 
 ///|

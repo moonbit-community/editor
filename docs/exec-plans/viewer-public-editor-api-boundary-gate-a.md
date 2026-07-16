@@ -6,10 +6,9 @@ Date: 2026-07-14
 
 Parent plan: `docs/exec-plans/viewer-public-editor-api-boundary.md`
 
-Local baseline: `e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3`
+Local baseline: recorded repository state
 
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 This is the review entrypoint for the parent plan's mandatory Gate A. At this
 snapshot it froze inventories and migration decisions only; no MoonBit source,

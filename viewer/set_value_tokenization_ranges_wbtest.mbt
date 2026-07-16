@@ -1,7 +1,6 @@
 // Flush-range projection-domain evidence for tokenization parity.
 // `TextModel._emitContentChangedEvent` runs tokenization before ViewModel
-// content delivery at pinned vscode commit
-// `b18492a288de038fbc7643aae6de8247029d11bd`.
+// content delivery in the checked-in vscode source.
 
 ///|
 fn assert_flush_token_range_domains(

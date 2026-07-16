@@ -1,6 +1,6 @@
 # Monaco `renderWhitespace` / `renderControlCharacters` Option Plumbing 1:1 Port
 
-Status: landed (Stage 1 + Stage 2) — Date: 2026-06-30. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: landed (Stage 1 + Stage 2) — Date: 2026-06-30. Oracle: checked-in reference tree.
 
 Follows `_PORT_PLAYBOOK.md`. The *rendering* of whitespace glyphs and control-
 character placeholders is already ported in

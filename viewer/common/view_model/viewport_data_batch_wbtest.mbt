@@ -1,7 +1,6 @@
 ///| Exact local evidence for the real viewport batch seam required by
 /// `viewModelImpl.getViewportViewLineRenderingData` and
-/// `viewLinesViewportData.ts` at pinned vscode commit
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// `viewLinesViewportData.ts` in the checked-in vscode source.
 
 ///|
 priv struct ViewportCountingTokenizer {

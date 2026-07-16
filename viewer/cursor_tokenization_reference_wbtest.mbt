@@ -1,7 +1,6 @@
 // Exact-label readonly adaptation of
 // vscode/src/vs/editor/test/browser/controller/cursor.test.ts:2822-2851
-// at pinned vscode commit
-// `b18492a288de038fbc7643aae6de8247029d11bd`.
+// in the checked-in vscode source.
 // Pinned file SHA-256:
 // `73badec15dc0fbf27c06c4c5b80b0da12ccf9e8e624609570d611f96cfadba4c`.
 

@@ -1,5 +1,5 @@
-///| Port of `vscode/src/vs/base/common/resources.ts` (pinned submodule
-/// commit b18492a288d): the `ExtUri` comparison/derivation layer, its three
+///| Port of `vscode/src/vs/base/common/resources.ts` in the checked-in vscode
+/// source: the `ExtUri` comparison/derivation layer, its three
 /// exported instances, and the bound top-level exports.
 /// `distinctParents`/`DataUri`/`toLocalResource` are DEFERRED (no consumer).
 ///

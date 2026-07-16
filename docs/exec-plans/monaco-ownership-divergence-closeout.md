@@ -1,7 +1,7 @@
 # Closing the Monaco Object-Ownership Divergences
 
 Status: implemented — Date: 2026-07-08 (all four tracks landed the same
-day, A → B → C → D). Oracle pin: `vscode` submodule at `b18492a288d`.
+day, A → B → C → D). Oracle: checked-in `vscode` submodule.
 
 A review of the viewer's assembly path (`Viewer::Viewer` → `attach` →
 `set_model` → `flush_render`) against Monaco's

@@ -1,7 +1,7 @@
 // 1:1 port of Monaco/VS Code's decoration interval tree.
 //
 // Source: vscode/src/vs/editor/common/model/intervalTree.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (checked-in vscode submodule).
 //
 // The red-black tree is based on the "Introduction to Algorithms" by Cormen,
 // Leiserson and Rivest. Node offsets right of a subtree are stored

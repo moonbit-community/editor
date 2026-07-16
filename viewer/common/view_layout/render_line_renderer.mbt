@@ -1,5 +1,5 @@
 // Faithful port of vscode/src/vs/editor/common/viewLayout/viewLineRenderer.ts
-// (commit b18492a288de038fbc7643aae6de8247029d11bd): `renderViewLine`,
+// (checked-in source): `renderViewLine`,
 // `renderViewLine2`, `resolveRenderLineInput`, and `_renderLine`, plus the
 // helpers they call. The only intentional deviation is the line wrapper:
 // Monaco emits `<span>…</span>`; this viewer emits

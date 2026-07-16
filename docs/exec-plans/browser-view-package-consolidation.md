@@ -2,8 +2,7 @@
 
 Status: complete — Gate A approved and implementation validated 2026-07-14
 Date: 2026-07-13
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 ## Goal
 

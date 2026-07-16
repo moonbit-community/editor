@@ -1,8 +1,7 @@
 # Monaco Content/Glyph Hover Logic-Chain 1:1 Port
 
 Status: in progress — rewritten 2026-06-30 to the `_PORT_PLAYBOOK.md` format
-(orig. proposed 2026-06-29). Oracle commit:
-`294fb350837dbaee37b949533fead4df4e0e8971` (`vscode` submodule, pinned).
+(orig. proposed 2026-06-29). Oracle: checked-in `vscode` submodule.
 
 This plan ports the editor **hover logic chain** (controller / operation /
 widget sizing / wrapper / rendered parts / status-bar actions / glyph hover) one

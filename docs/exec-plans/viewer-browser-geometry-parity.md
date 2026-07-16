@@ -6,7 +6,7 @@ Date: 2026-07-10
 
 Implemented: 2026-07-12
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -139,7 +139,7 @@ Final:    424 TESTED + 96 PORTED + 80 DEFERRED + 39 N-A = 639
 ```
 
 The three amended fragments below supersede rejected raw drafts of 279/225/273
-rows and the rejected 633-row documentation-only inventory commit `fa145e3`.
+rows and the rejected 633-row documentation-only inventory milestone.
 Pre-review removed statement-level inflation and frozen cross-plan duplicates;
 formal Gate B then restored four omitted Group A declared members and two
 Group B owner-window fallbacks, corrected terminal classifications, and
@@ -546,7 +546,7 @@ The corrected normalized denominator is 176 final rows: GCW 122 + GRC 54.
 | GCW | `vscode/src/vs/editor/browser/viewParts/contentWidgets/contentWidgets.ts` | 633 | `e524a6baaf256fb8e8d427a76f217cd832954bdabaf11b73e1e066b6dd50f7a6` |
 | GRC | `vscode/src/vs/editor/browser/view/renderingContext.ts` | 217 | `1f10fa65e8235e03bfcb987cd19df7aaca34cac8d73b8be3bca31b8c556e47f9` |
 
-Both files were read completely at the pinned commit. GCW closes the geometry-owned container/mount, validation, anchor, measurement/cache, placement, focus, callback, write, and carrier clusters. GRC closes the widget-consumed restricted facts, DOM/GPU query facade, and range/position carriers.
+Both files were read completely at the checked-in source. GCW closes the geometry-owned container/mount, validation, anchor, measurement/cache, placement, focus, callback, write, and carrier clusters. GRC closes the widget-consumed restricted facts, DOM/GPU query facade, and range/position carriers.
 
 #### GCW ledger — `contentWidgets.ts`
 
@@ -1215,7 +1215,7 @@ The matrix below is keyed by source cluster rather than raw IDs; after the accep
 
 #### Historical inventory stop gate
 
-- [x] Four source files read completely at the pinned commit.
+- [x] Four source files read completely at the checked-in source.
 - [x] Hashes and line counts recorded.
 - [x] Scoped clusters and cross-plan overlaps closed explicitly.
 - [x] Cache/platform/persistence exclusions have explicit GFM rows.
@@ -1241,10 +1241,10 @@ any product or test edit.
 - Headless uniform-width arithmetic is not a substitute for browser DOM
   measurement.
 - `monaco_render_line_reference_test.mbt` remains the exact historical upstream
-  suite at its own 294fb350 pin and is not claimed as current-pin evidence.
+  suite at its own checked-in source pin and is not claimed as current-pin evidence.
   Geometry-specific renderer, FontInfo, FontMeasurements, and ViewLayout cases
   now live in ordinary `*_geometry_test.mbt` / `*_geometry_wbtest.mbt` files
-  derived against b18492a.
+  derived against checked-in source.
 
 ## Required Test Matrix (Phase 4)
 
@@ -1373,7 +1373,7 @@ readiness, fixes deviceScaleFactor 1, and uses a 1 CSS px geometry tolerance.
 
 - 2026-07-12: Phase 1–2 documentation-only inventory is ready. All eleven
   pinned source hashes and line counts were checked at oracle
-  `b18492a288de038fbc7643aae6de8247029d11bd`. Independent pre-review rejected
+  checked-in source. Independent pre-review rejected
   and normalized the raw Group A/B/C drafts before integration: statement-level
   inflation and frozen cross-plan duplicates were removed, omitted declared
   members/callbacks were restored, and applicable absent GPU/experimental seams
@@ -1381,8 +1381,8 @@ readiness, fixes deviceScaleFactor 1, and uses a 1 CSS px geometry tolerance.
 - 2026-07-12: the initial normalized proposed denominator was 633/633 TODO rows: 242 line
   geometry, 174 widget/query, and 217 layout/renderer/font atoms. The proposed
   terminal map is 421 TESTED, 93 PORTED, 73 DEFERRED, and 46 N-A. No product or
-  test file changed. It was committed as `fa145e3` and stopped for Gate B.
-- 2026-07-12: three independent Gate B reviews rejected `fa145e3`. Group A
+  test file changed. It was committed as recorded milestone and stopped for Gate B.
+- 2026-07-12: three independent Gate B reviews rejected recorded milestone. Group A
   omitted `ViewLines.getDomNode`, its two unsupported generic render methods,
   and `ViewLine.CLASS_NAME`; Group B omitted owner-window `scrollX ?? 0` and
   `scrollY ?? 0` fallbacks and duplicated/misclassified overflow/GPU ownership;
@@ -1396,7 +1396,7 @@ readiness, fixes deviceScaleFactor 1, and uses a 1 CSS px geometry tolerance.
   are integrated, all source hashes remain pinned, and no product or test file
   changed. Commit this amendment and STOP for fresh independent Gate B review.
 - 2026-07-12: browser-geometry Gate B passed at documentation-only amendment
-  commit `b4dfeb9690f0cc068056f20d3d433f34bcd92147`. The approved fixed
+  milestone. The approved fixed
   denominator is 639/639 TODO rows with 425 planned TESTED, 96 PORTED, 80
   DEFERRED, and 38 N-A; the child-plan SHA-256 is
   `16a5e943fef417443f4cdbd3078c4491a1a0f3e64caa2f1adddb21609230258f`.
@@ -1407,15 +1407,15 @@ readiness, fixes deviceScaleFactor 1, and uses a 1 CSS px geometry tolerance.
 
 ### 2026-07-12 — implementation, Gate D remediation, and freeze
 
-Implementation commit `226f071` ports ViewLayout measured-width ownership,
+Implementation milestone ports ViewLayout measured-width ownership,
 horizontal-scrollbar bottom extent, renderer font facts, FontInfo defaults and
 identity, and the single-window FontMeasurements cache/timer/request pipeline.
-Commit `b74e512` ports the normal ViewLine/RangeUtil strategy, ViewLines width
+The milestone ports the normal ViewLine/RangeUtil strategy, ViewLines width
 sweeps and visible-range facade, ContentWidgets validation/placement/callback/
 focus behavior, rendering phases, generated contracts, and source-derived
-white-box matrices. Commit `abd8ce8` restores Monaco's current-frame render
+white-box matrices. The milestone restores Monaco's current-frame render
 queue so width-feedback scroll events do not request a second native frame.
-Commit `b99e946` adds the embedded-font Chromium oracle and real iframe owner-
+The milestone adds the embedded-font Chromium oracle and real iframe owner-
 window/page-clamp fixture.
 
 Independent Group A review rejected earlier green states and drove exact

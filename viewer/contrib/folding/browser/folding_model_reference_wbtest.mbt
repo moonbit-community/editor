@@ -1,7 +1,7 @@
 // Conformance port of Monaco/VS Code's Folding Model suite.
 //
 // Ports: vscode/src/vs/editor/contrib/folding/test/browser/foldingModel.test.ts
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From the checked-in vscode submodule.
 //
 // Skipped cases: `update` and `delete` edit the backing model
 // (`applyEdits`) — the viewer's `TextModel` is readonly. The suite's

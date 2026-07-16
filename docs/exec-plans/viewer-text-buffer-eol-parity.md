@@ -4,7 +4,7 @@ Status: implemented and frozen — EOL Option B
 
 Date: 2026-07-10
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -209,7 +209,7 @@ Final: 212 TESTED + 34 PORTED + 0 DEFERRED + 350 N-A = 596
 Unresolved: 0 TODO + 0 PASS
 ```
 
-The source files are byte-pinned at the oracle commit:
+The source files are checksummed from the checked-in source:
 
 | Source | Scoped lines | SHA-256 |
 |---|---:|---|
@@ -272,7 +272,7 @@ For every construction and `set_value(s)`:
   claimed as parity: their rows are N-A because the fixed public
   Viewer/workbench contract retains U+FEFF as ordinary content.
 
-Review gate: Gate B approved documentation-only commit `a518b08` and child
+Review gate: Gate B approved documentation-only milestone and child
 SHA-256 `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`;
 product/test implementation is authorized against this fixed denominator.
 
@@ -687,7 +687,7 @@ this closure are excluded.
 Final PB totals: 71 TESTED / 17 PORTED / 152 N-A = 240.
 
 `PB-200` is intentionally retired rather than reused: rejected commit
-`2bd49e9` assigned it to a duplicate combination path with no independent
+recorded milestone assigned it to a duplicate combination path with no independent
 source atom. The ID gap is audit history, not an absent inventory member.
 
 `CacheEntry`/`PieceTreeSearchCache` (`:201-266`) is the complete excluded
@@ -1016,8 +1016,8 @@ Final ORACLE totals: 1 TESTED = 1.
 Existing `model_reference_wbtest.mbt` already owns `model getValue`,
 `getValueInRange`, `getValueLengthInRange`, line-separator/lonely-CR cases, and
 `setValue eventing`; they provide evidence for member rows without duplicating
-the test denominator. The old 294fb350 source files are byte-identical to the
-pinned b18492a versions, but citations will be updated to the program oracle.
+the test denominator. The previously referenced source files are byte-identical to the
+checked-in versions, but citations will be updated to the program oracle.
 
 Additional branch oracles are the immutable `testLineStarts` helper,
 `prefix sum for line feed / basic`, the readonly range/line-content cases, and
@@ -1030,7 +1030,7 @@ not claimed as complete test ports.
 - `text_model_reference_wbtest.mbt` currently groups the CRLF range-length and
   TextModelData cases as DEFERRED. REF-001–007 now give each name its own
   disposition; the file's old oracle is byte-identical but its citations and
-  triage must be updated to b18492a.
+  triage must be updated to the current source paths and labels.
 - `model_reference_wbtest.mbt` already contains mixed-EOL value/range/lonely-CR
   cases. They remain authority, but they do not prove storage/offset coherence.
 - `text_model_test.mbt` currently asserts raw CRLF starts (`9` rather than
@@ -1211,7 +1211,7 @@ update this ledger and stop for classification review.
   No product or test file changed. Commit this documentation-only gate and
   stop for fresh independent Gate B review.
 - 2026-07-12: three fresh Gate B reviews rejected documentation-only commit
-  `672a64f` (child SHA-256
+  recorded milestone (child SHA-256
   `cfb826ef6790c3892dadccfd7a95411b822b6736d619179bf6407a6af3324269`).
   Reviews found one malformed regex table row, an incomplete PieceTreeBase
   value/line/equality closure, collapsed line-char branches, missing TextModel
@@ -1228,7 +1228,7 @@ update this ledger and stop for classification review.
   clipboard, unpaired-surrogate, EOL/EOF line-char, and line-extraction axes.
   No product/test file changed; commit and stop for fresh Gate B re-review.
 - 2026-07-12: three fresh Gate B reviews rejected documentation-only commit
-  `2b99a7e` (child SHA-256
+  recorded milestone (child SHA-256
   `4a0246801929fcd58b752167925a85e970dc0338b224bbc6a14db4b6367b2cae`).
   Reviews found duplicate builder ownership, the missing public PieceTreeBase
   line-char wrapper and four missing ITextModel declarations, an overbroad PB
@@ -1245,7 +1245,7 @@ update this ledger and stop for classification review.
   remain transferred from async; and equality fixtures name all four source
   exits. No product/test file changed; commit and stop for fresh Gate B review.
 - 2026-07-12: three independent Gate B reviews rejected documentation-only
-  commit `5834c6f` (child SHA-256
+  milestone (child SHA-256
   `fe6e9e55295d6d16728660b0d9ccd4ce1b477bb92942c97701a66899d6184bfd`).
   They established that final `getLineCharCode(line,lineLength)` reaches a
   truthy null-piece sentinel and fails rather than returning 0; found an
@@ -1262,7 +1262,7 @@ update this ledger and stop for classification review.
   the event scope contains only Flush/ModelRawFlush atoms. No product/test
   file changed; commit and stop for fresh Gate B review.
 - 2026-07-12: the builder/base and combined Gate B reviews rejected
-  documentation-only commit `6634aaf` (child SHA-256
+  documentation-only milestone (child SHA-256
   `6772a3101ab170d2a2e1ce65237a48de33823b53146ef2d532f66f236d788cc8`);
   the model/events review passed. The rejected denominator omitted complete
   nodeAt/nodeAt2/offsetOfNode/iterate/getNodeContent bodies and TreeNode
@@ -1278,7 +1278,7 @@ update this ledger and stop for classification review.
   empty, nonempty-final, trailing-empty, in-piece-LF, and piece-end-successor
   oracles. No product/test file changed; commit and stop for fresh Gate B.
 - 2026-07-12: two independent Gate B reviews rejected documentation-only
-  commit `2bd49e9` (child SHA-256
+  milestone (child SHA-256
   `b1f27e21fb7e5c35d245ba487c0101ee537bc191d84dbfe81326aca376d39774`).
   PB-200 duplicated PB-115–117/RB-004–005 rather than owning a source atom;
   the SearchCache exclusion omitted scoped raw-line call-site owners; and the
@@ -1294,7 +1294,7 @@ update this ledger and stop for classification review.
   algebraic adaptation. No product/test file changed; commit and stop for
   fresh Gate B review.
 - 2026-07-12: private-closure Gate B passed documentation-only commit
-  `48eaff8` (child SHA-256
+  recorded milestone (child SHA-256
   `3ee78d59c266d6ccb6617669f8766c6b9e6c7ea514b5fa6fa7af39ae6635704d`),
   while model/matrix and combined reviews rejected it. BOM stripping also
   exposes singleton duplication for U+FEFF-prefixed held units; a basic prefix
@@ -1314,7 +1314,7 @@ update this ledger and stop for classification review.
   the same length-4 content behind separate BOM metadata; `a+D800/DBFF` kept
   one surrogate but reported non-basic false; and piece-end successor probes
   returned LF code 10 and ordinary `'1'` code 49. No repository file changed.
-- 2026-07-12: combined Gate B passed documentation-only commit `a652cd7`
+- 2026-07-12: combined Gate B passed documentation-only milestone
   (child SHA-256
   `440d5bf01338fb30ae71bab9574fc8d626bd5523e0f1bfedbcacef252c93c071`),
   while model/matrix and private-closure reviews rejected only ORACLE-001's
@@ -1327,7 +1327,7 @@ update this ledger and stop for classification review.
   PieceTreeTextBuffer field/constructor/getter, and Deviations names every
   affected EBB/EFB/ETB carrier. No product/test file changed; commit and stop
   for fresh Gate B review.
-- 2026-07-12: model/matrix Gate B passed documentation-only commit `6be96e2`
+- 2026-07-12: model/matrix Gate B passed documentation-only milestone
   (child SHA-256
   `2f9b511101bdbc27e871c5f4f238868ac57e558481c53cac4c275b1517c87211`);
   private-closure and combined reviews rejected only ORACLE-001's still-
@@ -1340,7 +1340,7 @@ update this ledger and stop for classification review.
   deviations map PB-004–029/038–040 without creating source duplicates. No
   product/test file changed; commit and stop for fresh Gate B review.
 - 2026-07-12: private-closure and model/matrix Gate B passed documentation-only
-  commit `5b0a631` (child SHA-256
+  milestone (child SHA-256
   `c522536d5c053131dd76f1e502a4d0356a8d916fce8da0df2d111649fa0c1d94`);
   combined review rejected only the omission of PB-106, the independent
   LineStarts constructor carrier already inside ORACLE-001's cited range. All
@@ -1350,14 +1350,14 @@ update this ledger and stop for classification review.
   PB-004–029/038–040, completing every existing producer/carrier row without
   adding or reclassifying one. No product/test file changed; commit and stop
   for fresh Gate B review.
-- 2026-07-12: Gate B passed at documentation-only commit `a518b08` (child
+- 2026-07-12: Gate B passed at documentation-only milestone (child
   SHA-256 `9da062a8102eda78dc1c40a27123e3ed28b469fb214af05909cb17fb96c5f682`).
   Three independent reviews approved all 596 unique TODO rows (584 source,
   11 REF, one ORACLE), proposed 212 TESTED / 34 PORTED / 350 N-A terminals,
   nine pinned hashes, private PB/RB/SearchCache closure, ORACLE producer and
   behavior maps, Option-B/BOM/TMV/PR/tokenization ownership, and every required
   matrix. No product/test edit preceded approval; implementation is authorized.
-- 2026-07-12: product commit `ad4c2a9` normalizes CRLF/lone-CR before storing
+- 2026-07-12: product milestone normalizes CRLF/lone-CR before storing
   text or deriving line starts; adds fixed-LF and non-basic-ASCII reads;
   routes TextModel full-value reads through the source-shaped full-range path;
   preserves the pinned nonfinal-LF and terminal-EOF line-char outcomes; and
@@ -1367,7 +1367,7 @@ update this ledger and stop for classification review.
   surrogate, three reference headers were stale, and the interior-U+FEFF,
   per-fixture invalid-clamp, remote-client, and raw/normalized contract seams
   were not all explicit.
-- 2026-07-12: corrective commit `a4ff33a` replaces every scoped value/line/
+- 2026-07-12: corrective milestone replaces every scoped value/line/
   range/normalizer slice with raw UTF-16 `String::unsafe_substring` semantics,
   adds D800/DBFF/DC00/DFFF and valid-pair-half regressions on JS/native, closes
   the missing test axes and exact reference metadata, and corrects the raw

@@ -2,8 +2,7 @@
 /// Faithful 1:1 conformance port of Monaco's inline-decoration computer suites,
 /// vscode/src/vs/editor/test/common/viewModel/inlineDecorations.test.ts
 /// (suite InlineModelDecorationsComputer and
-/// suite InjectedTextInlineDecorationsComputer) at submodule commit
-/// b18492a288de038fbc7643aae6de8247029d11bd. Test names are preserved verbatim.
+/// suite InjectedTextInlineDecorationsComputer) in the checked-in submodule. Test names are preserved verbatim.
 
 ///|
 /// Minimal createTextModel input retained from the source suite. Production
@@ -130,7 +129,7 @@ fn inline_reference_model(model : TestTextModel) -> @model.TextModel {
     "inline.txt",
     "inline-decoration-reference",
     1,
-    "b18492a",
+    "reference-revision",
     model.lines.join("\n"),
   )
 }

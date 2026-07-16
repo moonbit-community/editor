@@ -1,5 +1,5 @@
 /* Ported from vscode/src/vs/editor/contrib/folding/browser/folding.css
-   (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971),
+   (checked-in vscode submodule),
    minus the `.monaco-editor` scope prefix (the viewer's convention) and the
    `.monaco-reduce-motion` override (no reduce-motion root class). The
    chevron nodes are the margin rows' `.cldr` divs

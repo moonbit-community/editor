@@ -1,6 +1,6 @@
 # Monaco Marker Render 1:1 Port
 
-Status: implemented (A–G, I) — Date: 2026-07-01. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: implemented (A–G, I) — Date: 2026-07-01. Oracle: checked-in reference tree.
 
 Increments A–G landed; H (overview ruler / minimap parts) stays deferred. `just
 check && just test` green; `just test-browser` green except

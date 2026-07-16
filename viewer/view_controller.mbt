@@ -2,7 +2,7 @@
 /// Maps a pointer gesture to a `CoreNavigationCommands` call on the cursor
 /// stack — Monaco's `ViewController.dispatchMouse`
 /// (`vscode/src/vs/editor/browser/view/viewController.ts:217-311`, vscode
-/// submodule commit b18492a288de038fbc7643aae6de8247029d11bd), branch for
+/// checked-in submodule), branch for
 /// branch over the full `IMouseDispatchData` (`@controller.MouseDispatchData`;
 /// `data.position` is a 1-based view position).
 ///

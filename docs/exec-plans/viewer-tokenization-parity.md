@@ -4,7 +4,7 @@ Status: implemented and frozen
 
 Date: 2026-07-13
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -13,8 +13,8 @@ Finding: P1-11
 Depends on: viewer-model-lifecycle-ownership-parity.md and
 viewer-text-buffer-eol-parity.md
 
-Product/test work began only after documentation-only commit `d70d967` passed
-all three independent Gate-B lanes and approval record `e331550` landed. The
+Product/test work began only after documentation-only milestone passed
+all three independent Gate-B lanes and approval record recorded milestone landed. The
 ledger below is now mechanically collapsed to its implementation evidence;
 Gate D must independently approve it before this child can be frozen.
 
@@ -661,7 +661,7 @@ row or parity authority.
 | UTM-018 | `issue #44805: No visible lines via undoing` (`:132-150`) | `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #44805: No visible lines via undoing` evidence; hidden areas after editable undo | N-A (readonly Viewer has no undo API) |
 | UTM-019 | `view models react first to model changes` (`viewModelImpl.test.ts:92-117`) | Two attached editors receive model-first content delivery before hostile public listener mutation; adapt with nested `set_value` and exact range validity. Exact local target: `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt` | TESTED |
 | UTM-020 | `issue #46314: ViewModel is out of sync with Model!` (`cursor.test.ts:2822-2851`) | Two Viewers share one model; cursor callback invokes `tokenize_if_cheap(1)` during `set_value` without stale projection or eager sweep. Exact local target: `viewer/cursor_tokenization_reference_wbtest.mbt` | TESTED |
-| UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Move the exact named case from ordinary `word_helper_wbtest.mbt` into quality-compliant `viewer/common/model/model_reference_wbtest.mbt`, which cites the full source path and oracle commit; keep only non-reference helper coverage in the former file. | TESTED |
+| UTM-021 | `Get word at position` (`model.test.ts:439-455`) | Move the exact named case from ordinary `word_helper_wbtest.mbt` into source-labeled `viewer/common/model/model_reference_wbtest.mbt`, which cites the full source path; keep only non-reference helper coverage in the former file. | TESTED |
 | UTM-022 | `getWordAtPosition at embedded language boundaries` (`model.test.ts:457-474`) | `viewer/common/model/model_reference_wbtest.mbt` — Explicit named `SKIPPED: getWordAtPosition at embedded language boundaries` evidence beside UTM-021 under the same exact upstream path/pin; embedded token-language boundary word selection | DEFERRED (embedded-language token/config integration absent) |
 | UTM-023 | `issue #61296: VS code freezes when editing CSS file with emoji` (`model.test.ts:476-500`) | `viewer/common/model/model_reference_wbtest.mbt` — Explicit named `SKIPPED: issue #61296: VS code freezes when editing CSS file with emoji` evidence beside UTM-021 under the same exact upstream path/pin; emoji/word-pattern progress under dynamic language configuration | DEFERRED (dynamic language configuration and embedded word integration absent) |
 
@@ -1642,7 +1642,7 @@ and no duplicate IDs. Local LOC rows are excluded.
 | LOC-005 | Raw UTF-16 token content/slice operations preserve the same matrix. | `viewer/common/tokens/line_tokens.mbt` | TESTED |
 | LOC-006 | Correct guide header: tokenization is passive on read and explicit/visible/background work owns lexer calls. | `viewer/common/model/tokens/README.md` | PORTED |
 | LOC-007 | Correct compatibility header and ownership after moving live queue/state implementation to model/tokens. | `viewer/common/model/text_model_tokens.mbt` | PORTED |
-| LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and oracle commit `b18492a288de038fbc7643aae6de8247029d11bd`; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | PORTED |
+| LOC-008 | Correct the model-line reference header to cite full path `vscode/src/vs/editor/test/common/model/model.line.test.ts` and checked-in oracle; explicitly `SKIPPED`-name all 52 incremental cases because readonly Viewer has no incremental `applyEdits` seam and manually injected `ManualTokenizationSupport` remains deferred, rather than claiming background tokenization is absent. Keep the projection reference as a separate destination. | `viewer/common/model/model_line_reference_wbtest.mbt`; `viewer/common/view_model/model_line_projection_reference_wbtest.mbt` | PORTED |
 | LOC-009 | Place the syntactic font carrier in model/tokens, preserve the source `FontTokensUpdate` typealias there, and expose the exact same option/update/event values through the token-part event consumed by the parent; no duplicate parent carrier, alias, or conversion. Visual FontTokenDecorationsProvider stays deferred. | `viewer/common/model/tokens/annotations.mbt`; `viewer/common/model/tokens/annotations_wbtest.mbt`; `viewer/common/model/tokens/abstract_syntax_token_backend_wbtest.mbt`; `viewer/common/model/tokens/tokenization_text_model_part_wbtest.mbt` | TESTED |
 | LOC-010 | Keep large models on projected collection while disabling tokenization; document P2 deviation. | `viewer/common/view_model/README.md`; parent P2 backlog reservation for future `viewer-large-file-view-collection-parity.md` | TESTED |
 | LOC-011 | Scheduler epoch seam: retain the first non-`None` scheduler through all nonfinal detaches; idle/zero handles plus generation cancellation reset `_isScheduled` on final detach and prevent callbacks from an older epoch clearing fresh state. | `viewer/common/model/tokens/text_model_tokens.mbt`; `viewer/browser_host.mbt` | TESTED |
@@ -1650,9 +1650,9 @@ and no duplicate IDs. Local LOC rows are excluded.
 | LOC-013 | Reroute `ViewModel::get_line_content/get_line_length` away from token-reading `get_view_line_data` to non-token content/length paths; assert both token-store reads and lexer calls stay zero. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/view_model_tokens_test.mbt` | TESTED |
 | LOC-014 | Add raw start-offset word encoder; public registry wrapper does not construct end-offset LineTokens before TMS-126. | `viewer/common/model/tokens/line_tokens_encoder.mbt` | TESTED |
 | LOC-015 | `scheduler=None` enqueues no idle/zero/delayed work while explicit force and stabilized-true refresh remain synchronous. A first late `Some` while already attached stores the scheduler and wakes once without a duplicate attach event; later candidates are ignored until final clear. | `viewer/common/model/text_model_tokens.mbt`; `viewer/common/model/text_model.mbt` | TESTED |
-| LOC-016 | Correct the queue reference header to cite oracle commit `b18492a288de038fbc7643aae6de8247029d11bd` and full source path `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts`. | `viewer/common/model/text_model_tokens_reference_test.mbt` | PORTED |
+| LOC-016 | Correct the queue reference header to cite checked-in oracle and full source path `vscode/src/vs/editor/test/common/model/textModelTokens.test.ts`. | `viewer/common/model/text_model_tokens_reference_test.mbt` | PORTED |
 | LOC-017 | Correct the guide reference header: only #133 and #11856 are bracket suites; #122 is tokenization and #63822 is embedded-language behavior. | `viewer/common/model/guides_text_model_part_reference_test.mbt` | PORTED |
-| LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` at `b18492a288de038fbc7643aae6de8247029d11bd`; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TESTED |
+| LOC-018 | Move the exact `Get word at position` conformance case into `model_reference_wbtest.mbt`, citing `vscode/src/vs/editor/test/common/model/model.test.ts` in the checked-in source; reclassify `word_helper_wbtest.mbt` as ordinary local coverage and remove the duplicate conformance claim. | `viewer/common/model/model_reference_wbtest.mbt`; `viewer/common/model/word_helper_wbtest.mbt` | TESTED |
 | LOC-019 | Make the real `viewport_data_from_view_model` path build the viewport needed mask and call `get_view_lines_data` exactly once; its test records the single batch call, one passive token-store read per participating projected model line, and zero lexer invocations. | `viewer/common/view_model/viewport_data.mbt`; `viewer/common/view_model/viewport_data_batch_wbtest.mbt` | TESTED |
 | LOC-020 | Record the registry's `Color[]`/`Color` to CSS `Array[String]`/`String` reduction and exact nullable method signatures; preserve `changed_color_map : Bool`. | `syntax/README.md`; `syntax/pkg.generated.mbti`; `syntax/tokenizer_test.mbt` | TESTED |
 | LOC-021 | Structurally widen the frozen cursor-owned outgoing-only dispatcher with the model-token kind/wrapper/private arm and typed ViewModel listener; preserve no-op=false/no-merge/FIFO identity, run all cursor/ViewZones regressions, and replace the root direct TextModel listener with the ViewModel listener after synchronous browser ViewEvent delivery. Keep `ViewModel::ViewModel(model)` source-compatible; add only the exact optional `with_options` callback and headless default sink described above. | `viewer/common/view_model/view_model.mbt`; `viewer/common/view_model/cursor_event_dispatcher.mbt`; `viewer/common/view_model/model_tokens_outgoing.mbt`; `viewer/common/view_model/moon.pkg`; `viewer/common/view_model/README.md`; `viewer/common/view_model/pkg.generated.mbti`; `viewer/common/view_model/view_model_test.mbt`; `viewer/common/view_model/cursor_event_dispatcher_wbtest.mbt`; `viewer/common/view_model/view_model_impl_tokenization_reference_wbtest.mbt`; `viewer/attach_model.mbt`; `viewer/test_viewer_wbtest.mbt` | TESTED |
@@ -1872,7 +1872,7 @@ recounted.
   No product or test file changed; Gate B has not passed and requires a fresh
   independent review.
 - 2026-07-13: the second formal Gate-B round kept source completeness PASS but
-  REJECTED `af952ac` on test evidence and five boundary seams: 33 missing named
+  REJECTED recorded milestone on test evidence and five boundary seams: 33 missing named
   SKIPPED requirements, omitted reference destinations, wrong queue authority,
   absent real viewport/telemetry zero-lexer evidence, missing ViewModel token
   callback ownership, numeric enum ABI overclaims, an incomplete optional
@@ -1881,7 +1881,7 @@ recounted.
   source atoms + 97 exact tests, now proposed as 463 TESTED / 201 PORTED / 206
   DEFERRED / 173 N-A. No product or test file changed; Gate B has not passed
   and requires another fresh review.
-- 2026-07-13: the third formal Gate-B round REJECTED `e8c7e63` on one explicit
+- 2026-07-13: the third formal Gate-B round REJECTED recorded milestone on one explicit
   DOM/CSS-none declaration, two `model.test.ts` reference destinations, two
   placeholder LOC destinations, and the unowned model-token outgoing event.
   The correction pins and inventories the complete nine-row
@@ -1891,26 +1891,26 @@ recounted.
   206 PORTED / 206 DEFERRED / 174 N-A, plus 21 uncounted LOC rows. No product or
   test file changed; Gate B has not passed and requires another fresh review.
 - 2026-07-13: the fourth formal Gate-B round independently PASSed clean commit
-  `d70d967` in all three required lanes: complete source/test reread,
+  recorded milestone in all three required lanes: complete source/test reread,
   boundary/classification/package/API, and test evidence/matrices/mechanics.
   The approved implementation denominator is 1052 TODO rows = 955 source
   atoms + 97 exact tests, proposed as 466 TESTED / 206 PORTED / 206 DEFERRED /
   174 N-A, plus 21 uncounted LOC rows. All 38 pinned hashes match; no product
   or test file predates approval. Gate B is approved and implementation may
   now begin without changing this denominator or its reviewed handoffs.
-- 2026-07-13: implementation commits `0a8f4d6`, `76bd7f2`, `41b3a84`,
-  `7bee29c`, `4e6d23e`, `7af1d7a`, and `a4d7cad` land the registry/color-map
+- 2026-07-13: implementation commits recorded milestone, recorded milestone, recorded milestone,
+  recorded milestone, recorded milestone, recorded milestone, and recorded milestone land the registry/color-map
   surface, reconciled upstream references, contiguous stores, live
   model/backend, TextModel lifecycle, token-aware ViewModel/outgoing event,
   and browser Viewer scheduling. No implementation commit predates Gate-B
   approval.
-- 2026-07-13: closing-evidence commits `82ecb90`, `8aeeebf`, `7579fac`,
-  `4abab22`, `0dfff71`, and `8811d1a` add the once-selected idle adapter and
+- 2026-07-13: closing-evidence commits recorded milestone, recorded milestone, recorded milestone,
+  recorded milestone, recorded milestone, and recorded milestone add the once-selected idle adapter and
   2x2 capability matrix; real viewport batch/passive-read counters; exact
   cursor #46314, restore, flush-domain, telemetry, projection-mask, UTF-16,
   font, scheduler, and multi-view matrices; updated package contracts; and
   explicit demand in pre-existing render/inlay fixtures. Browser correction
-  `eb7bec8` records the bounded reset-plus-token repaint sequence and waits for
+  recorded milestone records the bounded reset-plus-token repaint sequence and waits for
   asynchronous grammar completion instead of treating the first passive paint
   as final.
 - 2026-07-13: the implementation candidate passes model **135/135** and
@@ -1925,7 +1925,7 @@ recounted.
   Gate D candidate — STOP FOR REVIEW; no further product/test edit is
   authorized until independent source/ledger, boundary/API, and test/matrix
   rereads report their findings.
-- 2026-07-13: all three independent Gate-D lanes REJECTED `86128ee` despite
+- 2026-07-13: all three independent Gate-D lanes REJECTED recorded milestone despite
   correct pins, denominator, totals, exact-test dispositions, and green gates.
   Confirmed remediation covers Projected all-false/context order; model
   attached events and `_hasListeners`; TextModelPart dispose/assert ordering;
@@ -1936,8 +1936,8 @@ recounted.
   language/configuration work. The child returns to implementation; the
   collapsed statuses are an unapproved candidate until a fresh three-lane
   Gate D passes.
-- 2026-07-13: remediation commits `c2de305`, `f46c396`, `c2b7604`, and
-  `4fe6517` close every rejected TextModel lifecycle, projection/context,
+- 2026-07-13: remediation commits recorded milestone, recorded milestone, recorded milestone, and
+  recorded milestone close every rejected TextModel lifecycle, projection/context,
   worker/deadline, font-carrier, disposal/guard, identity, private-API, and
   error-reporting finding. Exact package suites pass on JS and native:
   model/tokens **54/54**, model **140/140**, and ViewModel **168/168**.
@@ -1947,7 +1947,7 @@ recounted.
 - 2026-07-13: the full candidate passes `just check` with only the pre-existing
   diff-package +73 diagnostic, `just test` (**1414/1414 JS**, **1009/1009
   native**; Wasm/Wasm-GC have no test entry), `just build`, and Chromium
-  `just test-browser` **82/82**. Commit `ced7d4c` gives only the long-lived
+  `just test-browser` **82/82**. The milestone gives only the long-lived
   scroll performance oracle one fresh-worker retry after three observed
   0.1--0.3 ms host-jitter failures; it preserves all 12 cells, three
   repetitions, the 1 ms source-relative threshold, and the first-failure
@@ -1958,7 +1958,7 @@ recounted.
   fresh Gate D candidate — STOP FOR REVIEW; no further product/test edit is
   authorized until independent source/ledger, boundary/API, and test/matrix
   rereads report their findings.
-- 2026-07-13: the fresh source/ledger Gate-D lane REJECTED `860c7e6` on one
+- 2026-07-13: the fresh source/ledger Gate-D lane REJECTED recorded milestone on one
   newly exposed ordering gap. TMT-028 requires token-part disposal, then
   `isDisposed=true`, then superclass/registered-resource disposal. Local
   `TextModel::dispose` still released `AttachedViews` and cleared the scheduler
@@ -1968,7 +1968,7 @@ recounted.
   branches passed this lane. The child returns to implementation for the one
   ordered transition and executable order evidence; the candidate remains
   unapproved.
-- 2026-07-13: commit `0146cf7` closes TMT-028 with one private, production-used
+- 2026-07-13: milestone closes TMT-028 with one private, production-used
   source-order sequence: `isDisposing=true` -> will-dispose -> token-part
   dispose -> `isDisposed=true` -> registered resources ->
   `isDisposing=false`. Its white-box trace proves every intermediate flag and

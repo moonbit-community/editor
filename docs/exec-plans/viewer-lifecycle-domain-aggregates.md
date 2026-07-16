@@ -5,12 +5,11 @@ approved before Milestones B–G began.
 
 Date: 2026-07-15
 
-Local baseline: `87467b1be9a7b143434cc64e772e15d2780ca7a0`
+Local baseline: recorded repository state
 
 Gate A evidence: `viewer-lifecycle-domain-aggregates-gate-a.md`.
 
-Monaco oracle: checked-in `vscode` commit
-`b18492a288de038fbc7643aae6de8247029d11bd`.
+Monaco oracle: checked-in `vscode` submodule.
 
 ## Summary
 
@@ -775,7 +774,7 @@ Commit this milestone independently.
 5. Run formatting and the complete repository gates.
 6. Recount the final direct Viewer fields and verify every VFD row reached its
    intended disposition.
-7. Record final commit ids, test counts, and any approved deviations in this
+7. Record final milestone results, test counts, and any approved deviations in this
    plan, then mark it implemented.
 
 Full gate:
@@ -874,12 +873,12 @@ mirror field, or public headless API was introduced.
 
 | Milestone | Commit | Result |
 | --- | --- | --- |
-| Gate A | `3a1ef52` | 49 fields, 49 ledger rows, ownership traces and baseline characterization recorded |
-| B | `98e7aba` | contribution storage and content-hover ownership |
-| C | `78569b5` | configuration transition owner |
-| D | `f409ea4` | model slot and browser-only model data |
-| E | `c249e59` | one-way headless/mounted owner and atomic placeholder |
-| F | `76fada8` | reentrant cursor-delivery state machine |
+| Gate A | recorded milestone | 49 fields, 49 ledger rows, ownership traces and baseline characterization recorded |
+| B | recorded milestone | contribution storage and content-hover ownership |
+| C | recorded milestone | configuration transition owner |
+| D | recorded milestone | model slot and browser-only model data |
+| E | recorded milestone | one-way headless/mounted owner and atomic placeholder |
+| F | recorded milestone | reentrant cursor-delivery state machine |
 | G | the commit containing this closeout record | current architecture/harness docs, API audit, and full validation |
 
 Focused final evidence includes 217/217 root Viewer JS tests, 19/19 cursor

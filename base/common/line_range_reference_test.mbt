@@ -1,7 +1,7 @@
 // Conformance port of Monaco/VS Code's LineRange / LineRangeSet suites.
 //
 // Ports: vscode/src/vs/editor/test/common/core/lineRange.test.ts
-// From vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+// From the checked-in vscode submodule.
 
 ///|
 test "contains" {

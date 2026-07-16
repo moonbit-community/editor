@@ -1,6 +1,6 @@
 // Ported from
 // `vscode/src/vs/editor/browser/viewParts/viewLines/rangeUtil.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd).
+// (checked-in vscode submodule).
 //
 // The DOM Range state is held in one JS object so every measurement reuses the
 // same Range identity. `_read_client_rects_with_state` owns the source's exact

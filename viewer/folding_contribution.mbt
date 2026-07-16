@@ -1,6 +1,6 @@
 // The folding feature's registrations — the contribution + action half of
 // `vscode/src/vs/editor/contrib/folding/browser/folding.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971):
+// checked-in submodule):
 // `registerEditorContribution(FoldingController.ID, …, Eager)` plus the
 // keyboard-reachable actions. Only `editor.fold` and `editor.unfold` are
 // registered: the registry dispatches single (non-chord) keystrokes, and the

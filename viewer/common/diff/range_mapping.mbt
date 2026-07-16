@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/common/diff/rangeMapping.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the mapping
+// checked-in submodule): the mapping
 // types a lines-diff result is expressed in.
 //
 // Parity ledger (source members):

@@ -1,7 +1,7 @@
 // Conformance port of Monaco/VS Code's PrefixSumComputer suite.
 //
 // Ports: vscode/src/vs/editor/test/common/viewModel/prefixSumComputer.test.ts
-// From vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971.
+// From the checked-in vscode submodule.
 //
 // Like the upstream `forBoth`, every case runs against both PrefixSumComputer
 // and ConstantTimePrefixSumComputer through a shared adapter.

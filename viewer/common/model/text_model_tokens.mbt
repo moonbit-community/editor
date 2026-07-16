@@ -1,7 +1,7 @@
 ///| Stateful and background grammar tokenization machinery.
 ///
 /// Source: `vscode/src/vs/editor/common/model/textModelTokens.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`, lines 23-558. Incremental-edit
+/// checked-in source, lines 23-558. Incremental-edit
 /// members are intentionally absent for readonly Viewer; immutable
 /// `TokenizerState`, raw arrays, direct live model-state fields, `0x7FFFFFFF`, and the
 /// cancellable injected scheduler are the Gate-B-approved adaptations.

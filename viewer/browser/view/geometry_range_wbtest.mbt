@@ -1,5 +1,5 @@
 // Source-derived branch tests for pinned `domReadingContext.ts` and
-// `rangeUtil.ts` at b18492a288de038fbc7643aae6de8247029d11bd.
+// `rangeUtil.ts` in the checked-in source.
 
 ///|
 #external

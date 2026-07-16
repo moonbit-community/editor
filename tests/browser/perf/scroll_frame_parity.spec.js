@@ -1,6 +1,5 @@
 import { expect, test } from '../support/test.js';
 
-const oracleCommit = 'b18492a288de038fbc7643aae6de8247029d11bd';
 const viewportLines = [10, 37, 100];
 const smoothValues = [false, true];
 const inputs = ['physical', 'trackpad'];
@@ -82,7 +81,6 @@ async function compareScrollFrameParity({ page }, testInfo) {
   const report = {
     suite: 'scroll_frame_parity',
     status: 'passed',
-    oracleCommit,
     repetitions,
     frameCount,
     observedCadenceHz: Math.round(1000 / observedCadence),

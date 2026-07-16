@@ -6,9 +6,9 @@ Date: 2026-07-14
 
 Parent plan: docs/exec-plans/viewer-public-editor-api-boundary.md
 
-Oracle commit: vscode submodule b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in `vscode` submodule
 
-Local baseline: repository HEAD e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3
+Local baseline: recorded repository state
 
 This companion closes only the current root public-surface and caller-evidence
 parts of Gate A. It changes no product source, package manifest, or generated
@@ -47,7 +47,7 @@ not promises to preserve the declarations.
 
 Reproduction:
 
-    BASE=e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3
+BASE=<baseline>
     git show "$BASE:viewer/pkg.generated.mbti" | wc -l
     git show "$BASE:viewer/pkg.generated.mbti" | wc -c
     git show "$BASE:viewer/pkg.generated.mbti" | shasum -a 256

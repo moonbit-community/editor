@@ -1,5 +1,5 @@
 /* Port of `vscode/src/vs/workbench/contrib/scm/browser/media/
-   dirtydiffDecorator.css` (vscode 294fb350), trimmed to the classes the
+   dirtydiffDecorator.css` (vscode checked-in source), trimmed to the classes the
    viewer emits: `primary` only, no `pattern`/`secondary` variants (single
    provider, no gutter-pattern setting) and no peek-widget/`monaco-workbench`
    motion rules. The `QuickDiffWorkbenchController` dynamic stylesheet's

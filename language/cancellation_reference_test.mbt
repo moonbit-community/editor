@@ -1,5 +1,5 @@
-// Ported from `vscode/src/vs/base/test/common/cancellation.test.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd. The CancellationToken suite's
+// Ported from `vscode/src/vs/base/test/common/cancellation.test.ts` in the
+// checked-in vscode source. The CancellationToken suite's
 // source test names are preserved verbatim; CancellationTokenPool is explicitly
 // deferred by the approved inventory.
 //

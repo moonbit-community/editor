@@ -1,7 +1,7 @@
 ///| Attached-view priority and shared syntactic backend contracts.
 ///
 /// Source: `vscode/src/vs/editor/common/model/tokens/abstractSyntaxTokenBackend.ts`
-/// at `b18492a288de038fbc7643aae6de8247029d11bd`, lines 24-187. The local
+/// in the checked-in source, lines 24-187. The local
 /// emitter/generation scheduler is the Gate-B-approved FFI-free observable
 /// adaptation; member order, range conversion, 50 ms delay, and early returns
 /// follow that unit.

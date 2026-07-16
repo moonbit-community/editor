@@ -3,7 +3,7 @@
 // Ports:
 //   vscode/src/vs/editor/common/viewLayout/lineDecorations.test.ts (5 cases)
 //   vscode/src/vs/editor/common/viewLayout/viewLineRenderer.test.ts (72 cases)
-// From vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+// From the checked-in vscode submodule.
 //
 // `viewer/view_line_renderer` is a faithful 1:1 port of Monaco's
 // `viewLineRenderer.ts`, so every case asserts Monaco's exact output: the inner

@@ -1,7 +1,7 @@
 // The quick-diff feature's registration — the role of
 // `vscode/src/vs/workbench/contrib/scm/browser/quickDiff.contribution.ts`
 // plus `QuickDiffWorkbenchController`'s editor tracking (vscode submodule
-// commit 294fb350), reduced to the editor-contribution registry: the
+// checked-in source), reduced to the editor-contribution registry: the
 // controller upstream watches the editor service and attaches a
 // `QuickDiffDecorator` per (resource, editor); the viewer's registry
 // already instantiates per editor, so the contribution body IS the

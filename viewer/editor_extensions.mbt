@@ -1,6 +1,6 @@
 // Port of the registration surface of
 // `vscode/src/vs/editor/browser/editorExtensions.ts` (vscode submodule
-// commit 294fb350837dbaee37b949533fead4df4e0e8971): the editor-contribution
+// checked-in source): the editor-contribution
 // registry (`EditorContributionRegistry`, `registerEditorContribution`,
 // `codeEditorContributions.ts`'s per-editor instantiation) and the
 // command + keybinding registration (`Command.register` →

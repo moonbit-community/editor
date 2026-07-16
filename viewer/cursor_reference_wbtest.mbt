@@ -1,6 +1,6 @@
 // Exact-label subset of
 // vscode/src/vs/editor/test/browser/controller/cursor.test.ts
-// at b18492a288de038fbc7643aae6de8247029d11bd.
+// in the checked-in source.
 //
 // This root-owned split covers public API/event/flush and pointer-command
 // seams. Movement-only labels live in

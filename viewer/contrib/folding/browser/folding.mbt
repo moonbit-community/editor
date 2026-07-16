@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/folding.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the contracts
+// checked-in submodule): the contracts
 // other folding files consume — `FoldingLimitReporter`,
 // `SelectedLines`, `toSelectedLines` — and the `FoldingController`'s state.
 //

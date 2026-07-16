@@ -5,7 +5,7 @@
 /// `vscode/src/vs/editor/common/cursor/cursorMoveCommands.ts` and the scoped
 /// Home/End/Page command callers in
 /// `vscode/src/vs/editor/browser/coreCommands.ts`, pinned at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in source.
 /// Exact 15-member `CursorMove.Direction` enum contract
 /// (`cursorMoveCommands.ts:929-948`). The viewport members remain behaviorally
 /// deferred, but retaining them here keeps the aggregate source type complete.

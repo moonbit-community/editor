@@ -2,8 +2,7 @@
 
 Status: implemented and frozen — 2026-07-13
 Date: 2026-07-13
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 Gate A review artifact:
 `text-model-tokenization-package-merge-gate-a.md`. The user's explicit request
@@ -213,10 +212,10 @@ Required validation:
 
 The implementation was split into independently validated milestones:
 
-- `9e23f66` — complete Gate A inventory and reviewed representation;
-- `4338df7` — behavior-neutral package and test merge;
-- `7ec1b53` — direct ownership through private `TokenizationModelState`;
-- `30a4ed2` — public API and constructor cleanup;
+- recorded milestone — complete Gate A inventory and reviewed representation;
+- recorded milestone — behavior-neutral package and test merge;
+- recorded milestone — direct ownership through private `TokenizationModelState`;
+- recorded milestone — public API and constructor cleanup;
 - the plan-freezing commit — documentation and final validation.
 
 The final ledger is exactly **558 rows: 261 TESTED, 96 PORTED, 81 DEFERRED,
@@ -228,7 +227,7 @@ were replaced one-for-one by the approved live shared-state fields; this is the
 reviewed representation seam, not a new behavioral deviation.
 
 Milestone D reduced the merged generated interface from 666 lines at
-`7ec1b53` to 403 lines. The former token cluster retains exactly 14 public
+recorded milestone to 403 lines. The former token cluster retains exactly 14 public
 declarations: the two theme/encoding helpers, visible-line range and attached
 handle update, token event/range payloads, deadline and scheduler construction,
 and passive line-token/count reads. Stores, queues, backends, lifecycle helpers,

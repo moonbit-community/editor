@@ -1,6 +1,5 @@
 // 1:1 port of the model content-change event types from
-// vscode/src/vs/editor/common/textModelEvents.ts (vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd), plus `DidChangeContentEmitter`
+// vscode/src/vs/editor/common/textModelEvents.ts (checked-in vscode submodule), plus `DidChangeContentEmitter`
 // (`textModel.ts:2698-2743`) and the registered-view-model seam
 // (`textModel.ts:303,449-455,1652-1667`). Only the `Flush` raw change is
 // constructed today (`TextModel::set_value`); the full raw-change union is

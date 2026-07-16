@@ -1,5 +1,5 @@
 // Exact trace oracle: `vscode/src/vs/base/test/browser/ui/scrollbar/
-// scrollableElement.test.ts` at b18492a288de038fbc7643aae6de8247029d11bd.
+// scrollableElement.test.ts` in the checked-in source.
 // The test loader reads the pinned submodule so the nine source traces remain
 // byte-owned by upstream instead of being copied and silently drifting here.
 

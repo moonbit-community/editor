@@ -1,7 +1,7 @@
 ///| Concrete stateful grammar backend over shared live model state.
 ///
 /// Source: `vscode/src/vs/editor/common/model/tokens/tokenizerSyntaxTokenBackend.ts`
-/// at `b18492a288de038fbc7643aae6de8247029d11bd`, lines 26-322. The live
+/// in the checked-in source, lines 26-322. The live
 /// `TokenizationModelState`, absent custom/verifier worker arms, and optional
 /// epoch scheduler are the reviewed deviations; reset/event/store/refresh
 /// ordering and branch constants follow the source.

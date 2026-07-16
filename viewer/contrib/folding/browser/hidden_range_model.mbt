@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/hiddenRangeModel.ts`
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): derives
+// (checked-in vscode submodule): derives
 // the hidden line ranges from the folding model's collapsed regions and
 // fires them at the consumer (the controller applies them via
 // `editor.setHiddenAreas`).

@@ -1,6 +1,6 @@
 ///| Faithful conformance port of
-/// `vscode/src/vs/editor/test/common/model/textModel.test.ts`, pinned at
-/// submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+/// `vscode/src/vs/editor/test/common/model/textModel.test.ts` in the checked-in
+/// vscode source.
 ///
 /// Readonly-subset triage of the file's 40 cases. In scope and ported here (18):
 ///   - `TextModelData.fromString`: `one line text`, `multiline text`, `Non

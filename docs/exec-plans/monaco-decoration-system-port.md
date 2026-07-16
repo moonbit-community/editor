@@ -1,7 +1,7 @@
 # Monaco Decoration System 1:1 Port (storage → view conversion → overlay)
 
-Status: **landed** — proposed and implemented 2026-07-02. Oracle commit:
-`294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: **landed** — proposed and implemented 2026-07-02. Oracle: checked-in
+source.
 
 The "Option A" migration from the 2026-07-02 port audit (memory:
 `monaco-port-remaining-gaps-2026-07`): replace the viewer's half-ported live

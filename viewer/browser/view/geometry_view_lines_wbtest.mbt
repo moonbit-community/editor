@@ -1,5 +1,5 @@
 // Source-derived ViewLines geometry tests for pinned `viewLines.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in source.
 
 ///|
 fn geometry_view_lines(

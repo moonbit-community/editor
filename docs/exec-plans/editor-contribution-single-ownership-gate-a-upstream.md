@@ -2,7 +2,7 @@
 
 Status: inventory ready — STOP FOR REVIEW
 Date: 2026-07-14
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 Parent plan: `docs/exec-plans/editor-contribution-single-ownership.md`
 
 This is the upstream half of Gate A only. It changes no product code and does
@@ -80,8 +80,8 @@ The quick-diff mapping is also intentionally non-identity-based:
   is not the local contribution;
 - local `quickDiff.decorator` is an eager per-viewer reduction of upstream
   `QuickDiffWorkbenchController` plus `QuickDiffDecorator`;
-- the two locally cited quick-diff files are byte-identical between their old
-  header pin `294fb350837dbaee37b949533fead4df4e0e8971` and the current oracle
+- the two locally cited quick-diff files are byte-identical between the
+  previously cited source state and the current oracle
   (`git diff --quiet` returned 0), so the mapping can be safely repinned without
   source drift.
 
@@ -802,7 +802,7 @@ axes; repository-green checks alone are insufficient:
 
 ## Closing audit
 
-- [x] Oracle HEAD equals `b18492a288de038fbc7643aae6de8247029d11bd`.
+- [x] The oracle source is the checked-in submodule state.
 - [x] The complete 165-line `codeEditorContributions.ts` unit was reread and
       every scoped member, branch, early exit, timing constant, and lifetime
       owner has a row.

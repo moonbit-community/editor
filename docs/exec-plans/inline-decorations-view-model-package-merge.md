@@ -2,8 +2,7 @@
 
 Status: implemented and frozen — 2026-07-14
 Date: 2026-07-13
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 Gate A review artifact:
 `inline-decorations-view-model-package-merge-gate-a.md`. The user explicitly
@@ -36,8 +35,8 @@ the conformance test denominator remain unchanged.
 | `viewer/common/view_model` | 6,527 | projection, converter, decorations, view-model lifecycle |
 | Combined target | 7,105 | one multi-target view-model package |
 
-The current inline file is pinned to the older `294fb350...` source and
-contains:
+The current inline file matches the relevant source shape in the checked-in
+vscode tree and contains:
 
 - `InlineDecorationsModel`;
 - `CoordinatesConverter`;
@@ -89,8 +88,8 @@ Before moving code, produce:
    helper.
 4. A production-vs-test matrix for each generic parameter and trait
    implementation.
-5. A current-pin diff from `294fb350...` to `b18492a...` for the scoped source
-   and tests.
+5. A diff from the previously recorded source state to the current checked-in
+   source for the scoped source and tests.
 6. A target type map identifying which declarations become concrete, private,
    canonical aliases, or remain genuinely public.
 
@@ -236,11 +235,11 @@ comparison also matched all 23 upstream test labels.
 
 Implementation history:
 
-- `7d67fb8` — approved Gate A inventory;
-- `13a2862` — behavior-neutral package and suite relocation;
-- `fd071b2` — concrete ownership, duplicate-computer consolidation, and
+- recorded milestone — approved Gate A inventory;
+- recorded milestone — behavior-neutral package and suite relocation;
+- recorded milestone — concrete ownership, duplicate-computer consolidation, and
   removal of cross-package traits/generics;
-- `dde215d` — minimal generated API, documentation merge, and obsolete
+- recorded milestone — minimal generated API, documentation merge, and obsolete
   package removal.
 
 The five reviewed product-reach gaps remain terminal `DEFERRED` outcomes:

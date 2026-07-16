@@ -2,7 +2,7 @@
 //
 // Source: vscode/src/vs/editor/common/core/characterClassifier.ts
 //   with toUint8 from vscode/src/vs/base/common/uint.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971).
+// (checked-in vscode submodule).
 //
 // A fast character classifier: a dense Uint8 map for ASCII (0..255) plus a
 // sparse map for the rest. Values are clamped to a byte.

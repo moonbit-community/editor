@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/editorDom.ts` (vscode submodule
-// commit b18492a288de038fbc7643aae6de8247029d11bd): the coordinate model
+// checked-in source): the coordinate model
 // (`PageCoordinates`/`ClientCoordinates`/`EditorPagePosition`/
 // `CoordinatesRelativeToEditor` and their factory functions),
 // `EditorDomMouseEvent`, `EditorMouseEventFactory` and

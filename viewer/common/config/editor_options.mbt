@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/common/config/editorOptions.ts:2457-2556`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // `EditorLayoutInfo` shape, trimmed to the parts the viewer renders. Relocated
 // here from the root package so the hit-test pipeline
 // (`viewer/browser/controller`) can read it; `Viewer::get_layout_info`

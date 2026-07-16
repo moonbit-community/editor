@@ -18,7 +18,7 @@ Deferred as planned: `RangePriorityQueueImpl`, embedded-language `LanguageIdCode
 `ViewLayout` ↔ `LinesLayout`. Browser specs were remapped to `mtk<n>`; rerun
 `just test-browser` to confirm the rendering gate.
 
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 Std pin: `moonbitlang/core` at the toolchain in use (`moon 0.1.20260618`).
 
 Follows `monaco-test-conformance-port.md` (which landed the faithful

@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/common/diff/linesDiffComputers.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the computer
+// checked-in submodule): the computer
 // registry.
 //
 // Parity ledger: `getDefault` — PORTED (package-level fn; the viewer has no

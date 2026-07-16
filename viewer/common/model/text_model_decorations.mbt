@@ -1,7 +1,7 @@
 // 1:1 port of Monaco/VS Code's TextModel decoration cluster.
 //
 // Source: vscode/src/vs/editor/common/model/textModel.ts
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971):
+// (checked-in vscode submodule):
 // fields `:285-290` (carried on `TextModel`, `text_model.mbt`), event
 // plumbing `:225-226,:1624-1667`, public API
 // `:1669-1886`, private impls `:1890-2062`, `DecorationsTrees` `:2196-2353`,

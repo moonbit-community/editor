@@ -1,5 +1,4 @@
-///| Port of `vscode/src/vs/base/common/extpath.ts` (pinned submodule commit
-/// b18492a288d) — only the members `resources.ts` consumes; the rest are
+///| Port of `vscode/src/vs/base/common/extpath.ts` (checked-in submodule) — only the members `resources.ts` consumes; the rest are
 /// explicit DEFERRED rows in the plan ledger. `isPathSeparator`
 /// (extpath.ts:12) is shared with path.mbt's identical private helper.
 /// Regex character classes become char loops (D3).

@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/editor/contrib/folding/browser/foldingRanges.ts`
-// (vscode submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the
+// (checked-in vscode submodule): the
 // compact `FoldingRegions` store (parallel packed u32 arrays + bit fields),
 // the `FoldingRegion` accessor, `FoldRange`/`FoldSource`, and the
 // `sanitizeAndMerge` reconciliation of provider ranges with user/previous

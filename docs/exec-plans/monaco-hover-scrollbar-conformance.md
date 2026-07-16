@@ -33,11 +33,11 @@ transitions into locally owned MoonBit and CSS code.
 Use the checked-out VS Code submodule at commit:
 
 ```text
-294fb350837dbaee37b949533fead4df4e0e8971
+checked-in source
 ```
 
 Do not silently update the reference commit while executing this plan. If the
-submodule changes, either reset to the pinned commit for this work or create a
+submodule changes, either reset to the checked-in source for this work or create a
 new plan/addendum that records the new commit and explains why the oracle
 changed.
 

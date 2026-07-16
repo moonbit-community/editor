@@ -1,6 +1,5 @@
 // The public decoration API slice of Monaco's `codeEditorWidget.ts`
-// (decoration plan Phase 5), vscode submodule commit
-// 294fb350837dbaee37b949533fead4df4e0e8971:
+// (decoration plan Phase 5), checked-in vscode submodule:
 // `deltaDecorations` (:1368), `removeDecorations` (:1380),
 // `getLineDecorations` (:1342), `getDecorationsInRange` (:1350).
 //

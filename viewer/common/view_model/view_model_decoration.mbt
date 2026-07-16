@@ -1,7 +1,7 @@
 ///|
 /// Faithful 1:1 port of Monaco's
 /// `viewModel/viewModelDecoration.ts` declarations used by the viewer, from
-/// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd.
+/// checked-in vscode submodule.
 ///
 /// A model decoration resolved into view coordinates (Monaco
 /// `ViewModelDecoration`).

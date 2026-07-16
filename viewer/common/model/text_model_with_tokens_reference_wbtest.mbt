@@ -1,6 +1,6 @@
 ///| Scoped dispositions from
 /// `vscode/src/vs/editor/test/common/model/textModelWithTokens.test.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in source.
 
 // SKIPPED: microsoft/monaco-editor#122: Unhandled Exception: TypeError: Unable to get property 'replace' of undefined or null reference — dynamic language changes and their temporary default-token state are deferred.
 

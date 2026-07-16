@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/common/config/fontInfo.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd. Monaco's
+// checked-in source. Monaco's
 // `FontInfo extends BareFontInfo` inheritance flattens into two structs (a
 // `FontInfo` repeats the bare fields and exposes `bare()` for consumers of
 // the base shape). The `EditorZoom` multiplier is not ported — the readonly

@@ -1,7 +1,7 @@
 // Local tests for the ported `Position` methods.
 //
-// Unlike the `*_reference_test.mbt` suites, this is not a 1:1 port: at the
-// pinned vscode submodule commit (294fb350837dbaee37b949533fead4df4e0e8971)
+// Unlike the `*_reference_test.mbt` suites, this is not a 1:1 port: in the
+// checked-in vscode source
 // there is no standalone `position.test.ts` — the editor `Position`
 // (vs/editor/common/core/position.ts) is exercised indirectly (e.g. through
 // range.test.ts, already ported in `monaco_range_reference_test.mbt`). These

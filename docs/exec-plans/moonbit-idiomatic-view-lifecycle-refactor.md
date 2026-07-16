@@ -2,8 +2,7 @@
 
 Status: implemented on 2026-07-13; all milestones and required checks complete.
 Date: 2026-07-13
-Monaco oracle: checked-in `vscode` commit
-`b18492a288de038fbc7643aae6de8247029d11bd`.
+Monaco oracle: checked-in `vscode` submodule.
 
 ## Summary
 
@@ -607,17 +606,17 @@ The user explicitly approved execution by requesting implementation of this
 plan on 2026-07-13. The implementation landed as three coherent code
 milestones:
 
-1. `fb60552` (`refactor(view): separate event and render capabilities`)
+1. recorded milestone (`refactor(view): separate event and render capabilities`)
    introduced the eight-member event index, narrowed the ordinary lifecycle to
    seven members, and added source-order/batch/render-phase tests.
-2. `de2d713` (`refactor(view): close dynamic overlay dispatch`) removed the
+2. recorded milestone (`refactor(view): close dynamic overlay dispatch`) removed the
    redundant overlay trait and tested both ordered construction subsets and
    per-line bounds.
-3. `ebc88c1` (`refactor(view): clarify lifecycle ownership`) split the mixed
+3. recorded milestone (`refactor(view): clarify lifecycle ownership`) split the mixed
    adapter unit by responsibility and updated current ownership contracts.
 
 The closing oracle check still resolves `vscode` to
-`b18492a288de038fbc7643aae6de8247029d11bd`; all five inventoried line counts
+checked-in source; all five inventoried line counts
 and SHA-256 hashes match the Source Inventory table. The structural ledger
 closes with 13 `TESTED` rows, zero deferrals, and zero N-A rows.
 

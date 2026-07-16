@@ -4,7 +4,7 @@ Status: implemented
 
 Date: 2026-07-10
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -959,9 +959,8 @@ parity members.
 
 ### Inventory audit evidence
 
-- Pinned oracle verification:
-  `git -C vscode rev-parse HEAD` returned
-  `b18492a288de038fbc7643aae6de8247029d11bd`, exactly the plan pin.
+- Oracle verification: the checked-out vscode source matches the source tree
+  used by the plan.
 - The nine pinned files were read in full or across the closed line ranges above.
   Their complete files total 4,848 lines:
   `2559 + 165 + 992 + 305 + 26 + 23 + 112 + 308 + 358`.
@@ -1216,11 +1215,11 @@ reviews approved both the exhaustive cells and this grouping.
 
 ## Execution Record
 
-2026-07-10 inventory milestone committed as `3dbc1e7` and independently
+2026-07-10 inventory milestone committed as recorded milestone and independently
 approved at SHA-256
 `4d1e57457a08528d88e2e3e86fa5dde14b6d0caf617f0170635a2d3173ccc52e`:
 
-- oracle verified at `b18492a288de038fbc7643aae6de8247029d11bd`;
+- oracle verified in the checked-in source;
 - Phase 0 closed with every excluded sibling cluster named;
 - Phase 1 source inventory = 427 first-class rows, including independent rows
   for every behavior-changing branch and early return;
@@ -1238,29 +1237,29 @@ approved at SHA-256
 
 2026-07-10 implementation closeout:
 
-- `a296f8d` (`fix(markers): own decorations by model identity`) adds identity
+- recorded milestone (`fix(markers): own decorations by model identity`) adds identity
   acquisitions, ordered same-URI fanout, model-specific hover lookup,
   reasoned removal, blocked reentrant ingress, and exact-once owner/watch
   disposal. The focused marker and hover packages pass on JS and native
   (44/44 and 39/39 respectively after closing-audit regressions).
-- `beb8075` (`fix(view): close browser resource lifecycles`) lands View,
+- recorded milestone (`fix(view): close browser resource lifecycles`) lands View,
   pointer-monitor, scrollbar-drag, drag-frame, and hide-timeout ownership.
   Global pointer monitoring passes its capture/fallback/restart/stop/dispose
   matrix; all GPMM-001–020 are TESTED. Scrollbar input passes left-button,
   invalid-target, cloned-state, normal-axis, Windows 139/140/141, listener,
   and idempotent-disposal branches; all SB-001–014 are TESTED. The related JS
   package runs pass; the combined controller/view-layout run reports 179/179.
-- `4c96719` (`fix(viewer): enforce model and service ownership`) retains
+- recorded milestone (`fix(viewer): enforce model and service ownership`) retains
   Viewer- and View-scoped resources, owns only omitted services, preserves
   explicitly supplied services and the caller model/host, cancels root render
   work, disposes View before ViewModel, and removes owned DOM with containment
   guards. `lifecycle_ownership_wbtest.mbt` and `set_value_api_wbtest.mbt` pass
   7/7 each.
-- `2408063` (`fix(input): preserve mouse click detail`) restores the pinned
+- recorded milestone (`fix(input): preserve mouse click detail`) restores the source
   pointer/mouse split: pointerdown retains only the capture id, while mousedown
   remains the semantic double/triple-click event. The nine affected focused
   Playwright scenarios and the final browser suite pass.
-- `2e5a1fc` (`fix(lifecycle): close parity audit gaps`) closes the independent
+- recorded milestone (`fix(lifecycle): close parity audit gaps`) closes the independent
   review findings: duplicate marker multiplicity, owner-dispose-before-index-
   deletion ordering, did-dispose-before-base-store teardown, model-change-
   before-decoration-cleanup ordering, consecutive editor ids, and both

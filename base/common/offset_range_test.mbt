@@ -1,7 +1,7 @@
 // Local tests for the ported `OffsetRange` methods.
 //
-// Like `position_test.mbt`, this is not a 1:1 reference port: the pinned vscode
-// submodule commit (294fb350837dbaee37b949533fead4df4e0e8971) has no
+// Like `position_test.mbt`, this is not a 1:1 reference port: the checked-in
+// vscode source has no
 // `offsetRange.test.ts`. These cases assert the method semantics transcribed
 // from `core/ranges/offsetRange.ts`.
 

@@ -1,5 +1,5 @@
 ///| Faithful conformance port of vscode's `modelDecorations.test.ts` (pinned
-/// `vscode/` submodule, commit 294fb350):
+/// `vscode/` checked-in submodule):
 /// `vscode/src/vs/editor/test/common/model/modelDecorations.test.ts`.
 ///
 /// Ported here (against the real interval-tree decoration storage):

@@ -2,7 +2,7 @@
 
 Status: implemented — Date: 2026-07-10 (inventory, ledger, deviations, and
 exit gate appended at the bottom).
-Oracle commit: `vscode` submodule @ `b18492a288de038fbc7643aae6de8247029d11bd`.
+Oracle: checked-in `vscode` submodule.
 
 Oracle:
 - `src/vs/editor/common/model/textModel.ts` (`setValue` → `_setValueFromTextBuffer`,

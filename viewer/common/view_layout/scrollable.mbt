@@ -1,6 +1,6 @@
 // Ported from `vscode/src/vs/base/common/scrollable.ts` and
 // `vscode/src/vs/editor/common/viewLayout/viewLayout.ts` at
-// b18492a288de038fbc7643aae6de8247029d11bd.
+// checked-in source.
 
 ///|
 pub(all) struct ScrollDimensions {

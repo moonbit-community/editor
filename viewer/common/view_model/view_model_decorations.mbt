@@ -1,7 +1,6 @@
 // 1:1 port of Monaco's `viewModel/viewModelDecorations.ts` (whole file) plus
 // the `viewModelLines.ts:923` `getDecorationsInRange` slice its context
-// closure delegates to, from vscode submodule commit
-// b18492a288de038fbc7643aae6de8247029d11bd (decoration plan Phase 3 — this
+// closure delegates to, from checked-in vscode submodule (decoration plan Phase 3 — this
 // replaces the previous simplified eager-conversion `ViewModelDecorations`).
 //
 // Deviations:

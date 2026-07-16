@@ -13,7 +13,7 @@ deliberately tolerate inverted bounds where std `clamp`'s `guard min <= max`
 would panic. All steps verified behavior-preserving (js 416 / native 426 tests
 unchanged; 45 browser tests green).
 
-Oracle pin: `vscode` submodule at `294fb350` (2026-06-02, `heads/main`).
+Oracle: checked-in `vscode` submodule (2026-06-02, `heads/main`).
 Std pin: `moonbitlang/core` at the toolchain in use (`moon 0.1.20260618`).
 
 A post-conformance sweep of the product packages (`base/common`, `viewer/*`,

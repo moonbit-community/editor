@@ -1,5 +1,5 @@
 ///| Faithful conformance port of vscode's `textToHtmlTokenizer.test.ts` (pinned
-/// `vscode/` submodule, commit 294fb350) — the suite `Editor Modes -
+/// `vscode/` checked-in submodule) — the suite `Editor Modes -
 /// textToHtmlTokenizer`. All 5 cases are in scope and ported here against the
 /// `tokenize_line_to_html` / `tokenize_to_string` ports.
 ///

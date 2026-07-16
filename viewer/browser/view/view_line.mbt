@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/viewLines/viewLine.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // applicable slow-rendered-line strategy. Fast/zoom-policy and WebKit strategy
 // rows remain explicitly deferred by the approved geometry ledger.
 

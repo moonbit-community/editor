@@ -3,9 +3,8 @@
 Status: inventory ready — STOP FOR REVIEW
 Date: 2026-07-14
 Plan: `docs/exec-plans/browser-view-package-consolidation.md`
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
-Local baseline: repository `HEAD` `6877037`
+Oracle: checked-in `vscode` submodule
+Local baseline: recorded repository state
 
 This companion is the complete local-package half of Gate A. It inventories
 the current MoonBit packages, production and test declarations, manifests,

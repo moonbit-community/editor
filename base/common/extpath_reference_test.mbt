@@ -1,6 +1,6 @@
 // Conformance port of the in-scope members' suites from
-// `vs/base/test/common/extpath.test.ts` (pinned vscode/ submodule, commit
-// b18492a288d): toSlashes, getRoot, isWindowsDriveLetter. The other suites
+// `vs/base/test/common/extpath.test.ts` in the checked-in vscode source:
+// toSlashes, getRoot, isWindowsDriveLetter. The other suites
 // cover DEFERRED members (isUNC, isValidBasename, sanitizeFilePath, …).
 // `toPosixPath` and the string `isEqualOrParent` have no upstream suite;
 // they are pinned here from their documented arithmetic.

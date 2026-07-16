@@ -1,6 +1,6 @@
 # Monaco `CodeEditorWidget` Read-API 1:1 Port
 
-Status: **landed** — Date: 2026-06-29. Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Status: **landed** — Date: 2026-06-29. Oracle: checked-in reference tree.
 All four phases implemented; every parity-ledger row is `PASS`. See the
 Phase-5 reconciliation at the end.
 
@@ -55,7 +55,7 @@ member is named out-of-scope with a reason — none is left "unseen".
 
 ## Inventory (Phase 1) — the denominator
 
-Full public getter surface (read at oracle commit):
+Full public getter surface (read at checked-in source):
 
 ```
 getId getEditorType getOptions getOption getRawOptions getOverflowWidgetsDomNode

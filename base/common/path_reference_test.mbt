@@ -1,5 +1,5 @@
-// Conformance port of `vs/base/test/common/path.test.ts` (pinned vscode/
-// submodule, commit b18492a288d), suite "Paths (Node Implementation)".
+// Conformance port of `vs/base/test/common/path.test.ts` in the checked-in
+// vscode source, suite "Paths (Node Implementation)".
 //
 // The JS tables call `path.posix.*` / `path.win32.*` explicitly and are
 // transcribed against `Posix::` / `Win32::` directly; assertions on the

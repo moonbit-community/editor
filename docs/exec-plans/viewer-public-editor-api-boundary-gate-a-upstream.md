@@ -2,7 +2,7 @@
 
 Status: approved historical inventory — implementation started 2026-07-14
 Date: 2026-07-14
-Oracle commit: `b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in reference tree
 Parent plan: `docs/exec-plans/viewer-public-editor-api-boundary.md`
 
 This is the upstream half of Gate A only. It changes no product code, moves no
@@ -1615,8 +1615,8 @@ alone do not establish parity:
 ## Closing audit
 
 - [x] `vscode` HEAD equals
-      `b18492a288de038fbc7643aae6de8247029d11bd`.
-- [x] All eight manifest files were read at the pinned commit and their line
+      checked-in source.
+- [x] All eight manifest files were read at the checked-in source and their line
       counts/file hashes were recorded.
 - [x] U03, U06, and U07 are complete source units; every meaningful member,
       constant, branch, exit, and lifetime atom has a row.

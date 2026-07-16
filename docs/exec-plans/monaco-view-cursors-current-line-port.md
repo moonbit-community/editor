@@ -1,7 +1,7 @@
 # Monaco viewCursors + currentLineHighlight Port (and overlay-widgets parent fix)
 
 Status: landed — Date: 2026-07-02 (Increments A–D implemented same day).
-Oracle commit: `294fb350837dbaee37b949533fead4df4e0e8971`.
+Oracle: checked-in reference tree.
 
 Validation at closure: `just check` green (architecture + all targets);
 `moon test --target all` 567 js / 526 native; browser suite 53/53 including
@@ -12,7 +12,7 @@ content highlight and flags `has-selection`) and the updated
 cursors-layer in lines-content, current-line-highlight layer first in the
 margin overlays). One pre-existing stale expectation fixed along the way
 (markdown hover row `tabindex=0`, reproducible before this work at
-`d7e0416`).
+recorded milestone).
 
 Follow-on to `monaco-set-selection-api-port.md`: `set_position` currently has
 no visible feedback (a collapsed selection paints nothing), because the

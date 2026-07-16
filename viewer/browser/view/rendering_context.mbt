@@ -242,7 +242,7 @@ fn RenderingContext::content_widgets_render_context(
 
 ///|
 /// `HorizontalPosition` (`vscode/src/vs/editor/browser/view/renderingContext.ts:196-209`,
-/// vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): a
+/// checked-in vscode submodule): a
 /// measured caret x on a rendered line. The readonly consumers only use the
 /// rounded `left`; Monaco's additional source carrier fields are intentionally
 /// omitted because no current producer/consumer boundary observes them.

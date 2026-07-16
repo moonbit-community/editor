@@ -1,5 +1,5 @@
 ///| Port of `vscode/src/vs/base/common/path.ts` (vscode's vendored copy of
-/// Node v22 `lib/path.js`), pinned submodule commit b18492a288d.
+/// Node v22 `lib/path.js`), checked-in submodule.
 ///
 /// The JS namespace objects `posix`/`win32` become zero-field namespace types
 /// `Posix`/`Win32` with static-style methods; JS variadics become

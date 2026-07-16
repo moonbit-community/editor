@@ -6,11 +6,10 @@ Date: 2026-07-14
 
 Parent plan: `docs/exec-plans/viewer-public-editor-api-boundary.md`
 
-Oracle commit: `vscode` submodule at
-`b18492a288de038fbc7643aae6de8247029d11bd`
+Oracle: checked-in `vscode` submodule
 
 Local baseline: repository `HEAD`
-`e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3`
+at inventory time
 
 This companion freezes the generated-interface and package-dependency half of
 Gate A. It changes no product source, `moon.pkg`, or `pkg.generated.mbti` file.
@@ -94,7 +93,7 @@ Consumer sentinels:
 The complete files can be reproduced without trusting the working tree:
 
 ```zsh
-BASE=e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3
+BASE=<baseline>
 files=(
   viewer/pkg.generated.mbti
   viewer/common/cursor/pkg.generated.mbti
@@ -965,7 +964,7 @@ test set_value -> base/common, viewer, common/model, test/support, rabbita/dom
 Reproduction from the immutable baseline object:
 
 ```zsh
-BASE=e5beb1c8cd5c9d5b2fbfbfca55025438b17e1ca3
+BASE=<baseline>
 files=(
   base/common/moon.pkg base/browser/moon.pkg platform/log/moon.pkg
   syntax/moon.pkg language/moon.pkg viewer/common/services/moon.pkg

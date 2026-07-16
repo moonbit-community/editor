@@ -1,5 +1,5 @@
 // Port of `vscode/src/vs/workbench/contrib/scm/common/quickDiff.ts` (vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the change
+// checked-in submodule): the change
 // classification and the quick-diff service.
 //
 // Parity ledger (source members):

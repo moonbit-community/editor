@@ -1,5 +1,5 @@
 // Source-derived tests for `vscode/src/vs/editor/common/viewLayout/viewLayout.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd):
+// (checked-in vscode submodule):
 // EditorScrollDimensions, EditorScrollable content-size delivery, and the
 // applicable fixed-option ViewLayout width/height feedback branches.
 

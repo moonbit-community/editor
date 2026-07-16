@@ -6,7 +6,7 @@ Date: 2026-07-10
 
 Implemented: 2026-07-12
 
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 Parent: viewer-monaco-parity-remediation.md
 
@@ -214,8 +214,7 @@ Final:    284 TESTED + 44 PORTED + 8 DEFERRED + 10 N-A = 346
 
 ### Source evidence
 
-All hashes are from oracle commit
-`b18492a288de038fbc7643aae6de8247029d11bd`.
+All source checksums were computed from the checked-in `vscode` submodule.
 
 | Prefix | Pinned source | Scoped lines | File lines | SHA-256 |
 |---|---|---:|---:|---|
@@ -235,7 +234,7 @@ All hashes are from oracle commit
 `linesLayout.ts`, its 1244-line upstream test
 (`a49ccb881aad985965894ce8b6088d227baad1f03ed2cbb7e9c436b62eafedac`),
 and the other layout/model files above are byte-identical between the stale
-local reference-test pin `294fb350...` and the current oracle. The local test
+local reference-test source metadata and the current oracle. The local test
 header therefore needs a metadata correction, not a behavioral rebase.
 
 ### Browser/API ledger
@@ -727,8 +726,8 @@ stopped for fresh independent Gate B review before any product or test edit.
 - The pre-implementation local layout tests covered only anchor_line and
   height_px and did not establish the complete source contract.
 - viewer/common/view_layout/lines_layout_reference_test.mbt formerly named the
-  old 294fb350 oracle even though source and upstream test were byte-identical
-  at b18492a. The implementation corrected the pin, retained the exact labels,
+  old checked-in source oracle even though source and upstream test were byte-identical
+  in the checked-in source. The implementation corrected the pin, retained the exact labels,
   added ordinary local branch tests, and kept custom-line-height cases on the
   five explicit DEFERRED rows.
 
@@ -863,7 +862,7 @@ update the ledger and stop for classification review.
   passes produced the source-ordered fragments and challenged stale local
   tests and missing source owners. No product or test file changed. Commit this
   documentation-only gate and stop for independent Gate B review.
-- 2026-07-12: Gate B rejected documentation-only inventory commit `50d3905`
+- 2026-07-12: Gate B rejected documentation-only inventory milestone
   (this file's inventory SHA-256
   `3f93dcb568ece6a8857c4dbd28f22c2fd0c0e85c3a5ff7e844cf334706563991`).
   The reviews found seven frozen sibling mount rows, conflicting historical
@@ -880,7 +879,7 @@ update the ledger and stop for classification review.
   cursor outgoing-only queue widening without reopening the mixed RVC
   collector. No product/test file changed. Commit this documentation-only
   correction and stop for fresh independent Gate B review.
-- 2026-07-12: fresh Gate B reviews rejected correction commit `be2a127`
+- 2026-07-12: fresh Gate B reviews rejected correction milestone
   (this file's SHA-256
   `5d8864ecc77f889b246bad1c6b3cf8a95d9d2bf9450acdb3f0c212b3422f2449`).
   Owner-id evidence invalidated the projected-lines disposal handoff; reviews
@@ -895,7 +894,7 @@ update the ledger and stop for classification review.
   String-key seams are explicit. The matrix now covers `-0`, owner-0 cleanup,
   and exact frozen-key/live-map callback mutation. No product/test file changed;
   commit and stop for another fresh Gate B review.
-- 2026-07-12: Gate B passed at documentation-only inventory commit `1c83995`.
+- 2026-07-12: Gate B passed at documentation-only inventory milestone.
   The approved fixed denominator is 346/346 TODO rows with 287 proposed TESTED,
   41 PORTED, 8 DEFERRED, and 10 N-A; this file's SHA-256 is
   `a556095eee067bee7d32ffb31406c1e9de5407b2f66a7aa1dff45bcbe97b1790`.
@@ -903,7 +902,7 @@ update the ledger and stop for classification review.
   layout/model, and 14 outgoing atoms, including ownership transfers, reduced
   seams, exact matrices, hashes, and combined mechanics. No product/test edit
   preceded approval; implementation is authorized.
-- 2026-07-12: implementation commit `2cbec2a` ports the complete public mutable
+- 2026-07-12: implementation milestone ports the complete public mutable
   zone/accessor shape, generated IDs and model-scoped lifetime, source-ordered
   LinesLayout/ViewLayout whitespace transactions, projected visibility,
   dedicated outgoing event, browser DOM/margin ownership, safe callbacks,

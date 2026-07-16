@@ -2,7 +2,7 @@
 
 Status: implemented and validated
 Date: 2026-07-10
-Oracle commit: b18492a288de038fbc7643aae6de8247029d11bd
+Oracle: checked-in reference tree
 
 This plan follows _PORT_PLAYBOOK.md. It addresses the measured gap in priority
 order:
@@ -469,8 +469,8 @@ closing source reread, and commit the evidence.
   movement performs no view-layer batch or HTML mutation; new and invalid rows
   use their respective single batches. View-zone nodes are retained and their
   styles cached rather than clearing the container per frame.
-- The pinned Monaco oracle is built directly from commit
-  `b18492a288de038fbc7643aae6de8247029d11bd`. The 12 exposed configuration
+- The Monaco oracle is built directly from the checked-in `vscode` submodule.
+  The 12 exposed configuration
   cells (2 inputs × 2 smooth settings × 3 viewports) ran three repetitions on
   both implementations: 72 traces total. Observed cadence was 120 Hz; maximum
   dropped-frame ratio was 0 for both implementations. Raw p95 passed the
@@ -495,8 +495,7 @@ closing source reread, and commit the evidence.
 
 ## Closing source reread
 
-Final side-by-side reread against
-`b18492a288de038fbc7643aae6de8247029d11bd`:
+Final side-by-side reread against the checked-in source:
 
 - `view.ts` lines-content ownership: one rail is created before its consumers,
   passed to the scrollbar and view lines, keeps source child order, and is

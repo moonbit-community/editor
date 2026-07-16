@@ -3,7 +3,7 @@
 ///
 /// Ported from
 /// `vscode/src/vs/editor/common/cursor/cursorMoveOperations.ts` at
-/// `b18492a288de038fbc7643aae6de8247029d11bd`.
+/// checked-in source.
 ///
 /// The scoped surface is ordinary LTR movement with sticky tab stops off.
 /// Atomic soft-tab movement, visual RTL swapping, blank-line/buffer commands,

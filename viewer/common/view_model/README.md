@@ -119,7 +119,7 @@ The merged package keeps the Monaco source units distinct:
   and consumer preconditions.
 
 The four source-mapped artifacts are pinned to vscode commit
-`b18492a288de038fbc7643aae6de8247029d11bd`; the local matrix derives its cases
+checked-in source; the local matrix derives its cases
 from that same source revision and the approved Gate A behavior matrix.
 Production uses concrete
 `TextModel`, `ModelDecoration`, `ModelDecorationOptions`, and

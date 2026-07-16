@@ -1,6 +1,6 @@
 // The `Viewer::` half of Monaco's `FoldingController`
 // (`vscode/src/vs/editor/contrib/folding/browser/folding.ts`, vscode
-// submodule commit 294fb350837dbaee37b949533fead4df4e0e8971): the
+// checked-in submodule): the
 // event-handler bodies that need the editor. The controller *state* is owned
 // by the Viewer's central contribution entry (the foreign-method rule split,
 // see that file's header).

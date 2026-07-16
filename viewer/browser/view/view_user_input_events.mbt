@@ -1,5 +1,5 @@
 // Ported from `vscode/src/vs/editor/browser/view/viewUserInputEvents.ts`
-// (vscode submodule commit b18492a288de038fbc7643aae6de8247029d11bd): the
+// (checked-in vscode submodule): the
 // view→model coordinate conversion applied to every mouse target before it
 // reaches the public `ICodeEditor` events.
 //

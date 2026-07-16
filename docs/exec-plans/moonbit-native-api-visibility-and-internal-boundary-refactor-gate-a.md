@@ -203,7 +203,7 @@ Disposition reasons are contract-based:
 
 ## Constructor Ledger
 
-The following 92 declarations are `CANONICALIZE_ALIAS`. Each receives one
+The following 90 declarations are `CANONICALIZE_ALIAS`. Each receives one
 canonical `Type::Type` implementation with `#alias(new)`, and repository
 callers migrate to canonical spelling without changing parameters, defaults,
 effects, validation, derivation, or ownership:
@@ -226,8 +226,6 @@ syntax/lang_json/lexer.mbt:12 JsonTokenizer
 syntax/lang_moonbit/lexer.mbt:22 MoonbitTokenizer
 syntax/plain.mbt:12 PlainTokenizer
 syntax/tokenizer.mbt:124 TokenizationRegistry
-viewer/browser/config/char_width_reader.mbt:22 CharWidthRequest
-viewer/browser/controller/drag_scrolling.mbt:61 DragScrolling
 viewer/browser/controller/mouse_handler.mbt:148 MouseHandler
 viewer/browser/controller/mouse_handler.mbt:791 MouseDownState
 viewer/browser/controller/mouse_target.mbt:326 HitTestContext
@@ -303,10 +301,12 @@ viewer/ui/scrollbar/mouse_wheel_classifier.mbt:30 MouseWheelClassifier
 viewer/ui/scrollbar/scrollable_element.mbt:55 ScrollableElementDom
 ```
 
-The remaining four dispositions are:
+The remaining six terminal dispositions are:
 
 | Declaration | Location | Disposition | Reason |
 |---|---|---|---|
+| `CharWidthRequest::new` | `viewer/browser/config/char_width_reader.mbt:22` | superseded by `MAKE_PRIVATE` | Milestone C made the request type, enum, helper, and constructor package-private. |
+| `DragScrolling::new` | `viewer/browser/controller/drag_scrolling.mbt:61` | superseded by `MAKE_PRIVATE` | Milestone C made the direction enum private, so its exposing constructor also became private. |
 | `CancellationToken::new` | `language/cancellation.mbt:55` | `KEEP_ALTERNATE` | Documented directly cancellable compatibility path; source ownership is `CancellationTokenSource(...)`. |
 | `PrefixSumComputer::new` | `viewer/common/view_layout/prefix_sum_computer.mbt:26` | `VIEW_PRIMARY_COMPAT` | Canonical constructor accepts `ArrayView[Int]`; old `Array[Int]` signature remains a wrapper. |
 | `ConstantTimePrefixSumComputer::new` | `viewer/common/view_layout/prefix_sum_computer.mbt:210` | `VIEW_PRIMARY_COMPAT` | Same owned-copy compatibility contract. |

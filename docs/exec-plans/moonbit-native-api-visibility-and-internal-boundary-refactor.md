@@ -222,14 +222,17 @@ Reviewed terminal visibility dispositions:
 | `MOVE_INTERNAL_THEN_REVIEW` | 0 |
 
 The constructor regex in the frozen baseline missed generic declarations.
-The current checkout has 96 public `Type::new` declarations:
+The Gate A checkout had 96 public `Type::new` declarations. Milestone C made
+`CharWidthRequest::new` and `DragScrolling::new` private with their enclosing
+implementation-only types, so the terminal canonicalization set is 90:
 
 | Disposition | Count |
 |---|---:|
-| `CANONICALIZE_ALIAS` | 92 |
+| `CANONICALIZE_ALIAS` | 90 |
 | `KEEP_ALTERNATE` | 1 |
 | `VIEW_PRIMARY_COMPAT` | 2 |
 | `TEST_SUPPORT` | 1 |
+| superseded by `MAKE_PRIVATE` | 2 |
 
 The move inventory covers 69 production files, 3 black-box tests, 39
 white-box tests, 12 manifests/interfaces, 1,639 generated-interface lines, and

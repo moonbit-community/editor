@@ -84,14 +84,14 @@ pub(all) struct CursorStateChangedEvent {
 } derive(@debug.Debug)
 pub fn CursorStateChangedEvent::is_no_op(Self) -> Bool
 
-pub(all) struct DecorationToRender {
+pub struct DecorationToRender {
   start_line_number : Int
   end_line_number : Int
   class_name : String
   z_index : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct InjectedText {
+pub struct InjectedText {
   position : @common.Position
   text : String
   class_name : String
@@ -105,7 +105,7 @@ pub struct LineBreaksComputer {
 pub fn LineBreaksComputer::add_request(Self, Int, String, Array[InjectedText]) -> Unit
 pub fn LineBreaksComputer::finalize(Self) -> Array[ModelLineProjectionData?]
 
-pub(all) enum ModelLineProjection {
+pub enum ModelLineProjection {
   Identity
   Hidden
   Projected(ModelLineProjectionData, is_visible~ : Bool)
@@ -122,7 +122,7 @@ pub fn ModelLineProjection::is_visible(Self) -> Bool
 pub fn ModelLineProjection::normalize_position(Self, Int, @common.Position, @model.PositionAffinity) -> @common.Position
 pub fn ModelLineProjection::set_visible(Self, Bool) -> Self
 
-pub(all) struct ModelLineProjectionData {
+pub struct ModelLineProjectionData {
   model_line_number : Int
   line_length : Int
   projected_line : ProjectedTextLine
@@ -134,7 +134,7 @@ pub fn ModelLineProjectionData::view_line_count(Self) -> Int
 pub fn ModelLineProjectionData::view_line_index_for_model_column(Self, Int) -> Int
 pub fn ModelLineProjectionData::view_line_index_for_projected_column(Self, Int, affinity? : @model.PositionAffinity) -> Int
 
-pub(all) struct ModelLineProjectionSegment {
+pub struct ModelLineProjectionSegment {
   model_line_number : Int
   start_offset : Int
   end_offset : Int
@@ -145,7 +145,7 @@ pub(all) struct ModelLineProjectionSegment {
   wrapped_text_indent_length : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ModelTokensChangedOutgoingEvent {
+pub struct ModelTokensChangedOutgoingEvent {
   kind : OutgoingViewModelEventKind
   event : @model.ModelTokensChangedEvent
 }
@@ -165,18 +165,18 @@ pub(all) enum OutgoingViewModelEventKind {
   ModelTokensChanged
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ProjectedLinePart {
+pub struct ProjectedLinePart {
   start : Int
   end : Int
   kind : ProjectedLinePartKind
 } derive(Eq, @debug.Debug)
 
-pub(all) enum ProjectedLinePartKind {
+pub enum ProjectedLinePartKind {
   SourceSegment(model_start~ : Int, model_end~ : Int)
   InjectedSegment(model_column~ : Int, injected_text_index~ : Int, class_name~ : String)
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ProjectedTextLine {
+pub struct ProjectedTextLine {
   text : String
   model_line_length : Int
   model_columns : Array[Int]
@@ -191,7 +191,7 @@ pub fn ProjectedTextLine::model_column_to_projected_column(Self, Int, affinity? 
 pub fn ProjectedTextLine::normalize_projected_column_around_injections(Self, Int, @model.PositionAffinity) -> Int
 pub fn ProjectedTextLine::projected_column_to_model_column(Self, Int) -> Int
 
-pub(all) struct SimpleMoveArguments {
+pub struct SimpleMoveArguments {
   direction : SimpleMoveDirection
   unit : CursorMoveUnit
   select : Bool
@@ -218,7 +218,7 @@ pub struct ViewDecorationsCollection {
   // private fields
 }
 
-pub(all) struct ViewLineData {
+pub struct ViewLineData {
   content : String
   continues_with_wrapped_line : Bool
   min_column : Int
@@ -336,7 +336,7 @@ pub fn ViewModelLinesFromProjectedModel::set_tab_size(Self, Int) -> Bool
 pub fn ViewModelLinesFromProjectedModel::set_wrapping_settings(Self, @config.FontInfo, Int, @editor_api.WrappingIndent) -> Bool
 pub fn ViewModelLinesFromProjectedModel::view_line_rendering_data(Self, Int, line_decorations? : Array[@view_layout.LineDecoration]) -> @view_layout.ViewLineRenderingData
 
-pub(all) struct ViewModelOptions {
+pub struct ViewModelOptions {
   font_info : @config.FontInfo
   soft_wrap_column : Int
   tab_size : Int
@@ -349,12 +349,12 @@ pub fn ViewModelOptions::is_soft_wrap_enabled(Self) -> Bool
 pub fn ViewModelOptions::no_wrap() -> Self
 pub fn ViewModelOptions::soft_wrap(Int, tab_size? : Int, wrapping_indent? : @editor_api.WrappingIndent) -> Self
 
-pub(all) struct ViewTokensChangedRange {
+pub struct ViewTokensChangedRange {
   from_line_number : Int
   to_line_number : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ViewZonesChangedEvent {
+pub struct ViewZonesChangedEvent {
   kind : OutgoingViewModelEventKind
 } derive(@debug.Debug)
 pub fn ViewZonesChangedEvent::is_no_op(Self) -> Bool

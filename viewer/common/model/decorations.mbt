@@ -102,7 +102,7 @@ pub fn clean_class_name(class_name : String) -> String {
 /// height decorations), `textDirection`, `glyphMargin` lane options (glyph
 /// margin view part deferred). `overview_ruler`/`minimap` colors are carried
 /// as strings — no theme-object resolution (recorded theming design).
-pub(all) struct ModelDecorationOptions {
+pub struct ModelDecorationOptions {
   class_name : String
   message : String?
   inline_class_name : String?
@@ -178,7 +178,7 @@ pub(all) struct ModelDecoration {
 ///|
 /// `IModelDecorationsChangedEvent` (`textModelEvents.ts`), fired by
 /// `TextModel::on_did_change_decorations`.
-pub(all) struct ModelDecorationsChangedEvent {
+pub struct ModelDecorationsChangedEvent {
   affects_minimap : Bool
   affects_overview_ruler : Bool
   affects_glyph_margin : Bool

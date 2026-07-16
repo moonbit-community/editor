@@ -252,7 +252,7 @@ pub(all) struct ResourceMarker {
 /// separate line/column fields (Monaco stores them flat). `start_column` is
 /// mutable because `_createDecorationRange` snaps it for full-line markers
 /// (`markerDecorationsService.ts:220`).
-pub(all) struct Marker {
+pub struct Marker {
   owner : String
   resource : @base_common.Uri
   severity : MarkerSeverity
@@ -292,7 +292,7 @@ pub fn Marker::has_tag(self : Marker, tag : MarkerTag) -> Bool {
 
 ///|
 /// Aggregate per-severity counts, `MarkerStatistics` (`markers.ts:146`).
-pub(all) struct MarkerStatistics {
+pub struct MarkerStatistics {
   mut errors : Int
   mut warnings : Int
   mut infos : Int

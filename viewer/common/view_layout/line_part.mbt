@@ -25,7 +25,7 @@ pub(all) enum ForeignElementType {
 
 ///|
 /// Tokenized segment ending at `end_index` with CSS and metadata flags.
-pub(all) struct LinePart {
+pub struct LinePart {
   end_index : Int
   class_name : String
   metadata : Int

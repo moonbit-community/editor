@@ -19,12 +19,12 @@ pub(all) struct Change {
   modified_end_line_number : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct DefaultLinesDiffComputer {
+pub struct DefaultLinesDiffComputer {
 } derive(Eq, @debug.Debug)
 pub fn DefaultLinesDiffComputer::compute_diff(Self, Array[String], Array[String], LinesDiffComputerOptions) -> LinesDiff
 pub fn DefaultLinesDiffComputer::new() -> Self
 
-pub(all) struct DetailedLineRangeMapping {
+pub struct DetailedLineRangeMapping {
   original : @common.LineRange
   modified : @common.LineRange
   inner_changes : Array[RangeMapping]?
@@ -34,7 +34,7 @@ pub fn DetailedLineRangeMapping::flip(Self) -> Self
 pub fn DetailedLineRangeMapping::to_string(Self) -> String
 pub impl Show for DetailedLineRangeMapping
 
-pub(all) struct LineRangeMapping {
+pub struct LineRangeMapping {
   original : @common.LineRange
   modified : @common.LineRange
 } derive(Eq, @debug.Debug)
@@ -46,7 +46,7 @@ pub fn LineRangeMapping::join(Self, Self) -> Self
 pub fn LineRangeMapping::to_string(Self) -> String
 pub impl Show for LineRangeMapping
 
-pub(all) struct LinesDiff {
+pub struct LinesDiff {
   changes : Array[DetailedLineRangeMapping]
   moves : Array[MovedText]
   hit_timeout : Bool
@@ -58,14 +58,14 @@ pub(all) struct LinesDiffComputerOptions {
   compute_moves : Bool
 } derive(Eq, @debug.Debug)
 
-pub(all) struct MovedText {
+pub struct MovedText {
   line_range_mapping : LineRangeMapping
   changes : Array[DetailedLineRangeMapping]
 } derive(Eq, @debug.Debug)
 pub fn MovedText::MovedText(LineRangeMapping, Array[DetailedLineRangeMapping]) -> Self
 pub fn MovedText::flip(Self) -> Self
 
-pub(all) struct RangeMapping {
+pub struct RangeMapping {
   original_range : @common.Range
   modified_range : @common.Range
 } derive(Eq, @debug.Debug)

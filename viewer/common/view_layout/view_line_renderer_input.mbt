@@ -1,6 +1,6 @@
 ///|
 /// Fully normalized input for rendering one view line to HTML.
-pub(all) struct RenderLineInput {
+pub struct RenderLineInput {
   use_monospace_optimizations : Bool
   can_use_halfwidth_rightwards_arrow : Bool
   line_content : String

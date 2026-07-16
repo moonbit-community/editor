@@ -26,7 +26,7 @@ pub fn squiggly_theme_css(SquigglyThemeColors) -> String
 // Types and methods
 type DoubleResourceMap
 
-pub(all) struct Marker {
+pub struct Marker {
   owner : String
   resource : @common.Uri
   severity : MarkerSeverity
@@ -142,7 +142,7 @@ pub fn MarkerSeverity::label_plural(Self) -> String
 pub fn MarkerSeverity::to_diagnostic_severity(Self) -> @language.DiagnosticSeverity
 pub fn MarkerSeverity::value(Self) -> Int
 
-pub(all) struct MarkerStatistics {
+pub struct MarkerStatistics {
   mut errors : Int
   mut warnings : Int
   mut infos : Int

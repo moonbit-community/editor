@@ -15,7 +15,7 @@
 /// supported')` and `ModelLineProjection._assertVisible` (an invisible
 /// `Projected` is not asserted per method; only valid view lines reach these
 /// accessors).
-pub(all) enum ModelLineProjection {
+pub enum ModelLineProjection {
   Identity
   Hidden
   Projected(ModelLineProjectionData, is_visible~ : Bool)

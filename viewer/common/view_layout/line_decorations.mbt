@@ -1,6 +1,6 @@
 ///|
 /// One-based line decoration range plus CSS class.
-pub(all) struct LineDecoration {
+pub struct LineDecoration {
   start_column : Int
   end_column : Int
   class_name : String
@@ -81,7 +81,8 @@ pub(all) struct DecorationSegment {
 
 ///|
 /// Normalizes overlapping line decorations into contiguous CSS segments.
-pub(all) struct LineDecorationsNormalizer {}
+#warnings("-struct_never_constructed")
+pub struct LineDecorationsNormalizer {}
 
 ///|
 /// Converts sorted line decorations into renderer segments, preserving

@@ -12,7 +12,7 @@
 /// `tooltip` (`linesDecorationsTooltip`) is not carried by the viewer's
 /// decoration options; `z_index` is kept for parity but — like Monaco's
 /// `LinesDecorationsOverlay` — does not affect the emitted order.
-pub(all) struct DecorationToRender {
+pub struct DecorationToRender {
   start_line_number : Int
   end_line_number : Int
   class_name : String

@@ -52,7 +52,8 @@ pub(all) enum RawContentChangedType {
 /// (`:233`), `ModelRawLineChanged` (`:308`), `ModelRawLinesDeleted` (`:380`),
 /// `ModelRawLinesInserted` (`:406`), `ModelRawEOLChanged` (`:444`), with each
 /// class's fields as labeled payloads.
-pub(all) enum ModelRawChange {
+#warnings("-unused_constructor")
+pub enum ModelRawChange {
   ModelRawFlush
   ModelRawLineChanged(line_number~ : Int, line_number_post_edit~ : Int)
   ModelRawLinesDeleted(
@@ -85,7 +86,7 @@ pub fn ModelRawChange::change_type(
 ///|
 /// `ModelRawContentChangedEvent` (`textModelEvents.ts:457-500`) minus
 /// `resultingSelection` (file-header deviation).
-pub(all) struct ModelRawContentChangedEvent {
+pub struct ModelRawContentChangedEvent {
   changes : Array[ModelRawChange]
   /// The new version id the model has transitioned to.
   version_id : Int
@@ -124,7 +125,7 @@ pub fn ModelRawContentChangedEvent::merge(
 ///|
 /// `IModelContentChange` (`model/mirrorTextModel.ts`): one change entry of
 /// the public content-changed payload.
-pub(all) struct ModelContentChange {
+pub struct ModelContentChange {
   /// The range that got replaced.
   range : @base_common.Range
   /// The offset of the range that got replaced.
@@ -139,7 +140,7 @@ pub(all) struct ModelContentChange {
 /// The public `IModelContentChangedEvent` (`textModelEvents.ts:42-85`) minus
 /// `detailedReasons`/`detailedReasonsChangeLengths` (file-header deviation).
 /// The I-prefix drops per the repo naming policy.
-pub(all) struct ModelContentChangedEvent {
+pub struct ModelContentChangedEvent {
   /// Ordered from the end of the document to the beginning.
   changes : Array[ModelContentChange]
   /// The (new) end-of-line character.
@@ -155,7 +156,7 @@ pub(all) struct ModelContentChangedEvent {
 
 ///|
 /// `InternalModelContentChangeEvent` (`textModelEvents.ts:562-594`).
-pub(all) struct InternalModelContentChangeEvent {
+pub struct InternalModelContentChangeEvent {
   raw_content_changed_event : ModelRawContentChangedEvent
   content_changed_event : ModelContentChangedEvent
 } derive(Debug)

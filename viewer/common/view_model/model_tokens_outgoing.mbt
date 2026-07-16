@@ -1,7 +1,7 @@
 ///|
 /// Browser-neutral inclusive view-line range produced by the common ViewModel
 /// before the browser tier constructs its frozen `ViewTokensChangedEvent`.
-pub(all) struct ViewTokensChangedRange {
+pub struct ViewTokensChangedRange {
   from_line_number : Int
   to_line_number : Int
 } derive(Eq, Debug)

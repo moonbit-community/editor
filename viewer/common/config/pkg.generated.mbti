@@ -27,7 +27,7 @@ pub let minimum_line_height : Int
 // Errors
 
 // Types and methods
-pub(all) struct BareFontInfo {
+pub struct BareFontInfo {
   pixel_ratio : Double
   font_family : String
   font_weight : String
@@ -41,7 +41,7 @@ pub fn BareFontInfo::create(font_family~ : String, font_weight~ : String, font_s
 pub fn BareFontInfo::get_id(Self) -> String
 pub fn BareFontInfo::get_massaged_font_family(Self) -> String
 
-pub(all) struct EditorFontDefaults {
+pub struct EditorFontDefaults {
   font_family : String
   font_weight : String
   font_size : Double

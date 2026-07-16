@@ -524,7 +524,7 @@ pub fn TextModel::get_range_at(
 /// The `IModelDecorationsChangeAccessor` handed to `change_decorations`
 /// callbacks (`textModel.ts:1681-1701`). Fields are invalidated after the
 /// callback returns, like the source's `invalidFunc` swap.
-pub(all) struct ModelDecorationsChangeAccessor {
+pub struct ModelDecorationsChangeAccessor {
   mut add_decoration : (@base_common.Range, ModelDecorationOptions) -> String
   mut change_decoration : (String, @base_common.Range) -> Unit
   mut change_decoration_options : (String, ModelDecorationOptions) -> Unit

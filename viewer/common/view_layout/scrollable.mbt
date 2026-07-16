@@ -73,7 +73,7 @@ pub(all) struct ScrollChange {
 /// Complete Monaco `ScrollState` (`scrollable.ts:43-179`). Raw positions are
 /// retained before validation so a later dimension expansion can recover a
 /// position that was temporarily clamped.
-pub(all) struct ScrollState {
+pub struct ScrollState {
   force_integer_values : Bool
   raw_scroll_left : Double
   raw_scroll_top : Double
@@ -250,7 +250,7 @@ pub fn ScrollState::create_scroll_event(
 }
 
 ///|
-pub(all) struct SmoothScrollingUpdate {
+pub struct SmoothScrollingUpdate {
   scroll_left : Double
   scroll_top : Double
   is_done : Bool
@@ -731,7 +731,7 @@ pub fn Scrollable::scroll_by(
 
 ///|
 /// Monaco `EditorScrollDimensions` (`viewLayout.ts:19-71`).
-pub(all) struct EditorScrollDimensions {
+pub struct EditorScrollDimensions {
   width : Double
   content_width : Double
   scroll_width : Double

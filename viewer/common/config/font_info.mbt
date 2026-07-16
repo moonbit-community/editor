@@ -71,7 +71,7 @@ fn golden_line_height_ratio_for_platform(platform : FontPlatform) -> Double {
 ///|
 /// Monaco `EDITOR_FONT_DEFAULTS` (with `DEFAULT_MAC_FONT_FAMILY` /
 /// `DEFAULT_WINDOWS_FONT_FAMILY` / `DEFAULT_LINUX_FONT_FAMILY`).
-pub(all) struct EditorFontDefaults {
+pub struct EditorFontDefaults {
   font_family : String
   font_weight : String
   font_size : Double
@@ -107,7 +107,7 @@ fn editor_font_defaults_for_platform(
 ///|
 /// Monaco `BareFontInfo`: the requested font settings, with the line height
 /// already resolved through the golden-ratio/em/minimum rules.
-pub(all) struct BareFontInfo {
+pub struct BareFontInfo {
   pixel_ratio : Double
   font_family : String
   font_weight : String

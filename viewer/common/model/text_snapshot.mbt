@@ -7,7 +7,7 @@
 /// Monaco, and LSP-facing code share one convention. Document identity
 /// (language id, version) lives on `TextModel`, not the buffer — same split as
 /// Monaco.
-pub(all) struct TextSnapshot {
+pub struct TextSnapshot {
   text : String
   line_starts : Array[Int]
 } derive(Debug)

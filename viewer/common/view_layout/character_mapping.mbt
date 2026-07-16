@@ -8,7 +8,7 @@ pub(all) struct DomPosition {
 ///|
 /// Mapping entry from one line column to rendered DOM coordinates and visible
 /// monospace column.
-pub(all) struct CharacterMappingEntry {
+pub struct CharacterMappingEntry {
   part_index : Int
   char_index : Int
   visible_column : Int
@@ -16,7 +16,7 @@ pub(all) struct CharacterMappingEntry {
 
 ///|
 /// Column-to-DOM mapping produced while rendering a line.
-pub(all) struct CharacterMapping {
+pub struct CharacterMapping {
   length : Int
   entries : Array[CharacterMappingEntry]
 } derive(Eq, Debug)
@@ -175,14 +175,14 @@ fn mapping_rank_entry(entry : CharacterMappingEntry) -> Int {
 
 ///|
 /// Render output when the caller owns the output builder.
-pub(all) struct RenderLineOutput {
+pub struct RenderLineOutput {
   character_mapping : CharacterMapping
   contains_foreign_elements : ForeignElementType
 } derive(Eq, Debug)
 
 ///|
 /// Render output including generated HTML.
-pub(all) struct RenderLineOutput2 {
+pub struct RenderLineOutput2 {
   html : String
   character_mapping : CharacterMapping
   contains_foreign_elements : ForeignElementType

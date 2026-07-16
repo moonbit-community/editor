@@ -1,6 +1,6 @@
 ///|
 /// Backend-neutral view-model options derived from browser layout settings.
-pub(all) struct ViewModelOptions {
+pub struct ViewModelOptions {
   /// The measured font facts (Monaco threads `fontInfo` into the view model
   /// the same way): the line-breaks computer derives
   /// `columnsForFullWidthChar` from the typical advance widths.

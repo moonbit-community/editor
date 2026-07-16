@@ -20,7 +20,7 @@ pub(all) enum SelectionStartKind {
 /// while vertical movement crosses lines of different widths. The anchor-side
 /// value is preserved while extending a selection; collapsing a selection
 /// replaces both values with the active movement residue.
-pub(all) struct SingleCursorState {
+pub struct SingleCursorState {
   selection_start_start : @base_common.Position
   selection_start_end : @base_common.Position
   selection_start_kind : SelectionStartKind

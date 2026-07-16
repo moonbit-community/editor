@@ -75,12 +75,26 @@ test "RenderLineInput normalizes render-space identity" {
   assert_false(base == different_glyph)
   for
     changed in [
-      { ..base, use_monospace_optimizations: !base.use_monospace_optimizations },
-      {
-        ..base,
-        can_use_halfwidth_rightwards_arrow: !base.can_use_halfwidth_rightwards_arrow,
-      },
-      { ..base, space_width: base.space_width + 1.0 },
+      geometry_render_input(
+        " ",
+        use_monospace_optimizations=!base.use_monospace_optimizations,
+        space_width=10.0,
+        middot_width=9.0,
+        wsmiddot_width=14.0,
+      ),
+      geometry_render_input(
+        " ",
+        can_use_halfwidth_rightwards_arrow=!base.can_use_halfwidth_rightwards_arrow,
+        space_width=10.0,
+        middot_width=9.0,
+        wsmiddot_width=14.0,
+      ),
+      geometry_render_input(
+        " ",
+        space_width=base.space_width + 1.0,
+        middot_width=9.0,
+        wsmiddot_width=14.0,
+      ),
     ] {
     assert_false(base == changed)
   }

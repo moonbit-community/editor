@@ -32,7 +32,7 @@
 ///|
 /// `DefaultLinesDiffComputer` (`defaultLinesDiffComputer.ts:26`), engine
 /// swapped for piediff (see the file header).
-pub(all) struct DefaultLinesDiffComputer {} derive(Eq, Debug)
+pub struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
 #warnings("-unnecessary_annotation")

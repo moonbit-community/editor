@@ -25,7 +25,7 @@
 ///|
 /// Maps a line range in the original text model to a line range in the
 /// modified text model — `LineRangeMapping` (`rangeMapping.ts:19`).
-pub(all) struct LineRangeMapping {
+pub struct LineRangeMapping {
   /// The line range in the original text model.
   original : @base_common.LineRange
   /// The line range in the modified text model.
@@ -109,7 +109,7 @@ pub fn LineRangeMapping::changed_line_count(self : LineRangeMapping) -> Int {
 /// mappings — `DetailedLineRangeMapping` (`rangeMapping.ts:196`). The source
 /// class extends `LineRangeMapping`; MoonBit has no inheritance, so the
 /// struct is flat and repeats the two line ranges.
-pub(all) struct DetailedLineRangeMapping {
+pub struct DetailedLineRangeMapping {
   original : @base_common.LineRange
   modified : @base_common.LineRange
   /// If inner changes have not been computed, this is `None`. Otherwise it
@@ -152,7 +152,7 @@ pub fn DetailedLineRangeMapping::flip(
 ///|
 /// Maps a range in the original text model to a range in the modified text
 /// model — `RangeMapping` (`rangeMapping.ts:243`).
-pub(all) struct RangeMapping {
+pub struct RangeMapping {
   /// The original range.
   original_range : @base_common.Range
   /// The modified range.

@@ -1,7 +1,7 @@
 ///|
 /// The paired model/view cursor state. Both sides are committed atomically;
 /// live callers provide one side and the cursor derives the other.
-pub(all) struct CursorState {
+pub struct CursorState {
   model_state : SingleCursorState
   view_state : SingleCursorState
 } derive(Eq, Debug)
@@ -17,7 +17,7 @@ pub fn CursorState::new(
 
 ///|
 /// Model-only `PartialCursorState`: the view property is exactly absent.
-pub(all) struct PartialModelCursorState {
+pub struct PartialModelCursorState {
   model_state : SingleCursorState
   view_state : SingleCursorState?
 } derive(Eq, Debug)
@@ -31,7 +31,7 @@ pub fn PartialModelCursorState::new(
 
 ///|
 /// View-only `PartialCursorState`: the model property is exactly absent.
-pub(all) struct PartialViewCursorState {
+pub struct PartialViewCursorState {
   model_state : SingleCursorState?
   view_state : SingleCursorState
 } derive(Eq, Debug)
@@ -47,7 +47,8 @@ pub fn PartialViewCursorState::new(
 /// Source-shaped partial cursor-state union. Live callers normally provide
 /// exactly one side; `FullCursorState` represents the retained complete-state
 /// member used by snapshots/reprojection tests.
-pub(all) enum PartialCursorState {
+#warnings("-unused_constructor")
+pub enum PartialCursorState {
   FullCursorState(CursorState)
   ModelCursorState(PartialModelCursorState)
   ViewCursorState(PartialViewCursorState)
@@ -118,7 +119,7 @@ pub fn PartialCursorState::view_state(
 /// cursor listeners must remain silent. A content flush deliberately carries
 /// `old_selections=None` and old version `0` even when both visible states are
 /// the origin.
-pub(all) struct CursorStateChange {
+pub struct CursorStateChange {
   old_selections : Array[@core.Selection]?
   selections : Array[@core.Selection]
   old_model_version_id : Int

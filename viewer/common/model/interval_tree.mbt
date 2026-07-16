@@ -47,7 +47,7 @@ const CLASS_NAME_EDITOR_ERROR_DECORATION : String = "squiggly-error"
 
 ///|
 /// `NodeColor` (`intervalTree.ts:24-27`).
-pub(all) enum NodeColor {
+pub enum NodeColor {
   Black
   Red
 } derive(Eq, Debug)
@@ -404,7 +404,7 @@ fn init_sentinel() -> IntervalNode {
 
 ///|
 /// `IntervalTree` (`intervalTree.ts:243-346`).
-pub(all) struct IntervalTree {
+pub struct IntervalTree {
   mut root : IntervalNode
   mut request_normalize_delta : Bool
 }

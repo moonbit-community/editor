@@ -3,7 +3,7 @@
 /// `wrapped_text_indent_length` is the continuation indent applied to this
 /// segment's rendered view line (Monaco's `getMinOutputOffset`): `0` for a model
 /// line's first segment, the model line's wrapped indent for continuations.
-pub(all) struct ModelLineProjectionSegment {
+pub struct ModelLineProjectionSegment {
   model_line_number : Int
   start_offset : Int
   end_offset : Int
@@ -19,7 +19,7 @@ pub(all) struct ModelLineProjectionSegment {
 
 ///|
 /// Projection data for one model line.
-pub(all) struct ModelLineProjectionData {
+pub struct ModelLineProjectionData {
   model_line_number : Int
   line_length : Int
   projected_line : ProjectedTextLine

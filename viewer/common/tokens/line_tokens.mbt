@@ -26,7 +26,7 @@
 /// A line's tokens, represented by the complete set of views this package
 /// constructs. The closed enum preserves Monaco's concrete full/slice
 /// distinction without erasing it behind a trait object.
-pub(all) enum ViewLineTokens {
+pub enum ViewLineTokens {
   Full(LineTokens)
   Slice(SliceLineTokens)
 }

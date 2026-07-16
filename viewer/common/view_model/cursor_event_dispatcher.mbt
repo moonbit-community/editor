@@ -76,7 +76,7 @@ pub fn CursorStateChangedEvent::is_no_op(
 ///|
 /// Payload-free outgoing ViewZones change event. Its kind is semantic rather
 /// than Monaco's numeric const-enum ordinal `4`.
-pub(all) struct ViewZonesChangedEvent {
+pub struct ViewZonesChangedEvent {
   kind : OutgoingViewModelEventKind
 } derive(Debug)
 
@@ -97,7 +97,7 @@ pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
 /// (`viewModelEventDispatcher.ts:545-551`). The wrapper deliberately retains
 /// the exact event object; view-coordinate conversion belongs to the earlier
 /// browser ViewEvent delivery.
-pub(all) struct ModelTokensChangedOutgoingEvent {
+pub struct ModelTokensChangedOutgoingEvent {
   kind : OutgoingViewModelEventKind
   event : @model.ModelTokensChangedEvent
 }

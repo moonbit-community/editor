@@ -67,7 +67,7 @@ pub(all) struct InjectedTextOptions {
 } derive(Eq, @debug.Debug)
 pub fn InjectedTextOptions::InjectedTextOptions(String, inline_class_name? : String, attached_index? : Int) -> Self
 
-pub(all) struct InternalModelContentChangeEvent {
+pub struct InternalModelContentChangeEvent {
   raw_content_changed_event : ModelRawContentChangedEvent
   content_changed_event : ModelContentChangedEvent
 } derive(@debug.Debug)
@@ -101,7 +101,7 @@ pub fn IntervalNode::same(Self, Self) -> Bool
 pub fn IntervalNode::set_cached_offsets(Self, Int, Int, Int) -> Unit
 pub fn IntervalNode::set_options(Self, ModelDecorationOptions) -> Unit
 
-pub(all) struct IntervalTree {
+pub struct IntervalTree {
   mut root : IntervalNode
   mut request_normalize_delta : Bool
 }
@@ -120,14 +120,14 @@ pub(all) enum MinimapPosition {
   Gutter
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ModelContentChange {
+pub struct ModelContentChange {
   range : @common.Range
   range_offset : Int
   range_length : Int
   text : String
 } derive(@debug.Debug)
 
-pub(all) struct ModelContentChangedEvent {
+pub struct ModelContentChangedEvent {
   changes : Array[ModelContentChange]
   eol : String
   version_id : Int
@@ -149,7 +149,7 @@ pub(all) struct ModelDecorationMinimapOptions {
   position : MinimapPosition
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ModelDecorationOptions {
+pub struct ModelDecorationOptions {
   class_name : String
   message : String?
   inline_class_name : String?
@@ -178,7 +178,7 @@ pub(all) struct ModelDecorationOverviewRulerOptions {
   position : OverviewRulerLane
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ModelDecorationsChangeAccessor {
+pub struct ModelDecorationsChangeAccessor {
   mut add_decoration : (@common.Range, ModelDecorationOptions) -> String
   mut change_decoration : (String, @common.Range) -> Unit
   mut change_decoration_options : (String, ModelDecorationOptions) -> Unit
@@ -186,7 +186,7 @@ pub(all) struct ModelDecorationsChangeAccessor {
   mut delta_decorations : (Array[String], Array[ModelDeltaDecoration]) -> Array[String]
 }
 
-pub(all) struct ModelDecorationsChangedEvent {
+pub struct ModelDecorationsChangedEvent {
   affects_minimap : Bool
   affects_overview_ruler : Bool
   affects_glyph_margin : Bool
@@ -199,7 +199,7 @@ pub(all) struct ModelDeltaDecoration {
   options : ModelDecorationOptions
 } derive(@debug.Debug)
 
-pub(all) enum ModelRawChange {
+pub enum ModelRawChange {
   ModelRawFlush
   ModelRawLineChanged(line_number~ : Int, line_number_post_edit~ : Int)
   ModelRawLinesDeleted(from_line_number~ : Int, to_line_number~ : Int, last_untouched_line_post_edit~ : Int)
@@ -208,7 +208,7 @@ pub(all) enum ModelRawChange {
 } derive(@debug.Debug)
 pub fn ModelRawChange::change_type(Self) -> RawContentChangedType
 
-pub(all) struct ModelRawContentChangedEvent {
+pub struct ModelRawContentChangedEvent {
   changes : Array[ModelRawChange]
   version_id : Int
   is_undoing : Bool
@@ -227,7 +227,7 @@ pub(all) struct ModelTokensChangedRange {
   to_line_number : Int
 }
 
-pub(all) enum NodeColor {
+pub enum NodeColor {
   Black
   Red
 } derive(Eq, @debug.Debug)
@@ -332,7 +332,7 @@ pub fn TextModel::validate_range(Self, @common.Range) -> @common.Range
 pub fn TextModel::validate_range_relaxed(Self, @common.Range) -> @common.Range
 pub impl @debug.Debug for TextModel
 
-pub(all) struct TextSnapshot {
+pub struct TextSnapshot {
   text : String
   line_starts : Array[Int]
 } derive(@debug.Debug)
@@ -391,7 +391,7 @@ pub(all) struct VisibleLineRange {
   end_line_number : Int
 } derive(Eq, @debug.Debug)
 
-pub(all) struct WordAtPosition {
+pub struct WordAtPosition {
   word : String
   start_column : Int
   end_column : Int

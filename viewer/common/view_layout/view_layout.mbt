@@ -21,7 +21,7 @@ pub struct ViewLayout {
 }
 
 ///|
-pub(all) struct Viewport {
+pub struct Viewport {
   top : Double
   left : Double
   width : Double
@@ -29,7 +29,7 @@ pub(all) struct Viewport {
 } derive(Eq, Debug)
 
 ///|
-pub(all) struct SavedScrollState {
+pub struct SavedScrollState {
   scroll_top : Double
   scroll_top_without_view_zones : Double
   scroll_left : Double

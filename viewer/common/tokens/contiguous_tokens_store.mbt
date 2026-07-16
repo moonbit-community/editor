@@ -22,7 +22,7 @@ enum SyntacticLineTokens {
 ///|
 /// Inclusive changed-line interval produced by one contiguous batch.
 /// Source: `contiguousTokensStore.ts:213-244`.
-pub(all) struct ContiguousTokensStoreChange {
+pub struct ContiguousTokensStoreChange {
   from_line_number : Int
   to_line_number : Int
 }
@@ -30,7 +30,7 @@ pub(all) struct ContiguousTokensStoreChange {
 ///|
 /// Ordered changed intervals from `set_multiline_tokens`.
 /// Source: `contiguousTokensStore.ts:213-244`.
-pub(all) struct ContiguousTokensStoreUpdate {
+pub struct ContiguousTokensStoreUpdate {
   changes : Array[ContiguousTokensStoreChange]
 }
 

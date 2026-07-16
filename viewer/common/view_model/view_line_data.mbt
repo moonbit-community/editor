@@ -3,7 +3,7 @@
 /// field-for-field. The view↔model coordinate mapping and injected-text
 /// identity queries live on the `CoordinatesConverter` and
 /// `ViewModel::injected_text_index_at`, not on the line data.
-pub(all) struct ViewLineData {
+pub struct ViewLineData {
   /// The content at this view line.
   content : String
   /// Does this line continue with a wrapped line?

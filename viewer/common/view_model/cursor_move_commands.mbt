@@ -59,7 +59,7 @@ pub(all) enum CursorMoveUnit {
 
 ///|
 /// Exact typed argument contract consumed by the bound simple-move commands.
-pub(all) struct SimpleMoveArguments {
+pub struct SimpleMoveArguments {
   direction : SimpleMoveDirection
   unit : CursorMoveUnit
   select : Bool

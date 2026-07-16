@@ -30,7 +30,7 @@ pub fn visible_column_from_column(String, Int, Int) -> Int
 // Errors
 
 // Types and methods
-pub(all) struct Selection {
+pub struct Selection {
   selection_start : @common.Position
   position : @common.Position
 } derive(Eq, @debug.Debug)

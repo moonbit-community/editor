@@ -16,6 +16,30 @@ fn bare(line_height : Double, font_size : Double) -> @config.BareFontInfo {
 }
 
 ///|
+fn bare_variant(
+  base : @config.BareFontInfo,
+  pixel_ratio? : Double = base.pixel_ratio,
+  font_family? : String = base.font_family,
+  font_weight? : String = base.font_weight,
+  font_size? : Double = base.font_size,
+  font_feature_settings? : String = base.font_feature_settings,
+  font_variation_settings? : String = base.font_variation_settings,
+  line_height? : Double = base.line_height.to_double(),
+  letter_spacing? : Double = base.letter_spacing,
+) -> @config.BareFontInfo {
+  @config.BareFontInfo::create(
+    font_family~,
+    font_weight~,
+    font_size~,
+    font_feature_settings~,
+    font_variation_settings~,
+    line_height~,
+    letter_spacing~,
+    pixel_ratio~,
+  )
+}
+
+///|
 test "lineHeight 0 derives the golden-ratio line height from the font size" {
   let expected = (@config.golden_line_height_ratio * 12.0 + 0.5).to_int()
   assert_eq(bare(0.0, 12.0).line_height, expected)
@@ -217,14 +241,14 @@ test "BareFontInfo getId joins all eight identity axes in fixed order" {
   )
   assert_eq(base.get_id(), "2-Fira-500-13.5-features-variations-18-1.25")
   let variants : Array[@config.BareFontInfo] = [
-    { ..base, pixel_ratio: 3.0 },
-    { ..base, font_family: "Other" },
-    { ..base, font_weight: "600" },
-    { ..base, font_size: 14.5 },
-    { ..base, font_feature_settings: "other-features" },
-    { ..base, font_variation_settings: "other-variations" },
-    { ..base, line_height: 19 },
-    { ..base, letter_spacing: 2.25 },
+    bare_variant(base, pixel_ratio=3.0),
+    bare_variant(base, font_family="Other"),
+    bare_variant(base, font_weight="600"),
+    bare_variant(base, font_size=14.5),
+    bare_variant(base, font_feature_settings="other-features"),
+    bare_variant(base, font_variation_settings="other-variations"),
+    bare_variant(base, line_height=19.0),
+    bare_variant(base, letter_spacing=2.25),
   ]
   for variant in variants {
     assert_false(base.get_id() == variant.get_id())

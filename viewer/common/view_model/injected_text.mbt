@@ -1,6 +1,6 @@
 ///|
 /// Text inserted into a rendered line without existing in the source document.
-pub(all) struct InjectedText {
+pub struct InjectedText {
   position : @base_common.Position
   text : String
   class_name : String
@@ -20,7 +20,7 @@ pub fn InjectedText::InjectedText(
 
 ///|
 /// Segment kind inside a projected line: source text or injected text.
-pub(all) enum ProjectedLinePartKind {
+pub enum ProjectedLinePartKind {
   SourceSegment(model_start~ : Int, model_end~ : Int)
   InjectedSegment(
     model_column~ : Int,
@@ -31,7 +31,7 @@ pub(all) enum ProjectedLinePartKind {
 
 ///|
 /// Half-open projected text segment with its source/injected identity.
-pub(all) struct ProjectedLinePart {
+pub struct ProjectedLinePart {
   start : Int
   end : Int
   kind : ProjectedLinePartKind
@@ -50,7 +50,7 @@ pub(all) struct ProjectedLinePart {
 /// behavior; `model_column_to_projected_column` surfaces the `Right` side and
 /// `normalize_projected_column_around_injections` ports the normalization
 /// branches.
-pub(all) struct ProjectedTextLine {
+pub struct ProjectedTextLine {
   text : String
   model_line_length : Int
   model_columns : Array[Int]

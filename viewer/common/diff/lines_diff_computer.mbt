@@ -25,7 +25,7 @@ pub(all) struct LinesDiffComputerOptions {
 
 ///|
 /// `LinesDiff` (`linesDiffComputer.ts:19`).
-pub(all) struct LinesDiff {
+pub struct LinesDiff {
   changes : Array[DetailedLineRangeMapping]
   /// Sorted by original line ranges. The original line ranges and the
   /// modified line ranges must be disjoint (but can be touching).
@@ -38,7 +38,7 @@ pub(all) struct LinesDiff {
 
 ///|
 /// `MovedText` (`linesDiffComputer.ts:38`).
-pub(all) struct MovedText {
+pub struct MovedText {
   line_range_mapping : LineRangeMapping
   /// The diff from the original text to the moved text. Must be contained in
   /// the original/modified line range. Can be empty if the text didn't

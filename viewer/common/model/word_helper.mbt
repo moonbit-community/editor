@@ -12,7 +12,7 @@ pub let usual_word_separators : String = "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?"
 ///|
 /// A word inside a model, `IWordAtPosition` (`wordHelper.ts:16`). Columns are
 /// 1-based.
-pub(all) struct WordAtPosition {
+pub struct WordAtPosition {
   word : String
   start_column : Int
   end_column : Int

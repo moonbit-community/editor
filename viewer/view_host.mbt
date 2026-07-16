@@ -1,4 +1,4 @@
-// The viewer core's side of the `viewer/browser/view` seam: builds the
+// The viewer core's side of the `internal/viewer/browser/view` seam: builds the
 // `ViewContext` capability struct `View::render` needs (the local analog of
 // Monaco's `View` reading its owning `CodeEditorWidget`) and owns the render
 // loop entry points. Kept out of `view.mbt` because `View::render` cannot

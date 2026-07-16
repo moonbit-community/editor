@@ -2,7 +2,7 @@
 // (checked-in vscode submodule): the
 // `EditorLayoutInfo` shape, trimmed to the parts the viewer renders. Relocated
 // here from the root package so the hit-test pipeline
-// (`viewer/browser/controller`) can read it; `Viewer::get_layout_info`
+// (`internal/viewer/browser/controller`) can read it; `Viewer::get_layout_info`
 // (viewer/public_read_api.mbt) stays the producer.
 //
 // Omissions: `glyphMarginDecorationLaneCount` (no glyph-margin lanes),

@@ -1,4 +1,4 @@
-# Viewer browser testing seam
+# internal/viewer/browser/testing
 
 This JS-only package is the internal workbench/browser-test bridge for viewer
 telemetry and narrowly scoped controls. Entries are keyed by `Viewer::get_id`,

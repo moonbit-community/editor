@@ -1,6 +1,6 @@
-// The viewer core's side of the `viewer/browser/controller` seam: it builds
-// the input controller's `PointerHandlerHelper`, the local analog of Monaco's
-// `View._createPointerHandlerHelper` (view.ts:378-429) plus the
+// The viewer core's side of the `internal/viewer/browser/controller` seam: it
+// builds the input controller's `PointerHandlerHelper`, the local analog of
+// Monaco's `View._createPointerHandlerHelper` (view.ts:378-429) plus the
 // `ViewContext`/`ViewController` reads the helper substitutes for (the
 // helper's header in `mouse_handler.mbt` records the grouping). The closures
 // capture the view and the viewer so the controller never names the concrete

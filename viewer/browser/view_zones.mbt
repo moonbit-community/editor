@@ -1,7 +1,7 @@
 ///|
 /// Monaco's mutable `IViewZone` descriptor. Runtime registration state stays
-/// in `viewer/browser/view`; that layer retains this delegate by identity and
-/// rereads the documented live fields during layout.
+/// in `internal/viewer/browser/view`; that layer retains this delegate by
+/// identity and rereads the documented live fields during layout.
 pub(all) struct ViewZone {
   mut after_line_number : Int
   mut after_column : Int?
@@ -64,7 +64,7 @@ pub struct ViewZoneChangeAccessor {
 }
 
 ///|
-/// Runtime bridge used by `viewer/browser/view` to bind one transaction.
+/// Runtime bridge used by `internal/viewer/browser/view` to bind one transaction.
 pub fn ViewZoneChangeAccessor::from_callbacks(
   add : (ViewZone) -> String,
   remove : (String) -> Unit,

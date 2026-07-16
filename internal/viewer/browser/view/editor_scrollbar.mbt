@@ -1,8 +1,9 @@
 // Ported from `vscode/src/vs/editor/browser/viewParts/editorScrollbar/editorScrollbar.ts`.
-// The custom scrollbar geometry/DOM itself lives in `viewer/ui/scrollbar`
+// The custom scrollbar geometry/DOM itself lives in
+// `internal/viewer/ui/scrollbar`
 // (Monaco's `base/browser/ui/scrollbar/`); `EditorScrollbar` is the thin
 // view-part wrapper around it. Its lifecycle wiring lives in
-// `viewer/browser/view/view_overlays_lifecycle.mbt`.
+// `internal/viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
 /// Public scrollbar owner for root callers. Package-local lifecycle code

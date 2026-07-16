@@ -5,7 +5,7 @@ import {
   "moonbit-community/editor/platform/log",
   "moonbit-community/editor/internal/shell/remote_protocol",
   "moonbit-community/editor/viewer",
-  "moonbit-community/editor/viewer/browser/testing" @viewer_testing,
+  "moonbit-community/editor/internal/viewer/browser/testing" @viewer_testing,
   "moonbit-community/editor/viewer/common/editor_api",
   "moonbit-community/editor/viewer/common/agent_feedback_api",
   "moonbit-community/editor/viewer/common/languages",

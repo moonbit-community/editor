@@ -1,5 +1,5 @@
 // The viewer facade's public overlay-widget API delegates to
-// `viewer/browser/view/overlay_widgets.mbt`. It lives here because every
+// `internal/viewer/browser/view/overlay_widgets.mbt`. It lives here because every
 // `Viewer::` method must be defined in `Viewer`'s package.
 
 ///|

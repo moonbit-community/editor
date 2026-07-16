@@ -11,7 +11,7 @@
 //   the block-cursor `textContent`/token-class plumbing are not ported.
 //
 // Its narrow lifecycle adapter lives in
-// `viewer/browser/view/view_widgets_cursors_lifecycle.mbt`.
+// `internal/viewer/browser/view/view_widgets_cursors_lifecycle.mbt`.
 
 ///|
 /// Monaco's `ViewCursorRenderData` (`viewCursor.ts:26-36`), minus the

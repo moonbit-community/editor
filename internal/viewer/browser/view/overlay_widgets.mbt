@@ -4,7 +4,7 @@
 // they position themselves, so `render`/`prepare_render` stay no-ops; the
 // preference-position placement Monaco layers on top has no consumer yet).
 // The narrow lifecycle adapter lives in
-// `viewer/browser/view/view_overlays_lifecycle.mbt`.
+// `internal/viewer/browser/view/view_overlays_lifecycle.mbt`.
 
 ///|
 /// Public overlay-widget owner for root callers. Package-local lifecycle code

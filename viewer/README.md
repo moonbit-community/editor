@@ -107,7 +107,7 @@ Monaco's cursor-command `pushStackElement` calls have no local state to update.
 Alternate platform bindings, editable commands, multi-cursor, and column
 selection are outside the readonly surface. Build/render/hover telemetry is not
 part of the public Viewer API; the internal workbench and browser scenarios use
-the Viewer-id-keyed `viewer/browser/testing` seam.
+the Viewer-id-keyed `internal/viewer/browser/testing` seam.
 
 Cursor payload versions are `TextModel.get_version_id()`, never the caller's
 host metadata version. `set_position`/`set_selection` accept an optional

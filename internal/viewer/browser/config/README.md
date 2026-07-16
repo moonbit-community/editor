@@ -1,4 +1,4 @@
-# viewer/browser/config
+# internal/viewer/browser/config
 
 Browser-only font styling and deterministic character-width measurement.
 
@@ -30,5 +30,6 @@ The singleton intentionally has no dispose/cancel owner, and font-info
 serialization/restore is absent. Both are bounded by the process-lifetime,
 single-window viewer contract rather than hidden local alternatives.
 
-This package is JS-only and owns the Rabbita DOM seams. See
-`pkg.generated.mbti`; run `moon test --target js viewer/browser/config`.
+This internal package is JS-only and owns the Rabbita DOM seams. See
+`pkg.generated.mbti`; run
+`moon test internal/viewer/browser/config --target js`.

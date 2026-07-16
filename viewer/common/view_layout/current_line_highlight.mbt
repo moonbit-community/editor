@@ -3,10 +3,9 @@
 // the abstract overlay's should-render predicates, the two concrete class
 // builders, and the wrapped-line span helper. The canonical option enum lives
 // in `viewer/common/editor_api`. The DOM overlays that consume these are in
-// `viewer/browser/view/current_line_highlight.mbt` and
-// `viewer/browser/view/current_line_margin_highlight.mbt`. This DOM-free
-// option behavior stays here; canonical public option values live in
-// `viewer/common/editor_api`.
+// `internal/viewer/browser/view/current_line_highlight.mbt` and its
+// `current_line_margin_highlight.mbt` sibling. This DOM-free option behavior
+// stays here; canonical public option values live in `viewer/common/editor_api`.
 
 ///|
 /// `AbstractLineHighlightOverlay._shouldRenderInMargin`

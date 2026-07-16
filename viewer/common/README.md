@@ -11,7 +11,7 @@ The only production implementation is `line_html.mbt`:
 
 Mouse targets and hit testing do **not** live here. Browser event/target values are
 in `viewer/browser`, and the hit-test implementation is in
-`viewer/browser/controller`.
+`internal/viewer/browser/controller`.
 
 This package may depend on `viewer/common/editor_api`,
 `viewer/common/view_layout`, and `viewer/common/view_model`; it must remain

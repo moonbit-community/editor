@@ -1,9 +1,9 @@
 ///|
 /// Hooks the view's native input listeners. The pointer input (moves, downs,
 /// ups, leaves, selection drags) is owned entirely by the
-/// `viewer/browser/controller` `MouseHandler`, which registers its own DOM
-/// listeners on the view root through `EditorMouseEventFactory` — the viewer
-/// builds it here with a `PointerHandlerHelper` closing over the view (the
+/// `internal/viewer/browser/controller` `MouseHandler`, which registers its own
+/// DOM listeners on the view root through `EditorMouseEventFactory` — the
+/// viewer builds it here with a `PointerHandlerHelper` closing over the view (the
 /// local analog of Monaco's `View._createPointerHandlerHelper`). Copy,
 /// keyboard, focus tracking, wheel and the scrollbar/browser-reveal cluster
 /// stay here.

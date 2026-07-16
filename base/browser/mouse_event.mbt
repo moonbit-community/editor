@@ -10,8 +10,8 @@
 //   * `DragMouseEvent` (drag-and-drop text move is not ported; readonly
 //     viewer).
 //   * `IMouseWheelEvent`/`StandardWheelEvent` — the viewer's existing copy
-//     lives in `viewer/ui/scrollbar/mouse_event.mbt`; consolidating it here is
-//     a recorded follow-up, not part of this port.
+//     lives in `internal/viewer/ui/scrollbar/mouse_event.mbt`; consolidating it
+//     here is a recorded follow-up, not part of this port.
 //
 // `target` is typed `@rdom.Element?` instead of Monaco's bare `HTMLElement`
 // cast (mouseEvent.ts:59): the DOM allows non-element event targets, and the

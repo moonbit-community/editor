@@ -1,4 +1,4 @@
-# viewer/browser/controller
+# internal/viewer/browser/controller
 
 The JS-only pointer controller, mirroring Monaco's
 `editor/browser/controller/{mouseHandler,mouseTarget,dragScrolling}.ts` plus
@@ -44,7 +44,8 @@ and textarea/GPU/minimap paths.
 
 ## Boundary
 
-This package may use browser DOM and the browser/view, common view-model/layout,
-and scrollbar types. It must not import `viewer`, `internal/shell/**`, or
-Rabbita TEA/vdom/command packages. Shared browser mouse event/target values live
-in `viewer/browser`; the DOM hit-test algorithm lives here.
+This internal package may use browser DOM, `internal/viewer/browser/view`,
+common view-model/layout, and `internal/viewer/ui/scrollbar` types. It must not
+import `viewer`, `internal/shell/**`, or Rabbita TEA/vdom/command packages.
+Shared browser mouse event/target values live in `viewer/browser`; the DOM
+hit-test algorithm lives here.

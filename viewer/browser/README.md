@@ -12,7 +12,7 @@ without a direct browser-package import.
   identity and rereads its live fields during layout.
   `ViewZoneChangeAccessor` is an opaque callback handle; mutable ids, cached
   measurements, render data, and DOM attachment state stay private in
-  `viewer/browser/view`.
+  `internal/viewer/browser/view`.
 - `OverlayWidget` is an opaque unmanaged handle with immutable id/node and the
   supported null-position placement. Positioned/content-widget/layout variants
   remain outside the readonly product.

@@ -1,7 +1,7 @@
 // Root-private instrumentation remains only for white-box assertions. Browser
 // tests and the workbench subscribe through the Viewer-id-keyed
-// `viewer/browser/testing` registry, so none of these hooks or payloads leak
-// through the public Viewer facade.
+// `internal/viewer/browser/testing` registry, so none of these hooks or
+// payloads leak through the public Viewer facade.
 
 ///|
 /// Fires after a model's content is prepared for rendering (view-model build

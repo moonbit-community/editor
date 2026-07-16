@@ -1,19 +1,21 @@
 // The mouse-facing half of the hover input bridge, relocated from
-// `viewer/contrib/hover` (2026-07-09): everything whose signature carries the
-// hit-test target lives browser-side, mirroring Monaco — the source's
-// `ContentHoverWidgetWrapper.showsOrWillShow` / `_findHoverAnchorCandidates`
-// (`contentHoverWidgetWrapper.ts`) are `editor/contrib/hover/browser` code.
-// The multi-target `viewer/contrib/hover` package keeps the DOM-free hover
-// model (`HoverController`, anchors, participants). Targets arrive
-// **model-space** (the public-event boundary converts), exactly like the
-// source's `IEditorMouseEvent`.
+// `internal/viewer/contrib/hover` (2026-07-09): everything whose signature
+// carries the hit-test target lives browser-side, mirroring Monaco — the
+// source's `ContentHoverWidgetWrapper.showsOrWillShow` /
+// `_findHoverAnchorCandidates` (`contentHoverWidgetWrapper.ts`) are
+// `editor/contrib/hover/browser` code. The multi-target
+// `internal/viewer/contrib/hover` package keeps the DOM-free hover model
+// (`HoverController`, anchors, participants). Targets arrive **model-space**
+// (the public-event boundary converts), exactly like the source's
+// `IEditorMouseEvent`.
 
 ///|
 /// Typed editor events produced by the input bridge. Feature controllers
 /// consume these the way VS Code contributions consume editor events; no
 /// controller sees raw DOM events. `pub(all)` because the viewer's dispatch
-/// glue (`editor_events.mbt`, root package — the foreign-method rule keeps
-/// that glue out of this package) constructs these values.
+/// glue in the root package constructs these values across the package
+/// boundary. That glue remains root-owned because it reads private Viewer
+/// state and owns editor-event dispatch.
 pub(all) enum EditorEvent {
   MouseMoved(@editor_browser.MouseTarget)
   EscapePressed
@@ -40,9 +42,11 @@ pub(all) struct EditorContext {
 }
 
 ///|
-/// `HoverController::on_event` as a free function (the controller type is
-/// owned by the multi-target package; the foreign-method rule forbids adding
-/// methods to it here). The `MouseMoved` arm is Monaco's `showsOrWillShow`
+/// The browser reducer for the `HoverController` owned by the multi-target
+/// package. It is a public free function because the root Viewer calls it
+/// across the package boundary; a private local method on the foreign
+/// controller type would not provide that cross-package entrypoint. The
+/// `MouseMoved` arm is Monaco's `showsOrWillShow`
 /// (`contentHoverWidgetWrapper.ts:249-261`).
 pub fn hover_on_event(
   controller : @hover.HoverController,

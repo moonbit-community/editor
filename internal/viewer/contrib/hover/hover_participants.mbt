@@ -85,8 +85,8 @@ fn hover_line_decorations(
 /// `IEditorMouseEvent`; that type is js-only here, so this multi-target handle
 /// receives the extracted facts the ported participants read — the content-text
 /// hit's injected text (if any), the hit's model range, and the recorded
-/// pointer position (`viewer/contrib/hover/browser/hover_events.mbt` extracts
-/// them).
+/// pointer position
+/// (`internal/viewer/contrib/hover/browser/hover_events.mbt` extracts them).
 pub struct HoverParticipantHandle {
   ordinal : Int
   suggest_hover_anchor : ((

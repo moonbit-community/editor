@@ -1,9 +1,11 @@
 ///|
 /// Monaco `ContentHoverController` (`contentHoverController.ts`): the
 /// per-editor hover feature state, stored by the owning Viewer's central
-/// contribution registry. The `Viewer::` glue in `editor_events.mbt` keeps the
-/// dispatch role (the foreign-method rule pins it to the root package) and
-/// reads/writes state here through the root package's typed central accessor.
+/// contribution registry. The `Viewer::` dispatch glue remains in
+/// `editor_events.mbt` because it reads private Viewer state and owns the
+/// editor-event, timer, provider, decoration, and widget lifecycles. It
+/// reads/writes state here through the root package's typed central accessor,
+/// without making this internal package depend on the root Viewer.
 pub(all) struct ContentHoverController {
   /// The shown-hover state machine (anchor, operation, derived view).
   mut hover : @hover.HoverController

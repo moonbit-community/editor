@@ -1,13 +1,13 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/editor/viewer/contrib/hover/browser"
+package "moonbit-community/editor/internal/viewer/contrib/hover/browser"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/internal/viewer/browser/view",
+  "moonbit-community/editor/internal/viewer/contrib/hover",
+  "moonbit-community/editor/internal/viewer/ui/scrollbar",
   "moonbit-community/editor/language",
-  "moonbit-community/editor/viewer/browser/view",
   "moonbit-community/editor/viewer/common/view_model",
-  "moonbit-community/editor/viewer/contrib/hover",
-  "moonbit-community/editor/viewer/ui/scrollbar",
   "moonbit-community/rabbita/dom",
 }
 

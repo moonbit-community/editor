@@ -1,13 +1,15 @@
 ///|
 /// The per-editor state of `AgentFeedbackEditorInputContribution`
 /// (`agentFeedbackEditorInputContribution.ts`), owned by the Viewer's central
-/// contribution entry. The `Viewer::` glue in `agent_feedback_host.mbt` keeps
-/// the wiring role (the foreign-method rule pins it to the root package) and
-/// reads/writes state here through a typed central accessor. Field names follow
-/// the source members; deviations kept from the glue: the reserved gutter lane
-/// stores the host's base width (`lane_base_width`, the source's boolean
-/// `_reservedGutterSpace` plus the restore value), the hover line uses a `-1`
-/// sentinel, and the hover decoration collection is an id array.
+/// contribution entry. The `Viewer::` glue remains in
+/// `agent_feedback_host.mbt` because it reads private Viewer state and owns the
+/// editor/model wiring; keeping it there also prevents this internal package
+/// from importing the root package. It reads/writes state here through a typed
+/// central accessor. Field names follow the source members; deviations kept
+/// from the glue: the reserved gutter lane stores the host's base width
+/// (`lane_base_width`, the source's boolean `_reservedGutterSpace` plus the
+/// restore value), the hover line uses a `-1` sentinel, and the hover
+/// decoration collection is an id array.
 pub(all) struct AgentFeedbackEditorInputContribution {
   /// `_widget`: the lazily-created inline input widget.
   mut widget : AgentFeedbackInputWidget?

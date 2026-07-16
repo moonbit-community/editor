@@ -2,12 +2,13 @@
 // quickDiffDecorator.ts` (checked-in vscode submodule): `QuickDiffDecorator.
 // createDecoration` and the change→decoration mapping of `onDidChange`.
 //
-// Structural deviation (the foreign-method rule, like the folding contrib):
-// the `EditorDecorationsCollection` this feeds lives on `Viewer`, a foreign
-// type here, so the decorator's editor wiring (collection ownership, model /
-// service listeners, the `QuickDiffWorkbenchController` editor tracking) is
-// `Viewer::` glue in the root package (`viewer/quick_diff_host.mbt` /
-// `viewer/quick_diff_contribution.mbt`); this file keeps the pure parts.
+// Structural deviation: the `EditorDecorationsCollection` this feeds is
+// root-owned Viewer state. Its editor wiring (collection ownership, model /
+// service listeners, and `QuickDiffWorkbenchController` editor tracking)
+// therefore remains `Viewer::` glue in the root package
+// (`viewer/quick_diff_host.mbt` / `viewer/quick_diff_contribution.mbt`).
+// Keeping only the pure mapping here preserves the dependency direction from
+// the root Viewer into this internal implementation package.
 //
 // Parity ledger (source members):
 // - `QuickDiffDecorator.createDecoration` — PORTED REDUCED: gutter is the

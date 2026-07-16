@@ -3,13 +3,13 @@
 // other folding files consume — `FoldingLimitReporter`,
 // `SelectedLines`, `toSelectedLines` — and the `FoldingController`'s state.
 //
-// Structural deviation (the foreign-method rule, like the hover contrib):
-// the controller's *state* lives here and is owned by the root Viewer's
-// central contribution registry, while the event-handler bodies that need the
-// editor (`onModelChanged`,
-// `onHiddenRangesChanges`, the mouse handlers, the actions) are `Viewer::`
-// glue in the root package (`viewer/folding_host.mbt` /
-// `viewer/folding_contribution.mbt`).
+// Structural deviation: the controller's *state* lives here and is owned by
+// the root Viewer's central contribution registry. Event-handler bodies that
+// need private Viewer state and root-owned model/input wiring
+// (`onModelChanged`, `onHiddenRangesChanges`, the mouse handlers, and the
+// actions) remain `Viewer::` glue in the root package
+// (`viewer/folding_host.mbt` / `viewer/folding_contribution.mbt`). This keeps
+// the internal folding package independent of the root Viewer.
 //
 // Omissions: the syntax range provider (`SyntaxRangeProvider` — no folding
 // range providers in the language registry yet), view-state save/restore

@@ -69,7 +69,7 @@ pub fn ViewModel::with_options(
   attached_view? : @model.AttachedViewImpl,
   emit_view_tokens_changed? : (Array[ViewTokensChangedRange]) -> Unit = view_model_no_token_event_sink,
 ) -> ViewModel {
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=options.font_info,
     tab_size=options.tab_size,
@@ -80,11 +80,11 @@ pub fn ViewModel::with_options(
   // Monaco's member order: `_lines` → `coordinatesConverter` → `_cursor` →
   // `viewLayout` (`viewModelImpl.ts:122-126`) → `_decorations` (`:146`).
   let cursor_event_dispatcher = CursorEventDispatcher::new()
-  let cursor = @cursor.CursorsController::new(
+  let cursor = @cursor.CursorsController(
     model,
     coordinates_converter.cursor_context(),
   )
-  let view_layout = @view_layout.ViewLayout::new(
+  let view_layout = @view_layout.ViewLayout(
     line_height=options.font_info.line_height,
     line_count=lines.get_view_line_count(),
     smooth_scrolling~,

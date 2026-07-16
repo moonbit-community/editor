@@ -111,12 +111,12 @@ test "view controller selection adapters preserve exact keyboard and mouse sourc
 
     assert_true(
       viewer.set_selection_from_view_controller(
-        @core.Selection::new(Position(1, 2), Position(1, 4)),
+        Selection(Position(1, 2), Position(1, 4)),
       ),
     )
     assert_true(
       viewer.select_from_view_controller(
-        @core.Selection::new(Position(2, 1), Position(2, 3)),
+        Selection(Position(2, 1), Position(2, 3)),
       ),
     )
     assert_true(sources == ["keyboard", "mouse"])
@@ -137,7 +137,7 @@ test "selectAll returns without a view and hard-codes keyboard source" {
     assert_true(viewer.run_select_all_core_command(nominal_source="mouse"))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(1, 1), Position(2, 3)),
+      Selection(Position(1, 1), Position(2, 3)),
     )
     assert_true(sources == ["keyboard"])
   })
@@ -161,7 +161,7 @@ test "registered model line start and end commands preserve selection mode" {
     let install = fn(column, residue) {
       let position = @base_common.Position::Position(2, column)
       view_model.set_model_cursor_state(
-        @cursor.SingleCursorState::new(
+        SingleCursorState(
           position,
           position,
           Simple,
@@ -187,7 +187,7 @@ test "registered model line start and end commands preserve selection mode" {
     let start_select = view_model.cursor.model_state()
     assert_selection_eq(
       start_select.selection(),
-      @core.Selection::new(Position(2, 4), Position(2, 1)),
+      Selection(Position(2, 4), Position(2, 1)),
     )
     assert_eq(start_select.selection_start_leftover_visible_columns, 7)
     assert_eq(start_select.leftover_visible_columns, 0)
@@ -204,7 +204,7 @@ test "registered model line start and end commands preserve selection mode" {
     let end_select = view_model.cursor.model_state()
     assert_selection_eq(
       end_select.selection(),
-      @core.Selection::new(Position(2, 3), Position(2, 7)),
+      Selection(Position(2, 3), Position(2, 7)),
     )
     assert_eq(end_select.selection_start_leftover_visible_columns, 3)
     assert_eq(end_select.leftover_visible_columns, 0)

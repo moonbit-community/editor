@@ -6,7 +6,7 @@
 fn simulate_smooth_scroll(from : Double, to : Double) -> Array[(Int, Int)] {
   let viewport_height = 800.0
   let line_height = 20.0
-  let operation = @view_layout.SmoothScrollingOperation::new(
+  let operation = @view_layout.SmoothScrollingOperation(
     { scroll_left: 0.0, scroll_top: from, width: 0.0, height: viewport_height },
     { scroll_left: 0.0, scroll_top: to, width: 0.0, height: viewport_height },
     -10.0,
@@ -121,7 +121,7 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
-  let scrollable = @view_layout.Scrollable::new(
+  let scrollable = @view_layout.Scrollable(
     force_integer_values=true,
     smooth_scroll_duration=125.0,
     schedule_at_next_animation_frame=scheduler,
@@ -199,7 +199,7 @@ test "reuse animation replaces the target on the original timeline" {
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
-  let scrollable = @view_layout.Scrollable::new(
+  let scrollable = @view_layout.Scrollable(
     force_integer_values=true,
     smooth_scroll_duration=125.0,
     schedule_at_next_animation_frame=scheduler,
@@ -241,7 +241,7 @@ test "scroll event listener cancellation stops animation rescheduling" {
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
-  let scrollable = @view_layout.Scrollable::new(
+  let scrollable = @view_layout.Scrollable(
     force_integer_values=true,
     smooth_scroll_duration=125.0,
     schedule_at_next_animation_frame=scheduler,
@@ -273,7 +273,7 @@ test "scroll event listener cancellation stops animation rescheduling" {
 ///|
 test "smooth duration zero falls back to immediate without scheduling" {
   let scheduled = Ref(0)
-  let scrollable = @view_layout.Scrollable::new(
+  let scrollable = @view_layout.Scrollable(
     force_integer_values=true,
     smooth_scroll_duration=0.0,
     schedule_at_next_animation_frame=callback => {
@@ -304,7 +304,7 @@ test "view layout smooth option reconfigures the 125ms duration live" {
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
-  let layout = @view_layout.ViewLayout::new(
+  let layout = @view_layout.ViewLayout(
     line_height=20,
     line_count=100,
     smooth_scrolling=false,

@@ -91,37 +91,37 @@ test "registered cursor keys move and extend the primary selection" {
     assert_true(dispatch_navigation_key(viewer, "ArrowRight", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(1, 2), Position(1, 3)),
+      Selection(Position(1, 2), Position(1, 3)),
     )
     viewer.set_position(Position(2, 2))
     assert_true(dispatch_navigation_key(viewer, "ArrowLeft", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(2, 2), Position(2, 1)),
+      Selection(Position(2, 2), Position(2, 1)),
     )
     viewer.set_position(Position(2, 2))
     assert_true(dispatch_navigation_key(viewer, "ArrowUp", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(2, 2), Position(1, 2)),
+      Selection(Position(2, 2), Position(1, 2)),
     )
     viewer.set_position(Position(2, 2))
     assert_true(dispatch_navigation_key(viewer, "ArrowDown", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(2, 2), Position(3, 2)),
+      Selection(Position(2, 2), Position(3, 2)),
     )
     viewer.set_position(Position(1, 5))
     assert_true(dispatch_navigation_key(viewer, "Home", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(1, 5), Position(1, 3)),
+      Selection(Position(1, 5), Position(1, 3)),
     )
     viewer.set_position(Position(1, 5))
     assert_true(dispatch_navigation_key(viewer, "End", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(1, 5), Position(1, 6)),
+      Selection(Position(1, 5), Position(1, 6)),
     )
   })
 }
@@ -155,14 +155,14 @@ test "page commands use configured fallback for marker omitted and exact zero" {
     assert_true(dispatch_navigation_key(viewer, "PageUp", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(10, 1), Position(2, 1)),
+      Selection(Position(10, 1), Position(2, 1)),
     )
 
     viewer.set_position(Position(10, 1))
     assert_true(dispatch_navigation_key(viewer, "PageDown", shift=true))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(10, 1), Position(18, 1)),
+      Selection(Position(10, 1), Position(18, 1)),
     )
   })
 }
@@ -219,19 +219,19 @@ test "live single-cursor mouse branches use the shared transition spine" {
 
     // Ordinary click and drag.
     viewer.dispatch_mouse(mouse_dispatch_data(Position(1, 3)))
-    assert_cursor(viewer, @core.Selection::new(Position(1, 3), Position(1, 3)))
+    assert_cursor(viewer, Selection(Position(1, 3), Position(1, 3)))
     assert_last_cursor_transition(events, "mouse")
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(1, 6), in_selection_mode=true),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 3), Position(1, 6)))
+    assert_cursor(viewer, Selection(Position(1, 3), Position(1, 6)))
     assert_last_cursor_transition(events, "mouse")
 
     // Double click and its word-granularity drag continuation.
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(1, 8), mouse_down_count=2),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 7), Position(1, 11)))
+    assert_cursor(viewer, Selection(Position(1, 7), Position(1, 11)))
     assert_last_cursor_transition(events, "mouse")
     viewer.dispatch_mouse(
       mouse_dispatch_data(
@@ -240,14 +240,14 @@ test "live single-cursor mouse branches use the shared transition spine" {
         mouse_down_count=2,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 11), Position(1, 1)))
+    assert_cursor(viewer, Selection(Position(1, 11), Position(1, 1)))
     assert_last_cursor_transition(events, "mouse")
 
     // Triple click and its whole-line drag continuation.
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(2, 4), mouse_down_count=3),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(2, 1), Position(3, 1)))
+    assert_cursor(viewer, Selection(Position(2, 1), Position(3, 1)))
     assert_last_cursor_transition(events, "mouse")
     viewer.dispatch_mouse(
       mouse_dispatch_data(
@@ -256,14 +256,14 @@ test "live single-cursor mouse branches use the shared transition spine" {
         mouse_down_count=3,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(3, 1), Position(1, 1)))
+    assert_cursor(viewer, Selection(Position(3, 1), Position(1, 1)))
     assert_last_cursor_transition(events, "mouse")
 
     // Gutter click/drag takes the same live whole-line paths.
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(1, 4), started_on_line_numbers=true),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(2, 1)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(2, 1)))
     assert_last_cursor_transition(events, "mouse")
     viewer.dispatch_mouse(
       mouse_dispatch_data(
@@ -272,7 +272,7 @@ test "live single-cursor mouse branches use the shared transition spine" {
         in_selection_mode=true,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(3, 1)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(3, 1)))
     assert_last_cursor_transition(events, "mouse")
 
     // Four or more clicks route SelectAll through its source-shaped keyboard
@@ -280,7 +280,7 @@ test "live single-cursor mouse branches use the shared transition spine" {
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(2, 2), mouse_down_count=4),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(3, 6)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(3, 6)))
     assert_last_cursor_transition(events, "keyboard")
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(2, 2), mouse_down_count=5),
@@ -291,7 +291,7 @@ test "live single-cursor mouse branches use the shared transition spine" {
     // `_validateViewColumn` clamps a below-minimum pointer column before the
     // ordinary MoveTo adapter commits its view state.
     viewer.dispatch_mouse(mouse_dispatch_data(Position(1, 0)))
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(1, 1)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(1, 1)))
     assert_position(
       viewer.test_cursor().get_view_selection().get_position(),
       Position(1, 1),
@@ -333,10 +333,7 @@ test "deferred mouse branches remain exact no-ops" {
     ]
     for data in deferred {
       viewer.dispatch_mouse(data)
-      assert_cursor(
-        viewer,
-        @core.Selection::new(Position(1, 4), Position(1, 4)),
-      )
+      assert_cursor(viewer, Selection(Position(1, 4), Position(1, 4)))
       assert_eq(events.length(), 0)
     }
   })
@@ -612,7 +609,7 @@ test "dollar punctuation keeps its one-unit word anchor through continuation" {
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(1, 5), mouse_down_count=2, reveal_type=None),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 5), Position(1, 6)))
+    assert_cursor(viewer, Selection(Position(1, 5), Position(1, 6)))
     let anchor = viewer.test_cursor().model_state()
     assert_position(anchor.selection_start_start, Position(1, 5))
     assert_position(anchor.selection_start_end, Position(1, 6))
@@ -627,7 +624,7 @@ test "dollar punctuation keeps its one-unit word anchor through continuation" {
         reveal_type=None,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 5), Position(1, 10)))
+    assert_cursor(viewer, Selection(Position(1, 5), Position(1, 10)))
 
     // Backward continuation uses the punctuation anchor's far edge, keeping
     // the entire one-code-unit separator inside the selection.
@@ -638,7 +635,7 @@ test "dollar punctuation keeps its one-unit word anchor through continuation" {
         reveal_type=None,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 6), Position(1, 1)))
+    assert_cursor(viewer, Selection(Position(1, 6), Position(1, 1)))
   })
 }
 
@@ -661,7 +658,7 @@ test "shift gutter forward from Simple uses line continuation" {
     assert_position(state.view_state.position, Position(3, 1))
     assert_position(state.model_state.position, Position(3, 1))
     assert_true(state.model_state.selection_start_kind == Simple)
-    assert_cursor(viewer, @core.Selection::new(Position(1, 2), Position(3, 1)))
+    assert_cursor(viewer, Selection(Position(1, 2), Position(3, 1)))
   })
 }
 

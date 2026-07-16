@@ -102,7 +102,7 @@ priv struct TestState {
 fn TestState::new(forced_delta? : Bool = false) -> TestState {
   {
     oracle: Oracle::new(),
-    tree: @model.IntervalTree::new(),
+    tree: IntervalTree(),
     tree_nodes: [],
     oracle_nodes: [],
     forced_delta,
@@ -114,7 +114,7 @@ fn TestState::accept_op(self : TestState, op : Op) -> Unit raise {
   match op {
     Insert(begin, end) => {
       // ids allocate sequentially (source: ++this._lastNodeId indexes the slot)
-      let node = @model.IntervalNode::new("", begin, end)
+      let node = @model.IntervalNode("", begin, end)
       if self.forced_delta {
         node.delta = begin // FORCE_OVERFLOWING_TEST: this.delta = start
       }
@@ -632,7 +632,7 @@ test "seeded fuzz (getRandomInt loop, seeds 11111/22222/33333/44444/55555)" {
 
 ///|
 fn create_cormen_tree() -> @model.IntervalTree {
-  let r = @model.IntervalTree::new()
+  let r = @model.IntervalTree()
   let data = [
     (16, 21),
     (8, 9),
@@ -647,7 +647,7 @@ fn create_cormen_tree() -> @model.IntervalTree {
   ]
   for interval in data {
     let (start, end) = interval
-    let node = @model.IntervalNode::new("", start, end)
+    let node = @model.IntervalNode("", start, end)
     r.insert(node)
   }
   r

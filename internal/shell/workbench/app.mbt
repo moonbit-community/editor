@@ -111,7 +111,7 @@ fn workbench_services() -> WorkbenchServices {
     None => {
       let log_service = workbench_log_service()
       let languages = @languages.default_languages()
-      let markers = @markers.MarkerService::new(
+      let markers = @markers.MarkerService(
         schedule=@base_browser.queue_microtask,
       )
       let agent_feedback = @agent_feedback.AgentFeedbackService::new()

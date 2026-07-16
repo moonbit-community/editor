@@ -72,7 +72,7 @@ test "matrix whole-line decorations span line minima and maxima" {
 test "matrix wrapped model decorations map exact line boundaries" {
   let source_model = TestTextModel::create("abcdefghij")
   let model = inline_reference_model(source_model)
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,
@@ -211,7 +211,7 @@ test "matrix margin-only query filters glyph-margin decorations" {
       options: ModelDecorationOptions("", glyph_margin_class_name="margin"),
     },
   ])
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,
@@ -296,7 +296,7 @@ test "matrix model before and after injections keep source order" {
   assert_eq(stored.length(), 1)
   assert_true(stored[0].options.before is Some(_))
   assert_true(stored[0].options.after is Some(_))
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,

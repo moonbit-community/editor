@@ -77,7 +77,7 @@ impl @language.HoverProvider for ControlledHoverProvider with fn provide_hover(
 
 ///|
 async test "hover forwards caller token and skips empty provider results" {
-  let languages = Languages::new()
+  let languages = Languages()
   let empty_calls = Ref(0)
   let empty_tokens : Array[@language.CancellationToken] = []
   let good_calls = Ref(0)
@@ -115,7 +115,7 @@ async test "hover forwards caller token and skips empty provider results" {
 
 ///|
 async test "hover skips a provider None result and continues in order" {
-  let languages = Languages::new()
+  let languages = Languages()
   let none_calls = Ref(0)
   let none_tokens : Array[@language.CancellationToken] = []
   let good_calls = Ref(0)
@@ -146,7 +146,7 @@ async test "hover skips a provider None result and continues in order" {
 
 ///|
 async test "hover pre-cancellation avoids provider launch" {
-  let languages = Languages::new()
+  let languages = Languages()
   let calls = Ref(0)
   let provider = RecordingHoverProvider::{
     text: "unused",
@@ -168,7 +168,7 @@ async test "hover pre-cancellation avoids provider launch" {
 
 ///|
 async test "hover cancellation during await is silent and rejects late data" {
-  let languages = Languages::new()
+  let languages = Languages()
   let started = @aqueue.Queue(kind=Unbounded)
   let gate = @aqueue.Queue(kind=Unbounded)
   let provider = ControlledHoverProvider::{
@@ -200,7 +200,7 @@ async test "hover cancellation during await is silent and rejects late data" {
 
 ///|
 async test "hover rejects a registration disposed during await" {
-  let languages = Languages::new()
+  let languages = Languages()
   let started = @aqueue.Queue(kind=Unbounded)
   let gate = @aqueue.Queue(kind=Unbounded)
   let provider = ControlledHoverProvider::{

@@ -46,7 +46,8 @@ pub struct ContiguousTokensStore {
 ///|
 /// Creates an empty store retaining the shared language-id codec.
 /// Source: `contiguousTokensStore.ts:24-28`.
-pub fn ContiguousTokensStore::new(
+#alias(new)
+pub fn ContiguousTokensStore::ContiguousTokensStore(
   language_id_codec : @services.LanguageIdCodec,
 ) -> ContiguousTokensStore {
   { line_tokens: [], len: 0, language_id_codec }
@@ -83,13 +84,13 @@ pub fn ContiguousTokensStore::get_tokens(
     Missing
   }
   match raw_line_tokens {
-    Words(tokens) => LineTokens::new(tokens, line_text, self.language_id_codec)
+    Words(tokens) => LineTokens(tokens, line_text, self.language_id_codec)
     Missing | Empty => {
       let line_tokens : Array[UInt] = [
         line_text.length().reinterpret_as_uint(),
         self.default_metadata(top_level_language_id),
       ]
-      LineTokens::new(line_tokens, line_text, self.language_id_codec)
+      LineTokens(line_tokens, line_text, self.language_id_codec)
     }
   }
 }

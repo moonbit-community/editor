@@ -170,7 +170,7 @@ fn ReferenceInlineModelDecorationsComputer::ReferenceInlineModelDecorationsCompu
   source_model : TestTextModel,
 ) -> ReferenceInlineModelDecorationsComputer {
   let model = inline_reference_model(source_model)
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,

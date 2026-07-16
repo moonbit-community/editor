@@ -16,9 +16,9 @@ fn computer_test_model() -> @model.TextModel {
 
 ///|
 async test "content hover computer separates sync markers from async markdown" {
-  let languages = @languages.Languages::new()
-  let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let languages = @languages.Languages()
+  let markers = @markers.MarkerService()
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   let model = computer_test_model()
@@ -107,8 +107,8 @@ impl @language.HoverProvider for RecordingHoverProvider with fn provide_hover(
 fn computer_services_with_languages(
   languages : @languages.Languages,
 ) -> HoverParticipantServices {
-  let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let markers = @markers.MarkerService()
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   {
@@ -119,7 +119,7 @@ fn computer_services_with_languages(
 
 ///|
 async test "caller cancellation token reaches the language provider unchanged" {
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   let calls = Ref(0)
   let seen_token : Ref[@language.CancellationToken?] = Ref(None)
   languages.register_hover_provider(LanguageId("moonbit"), RecordingHoverProvider::{
@@ -154,7 +154,7 @@ async test "caller cancellation token reaches the language provider unchanged" {
 
 ///|
 async test "pre-canceled async computation never launches a participant provider" {
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   let calls = Ref(0)
   let seen_token : Ref[@language.CancellationToken?] = Ref(None)
   languages.register_hover_provider(LanguageId("moonbit"), RecordingHoverProvider::{
@@ -622,9 +622,7 @@ test "registry get_all aliases backing factories and build_all sorts ordinals" {
   backing.push(_services => controlled_participant(10, "ten-a"))
   registry.register(_services => controlled_participant(10, "ten-b"))
   assert_eq(registry.get_all().length(), 3)
-  let built = registry.build_all(
-    computer_services_with_languages(@languages.Languages::new()),
-  )
+  let built = registry.build_all(computer_services_with_languages(Languages()))
   assert_eq(built.length(), 3)
   assert_eq(built[0].ordinal, 10)
   assert_eq(built[1].ordinal, 10)
@@ -647,7 +645,7 @@ test "registry get_all aliases backing factories and build_all sorts ordinals" {
 
 ///|
 test "participant loading-message contract is explicit" {
-  let services = computer_services_with_languages(@languages.Languages::new())
+  let services = computer_services_with_languages(Languages())
   let anchor = async_test_anchor()
   let markdown = MarkdownHoverParticipant::new(services.languages).hover_participant_handle()
   guard markdown.create_loading_message is Some(markdown_loading_message) else {

@@ -102,7 +102,7 @@ fn view_zones_geometry_fixture(
     margin_dom_node=margin_zone,
     on_dom_node_top=_ => record_view_zones_geometry_event("callback:top"),
   )
-  let layout = @view_layout.LinesLayout::new(1, 20, 22, 0)
+  let layout = @view_layout.LinesLayout(1, 20, 22, 0)
   let whitespace_id = Ref("")
   layout.change_whitespace(accessor => {
     whitespace_id.val = accessor.insert_whitespace(1, 0, 17.0, 0.0)

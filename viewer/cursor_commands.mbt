@@ -543,7 +543,7 @@ fn SelectAllCommand::as_core_editor_command(
       view_model.set_cursor_state(
         Some(
           @cursor.CursorState::from_model_state(
-            @cursor.SingleCursorState::new(origin, origin, Simple, end),
+            SingleCursorState(origin, origin, Simple, end),
           ),
         ),
         "keyboard",
@@ -762,7 +762,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorLeft",
-      @view_model.SimpleMoveArguments::new(Left, None, false, 1),
+      SimpleMoveArguments(Left, None, false, 1),
     ).as_core_editor_command(),
     "ArrowLeft",
     shift=false,
@@ -771,7 +771,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorLeftSelect",
-      @view_model.SimpleMoveArguments::new(Left, None, true, 1),
+      SimpleMoveArguments(Left, None, true, 1),
     ).as_core_editor_command(),
     "ArrowLeft",
     shift=true,
@@ -780,7 +780,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorRight",
-      @view_model.SimpleMoveArguments::new(Right, None, false, 1),
+      SimpleMoveArguments(Right, None, false, 1),
     ).as_core_editor_command(),
     "ArrowRight",
     shift=false,
@@ -789,7 +789,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorRightSelect",
-      @view_model.SimpleMoveArguments::new(Right, None, true, 1),
+      SimpleMoveArguments(Right, None, true, 1),
     ).as_core_editor_command(),
     "ArrowRight",
     shift=true,
@@ -798,7 +798,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorUp",
-      @view_model.SimpleMoveArguments::new(Up, WrappedLine, false, 1),
+      SimpleMoveArguments(Up, WrappedLine, false, 1),
     ).as_core_editor_command(),
     "ArrowUp",
     shift=false,
@@ -807,7 +807,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorUpSelect",
-      @view_model.SimpleMoveArguments::new(Up, WrappedLine, true, 1),
+      SimpleMoveArguments(Up, WrappedLine, true, 1),
     ).as_core_editor_command(),
     "ArrowUp",
     shift=true,
@@ -816,7 +816,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorPageUp",
-      @view_model.SimpleMoveArguments::new(Up, WrappedLine, false, -1),
+      SimpleMoveArguments(Up, WrappedLine, false, -1),
     ).as_core_editor_command(),
     "PageUp",
     shift=false,
@@ -825,7 +825,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorPageUpSelect",
-      @view_model.SimpleMoveArguments::new(Up, WrappedLine, true, -1),
+      SimpleMoveArguments(Up, WrappedLine, true, -1),
     ).as_core_editor_command(),
     "PageUp",
     shift=true,
@@ -834,7 +834,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorDown",
-      @view_model.SimpleMoveArguments::new(Down, WrappedLine, false, 1),
+      SimpleMoveArguments(Down, WrappedLine, false, 1),
     ).as_core_editor_command(),
     "ArrowDown",
     shift=false,
@@ -843,7 +843,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorDownSelect",
-      @view_model.SimpleMoveArguments::new(Down, WrappedLine, true, 1),
+      SimpleMoveArguments(Down, WrappedLine, true, 1),
     ).as_core_editor_command(),
     "ArrowDown",
     shift=true,
@@ -852,7 +852,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorPageDown",
-      @view_model.SimpleMoveArguments::new(Down, WrappedLine, false, -1),
+      SimpleMoveArguments(Down, WrappedLine, false, -1),
     ).as_core_editor_command(),
     "PageDown",
     shift=false,
@@ -861,7 +861,7 @@ fn register_cursor_navigation_commands(
     registry,
     CursorMoveBasedCommand::new(
       "cursorPageDownSelect",
-      @view_model.SimpleMoveArguments::new(Down, WrappedLine, true, -1),
+      SimpleMoveArguments(Down, WrappedLine, true, -1),
     ).as_core_editor_command(),
     "PageDown",
     shift=true,
@@ -935,9 +935,7 @@ fn Viewer::run_cursor_move(
 ) -> Bool {
   guard self.get_view_model() is Some(view_model) else { return false }
   let changed = view_model.move_cursor_with_arguments(
-    @view_model.SimpleMoveArguments::new(
-      direction, unit, in_selection_mode, value,
-    ),
+    SimpleMoveArguments(direction, unit, in_selection_mode, value),
     source~,
     reason=Explicit,
   )

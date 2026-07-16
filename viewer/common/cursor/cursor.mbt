@@ -14,7 +14,8 @@ pub struct Cursor {
 
 ///|
 /// A fresh cursor collapsed at the document origin.
-pub fn Cursor::new() -> Cursor {
+#alias(new)
+pub fn Cursor::Cursor() -> Cursor {
   let origin = @base_common.Position::Position(1, 1)
   {
     model_state: SingleCursorState::collapsed(origin),
@@ -25,7 +26,7 @@ pub fn Cursor::new() -> Cursor {
 ///|
 /// Captures the model and view sides together.
 fn Cursor::as_cursor_state(self : Cursor) -> CursorState {
-  CursorState::new(self.model_state, self.view_state)
+  CursorState(self.model_state, self.view_state)
 }
 
 ///|
@@ -72,7 +73,7 @@ fn Cursor::set_view_state(
       view_state.selection_start_end.column,
     ),
   )
-  self.model_state = SingleCursorState::new(
+  self.model_state = SingleCursorState(
     Position(
       model_selection_start.start_line_number,
       model_selection_start.start_column,
@@ -100,7 +101,7 @@ pub fn Cursor::set_model_state(
   model_state : SingleCursorState,
 ) -> Unit {
   self.model_state = model_state
-  self.view_state = SingleCursorState::new(
+  self.view_state = SingleCursorState(
     context.model_to_view(model_state.selection_start_start),
     context.model_to_view(model_state.selection_start_end),
     model_state.selection_start_kind,

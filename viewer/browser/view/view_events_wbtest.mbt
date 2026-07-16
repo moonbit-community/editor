@@ -65,12 +65,12 @@ test "consumed payloads retain independent flags and array identity" {
   assert_eq(tokens.ranges[0].from_line_number, 4)
   assert_eq(tokens.ranges[0].to_line_number, 6)
 
-  let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
+  let selection = @core.Selection(Position(1, 1), Position(1, 1))
   let selections = [selection]
   let cursor = ViewCursorStateChangedEvent::ViewCursorStateChangedEvent(
     selections,
   )
-  selections.push(@core.Selection::new(Position(2, 1), Position(2, 1)))
+  selections.push(Selection(Position(2, 1), Position(2, 1)))
   assert_eq(cursor.selections.length(), 2)
 }
 
@@ -753,7 +753,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
   cursors.render_data = Some(prepare_cursor_render_data(10.0, 0, 18, 1.0))
   cursors.last_position = Some(Position(1, 1))
   cursors.last_rendered_position = Some(Position(1, 1))
-  let selection = @core.Selection::new(Position(1, 1), Position(1, 2))
+  let selection = @core.Selection(Position(1, 1), Position(1, 2))
   assert_true(
     view_cursors_on_view_event(
       cursors,
@@ -773,7 +773,7 @@ test "cursor state then focus uses new selection shape and focus returns false" 
     cursors.dom_node,
     "class",
   )
-  let moved_selection = @core.Selection::new(Position(2, 1), Position(2, 2))
+  let moved_selection = @core.Selection(Position(2, 1), Position(2, 2))
   assert_true(
     view_cursors_on_view_event(
       cursors,
@@ -1219,21 +1219,21 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
 ///|
 test "current-line predicate ignores same-line column moves but tracks emptiness" {
   let state = CurrentLineHighlightState::CurrentLineHighlightState()
-  let collapsed_line_3_column_1 = @core.Selection::new(
+  let collapsed_line_3_column_1 = @core.Selection(
     Position(3, 1),
     Position(3, 1),
   )
   assert_true(state.on_cursor_state_changed([collapsed_line_3_column_1]))
-  let collapsed_line_3_column_9 = @core.Selection::new(
+  let collapsed_line_3_column_9 = @core.Selection(
     Position(3, 9),
     Position(3, 9),
   )
   assert_false(state.on_cursor_state_changed([collapsed_line_3_column_9]))
   assert_true(state.selections[0] == collapsed_line_3_column_9)
-  let selected_on_line_3 = @core.Selection::new(Position(3, 2), Position(3, 9))
+  let selected_on_line_3 = @core.Selection(Position(3, 2), Position(3, 9))
   assert_true(state.on_cursor_state_changed([selected_on_line_3]))
   assert_false(state.selection_is_empty)
-  let collapsed_line_4 = @core.Selection::new(Position(4, 1), Position(4, 1))
+  let collapsed_line_4 = @core.Selection(Position(4, 1), Position(4, 1))
   assert_true(
     state.on_cursor_state_changed([
       collapsed_line_4, collapsed_line_3_column_9, collapsed_line_4,
@@ -1297,7 +1297,7 @@ fn view_event_test_overlay_render_context(
   view_lines : ViewLines,
   cursor_column : Int,
 ) -> (RenderingContext, RestrictedRenderingContext) {
-  let selection = @core.Selection::new(
+  let selection = @core.Selection(
     Position(1, cursor_column),
     Position(1, cursor_column),
   )
@@ -1362,7 +1362,7 @@ test "View renders text before prepare and completes all prepares before writes"
     "alpha",
   )
   let view_model = @view_model.ViewModel(model)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   layout.set_viewport_size(width=80.0, height=20.0) |> ignore
   layout.set_content_width(80.0) |> ignore
   let view = View::View()
@@ -1398,7 +1398,7 @@ test "View renders text before prepare and completes all prepares before writes"
     },
     model_position_to_view_position: position => position,
   }
-  let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
+  let selection = @core.Selection(Position(1, 1), Position(1, 1))
   let input : ViewRenderInput = {
     window: { start: 1, end: 2 },
     view_model,
@@ -1473,7 +1473,7 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
     "alpha",
   )
   let view_model = @view_model.ViewModel(model)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   layout.set_viewport_size(width=80.0, height=20.0) |> ignore
   layout.set_content_width(80.0) |> ignore
   let view = View::View()
@@ -1584,7 +1584,7 @@ test "grouped same-line cursor over-render retains caches and performs zero DOM 
   // emptiness are unchanged both return false in the pinned sources. The
   // grouped local handles intentionally still render; prove that bounded
   // overwork cannot replace a row or write any retained style/class.
-  let column_only = @core.Selection::new(Position(1, 2), Position(1, 2))
+  let column_only = @core.Selection(Position(1, 2), Position(1, 2))
   let cursor_event = view_event_test_cursor([column_only])
   content_handler.handle_view_events([cursor_event])
   margin_handler.handle_view_events([cursor_event])

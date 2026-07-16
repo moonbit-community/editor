@@ -23,7 +23,7 @@ test "view model produces viewport data from layout window" {
       #|[0, 18]
     ),
   )
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=3)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=3)
   layout.set_viewport_size(width=400.0, height=100.0) |> ignore
   layout.change_whitespace(accessor => {
     accessor.insert_whitespace(1, 0, 36.0, 0.0) |> ignore

@@ -86,7 +86,8 @@ pub struct ScrollState {
 } derive(Eq, Debug)
 
 ///|
-pub fn ScrollState::new(
+#alias(new)
+pub fn ScrollState::ScrollState(
   force_integer_values~ : Bool,
   width : Double,
   scroll_width : Double,
@@ -160,7 +161,7 @@ pub fn ScrollState::with_scroll_dimensions(
   update : ScrollDimensionsUpdate,
   use_raw_scroll_positions : Bool,
 ) -> ScrollState {
-  ScrollState::new(
+  ScrollState(
     force_integer_values=self.force_integer_values,
     option_or(update.width, self.width),
     option_or(update.scroll_width, self.scroll_width),
@@ -184,7 +185,7 @@ pub fn ScrollState::with_scroll_position(
   self : ScrollState,
   update : ScrollPositionUpdate,
 ) -> ScrollState {
-  ScrollState::new(
+  ScrollState(
     force_integer_values=self.force_integer_values,
     self.width,
     self.scroll_width,
@@ -257,7 +258,8 @@ pub struct SmoothScrollingUpdate {
 } derive(Eq, Debug)
 
 ///|
-pub fn SmoothScrollingUpdate::new(
+#alias(new)
+pub fn SmoothScrollingUpdate::SmoothScrollingUpdate(
   scroll_left : Double,
   scroll_top : Double,
   is_done : Bool,
@@ -278,7 +280,8 @@ pub struct SmoothScrollingOperation {
 }
 
 ///|
-pub fn SmoothScrollingOperation::new(
+#alias(new)
+pub fn SmoothScrollingOperation::SmoothScrollingOperation(
   from : SmoothScrollPosition,
   to : SmoothScrollPosition,
   start_time : Double,
@@ -405,7 +408,7 @@ pub fn SmoothScrollingOperation::start(
   now : Double,
 ) -> SmoothScrollingOperation {
   // Pretend the animation already started for a quicker response.
-  SmoothScrollingOperation::new(from, to, now - 10.0, duration + 10.0)
+  SmoothScrollingOperation(from, to, now - 10.0, duration + 10.0)
 }
 
 ///|
@@ -453,7 +456,8 @@ pub struct Scrollable {
 }
 
 ///|
-pub fn Scrollable::new(
+#alias(new)
+pub fn Scrollable::Scrollable(
   force_integer_values~ : Bool,
   smooth_scroll_duration? : Double = 0.0,
   schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
@@ -463,7 +467,7 @@ pub fn Scrollable::new(
     smooth_scroll_duration,
     schedule_at_next_animation_frame,
     now,
-    state: ScrollState::new(force_integer_values~, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    state: ScrollState(force_integer_values~, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
     smooth_scrolling: None,
     operation_generation: 0,
     on_scroll_emitter: Emitter(),
@@ -611,7 +615,7 @@ pub fn Scrollable::set_position_smooth(
         return
       }
       let new_operation = if reuse_animation {
-        SmoothScrollingOperation::new(
+        SmoothScrollingOperation(
           operation.from,
           valid_target,
           operation.start_time,
@@ -741,7 +745,8 @@ pub struct EditorScrollDimensions {
 } derive(Eq, Debug)
 
 ///|
-pub fn EditorScrollDimensions::new(
+#alias(new)
+pub fn EditorScrollDimensions::EditorScrollDimensions(
   width : Double,
   content_width : Double,
   height : Double,
@@ -778,19 +783,20 @@ pub struct EditorScrollable {
 }
 
 ///|
-pub fn EditorScrollable::new(
+#alias(new)
+pub fn EditorScrollable::EditorScrollable(
   smooth_scroll_duration : Double,
   schedule_at_next_animation_frame : (() -> Unit) -> @base_common.Disposable,
   now : () -> Double,
 ) -> EditorScrollable {
   {
-    scrollable: Scrollable::new(
+    scrollable: Scrollable(
       force_integer_values=true,
       smooth_scroll_duration~,
       schedule_at_next_animation_frame~,
       now~,
     ),
-    editor_dimensions: EditorScrollDimensions::new(0.0, 0.0, 0.0, 0.0),
+    editor_dimensions: EditorScrollDimensions(0.0, 0.0, 0.0, 0.0),
     content_size_emitter: Emitter(),
   }
 }

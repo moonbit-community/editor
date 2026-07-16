@@ -56,9 +56,10 @@ pub struct GuidesTextModelPart {
   indent_size : Int
   off_side : Bool
 }
+#alias(new)
+pub fn GuidesTextModelPart::GuidesTextModelPart(TextSnapshot, tab_size? : Int, indent_size? : Int, off_side? : Bool) -> Self
 pub fn GuidesTextModelPart::get_active_indent_guide(Self, Int, Int, Int) -> ActiveIndentGuideInfo
 pub fn GuidesTextModelPart::get_lines_indent_guides(Self, Int, Int) -> Array[Int]
-pub fn GuidesTextModelPart::new(TextSnapshot, tab_size? : Int, indent_size? : Int, off_side? : Bool) -> Self
 
 pub(all) struct InjectedTextOptions {
   content : String
@@ -91,9 +92,10 @@ pub(all) struct IntervalNode {
   mut range : @common.Range?
   // private fields
 }
+#alias(new)
+pub fn IntervalNode::IntervalNode(String, Int, Int) -> Self
 pub fn IntervalNode::detach(Self) -> Unit
 pub fn IntervalNode::left(Self) -> Self
-pub fn IntervalNode::new(String, Int, Int) -> Self
 pub fn IntervalNode::parent(Self) -> Self
 pub fn IntervalNode::reset(Self, Int, Int, Int, @common.Range?) -> Unit
 pub fn IntervalNode::right(Self) -> Self
@@ -105,13 +107,14 @@ pub struct IntervalTree {
   mut root : IntervalNode
   mut request_normalize_delta : Bool
 }
+#alias(new)
+pub fn IntervalTree::IntervalTree() -> Self
 pub fn IntervalTree::collect_nodes_from_owner(Self, Int) -> Array[IntervalNode]
 pub fn IntervalTree::collect_nodes_post_order(Self) -> Array[IntervalNode]
 pub fn IntervalTree::delete(Self, IntervalNode) -> Unit
 pub fn IntervalTree::get_all_in_order(Self) -> Array[IntervalNode]
 pub fn IntervalTree::insert(Self, IntervalNode) -> Unit
 pub fn IntervalTree::interval_search(Self, Int, Int, Int, Bool, Bool, Int, Bool) -> Array[IntervalNode]
-pub fn IntervalTree::new() -> Self
 pub fn IntervalTree::resolve_node(Self, IntervalNode, Int) -> Unit
 pub fn IntervalTree::search(Self, Int, Bool, Bool, Int, Bool) -> Array[IntervalNode]
 

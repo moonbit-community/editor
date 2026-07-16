@@ -14,7 +14,7 @@ fn insert_max_height_whitespaces(
 
 ///|
 test "LinesLayout accumulates ToInt32 whitespace heights as JavaScript numbers" {
-  let layout = LinesLayout::new(1, 10, 3, 4)
+  let layout = LinesLayout(1, 10, 3, 4)
   insert_max_height_whitespaces(layout, 0)
 
   assert_eq(layout.get_height_for_whitespace_index(0), 2147483647)
@@ -35,7 +35,7 @@ test "LinesLayout accumulates ToInt32 whitespace heights as JavaScript numbers" 
 
 ///|
 test "ViewLayout exposes uncoerced large line totals and offsets" {
-  let layout = ViewLayout::new(line_height=10, line_count=1)
+  let layout = ViewLayout(line_height=10, line_count=1)
   layout.change_whitespace(accessor => {
     accessor.insert_whitespace(0, 0, 2147483647.0, 0.0) |> ignore
     accessor.insert_whitespace(0, 1, 2147483647.0, 0.0) |> ignore
@@ -52,7 +52,7 @@ test "ViewLayout exposes uncoerced large line totals and offsets" {
 
 ///|
 test "LinesLayout preserves source ToInt32 points in search and viewport setup" {
-  let search_layout = LinesLayout::new(3, 10, 0, 0)
+  let search_layout = LinesLayout(3, 10, 0, 0)
   insert_max_height_whitespaces(search_layout, 0)
 
   // The line-2 top is 4294967304 before the source's `| 0`, and 8 after it.
@@ -72,7 +72,7 @@ test "LinesLayout preserves source ToInt32 points in search and viewport setup" 
 
   // Once viewport setup has applied its explicit coercions, loop accumulation
   // is ordinary JS-number addition and must not wrap back into the viewport.
-  let accumulation_layout = LinesLayout::new(2, 10, 0, 0)
+  let accumulation_layout = LinesLayout(2, 10, 0, 0)
   insert_max_height_whitespaces(accumulation_layout, 1)
   let accumulated_viewport = accumulation_layout.get_lines_viewport_data(0, 100)
   assert_eq(accumulated_viewport.start_line_number, 1)

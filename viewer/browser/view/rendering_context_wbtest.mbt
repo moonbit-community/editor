@@ -28,7 +28,7 @@ test "RenderingContext DOM facade returns null without rendered ViewLines" {
     "alpha",
   )
   let view_model = @view_model.ViewModel(model)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   layout.set_viewport_size(width=80.0, height=20.0) |> ignore
   let view = View::View()
   let (context, _restricted) = view_event_test_overlay_render_context(
@@ -55,7 +55,7 @@ test "RenderingContext snapshots current viewport and forwards includeViewZones"
     "a\nb\nc\nd\ne\nf\ng\nh\ni\nj",
   )
   let view_model = @view_model.ViewModel(model)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=10)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=10)
   layout.set_viewport_size(width=80.0, height=40.0) |> ignore
   layout.set_max_line_width(300.0) |> ignore
   layout.change_whitespace(accessor => {

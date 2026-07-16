@@ -768,7 +768,7 @@ fn inserted_tokens_from_injection_data(
   let inserts : Array[@tokens.InsertedToken] = []
   for index, options in injection_options {
     inserts.push(
-      @tokens.InsertedToken::new(
+      InsertedToken(
         injection_offsets[index],
         options.content,
         @tokens.LineTokens::default_token_metadata(),

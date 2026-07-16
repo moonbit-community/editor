@@ -2,7 +2,7 @@
 /// Hand-computed cases for the 10k-line fixture geometry: 600px viewport,
 /// 180000px content, 14px bar, no arrows, no paired bar.
 fn large_doc_bar() -> @view_layout.ScrollbarState {
-  let state = @view_layout.ScrollbarState::new(scrollbar_size=14.0)
+  let state = @view_layout.ScrollbarState(scrollbar_size=14.0)
   state.set_visible_size(600.0) |> ignore
   state.set_scroll_size(180000.0) |> ignore
   state
@@ -44,7 +44,7 @@ test "thumb drags and track jumps answer hand-computed positions" {
 
 ///|
 test "content inside the viewport needs no slider" {
-  let state = @view_layout.ScrollbarState::new(scrollbar_size=14.0)
+  let state = @view_layout.ScrollbarState(scrollbar_size=14.0)
   state.set_visible_size(600.0) |> ignore
   state.set_scroll_size(400.0) |> ignore
   assert_false(state.is_needed())
@@ -57,7 +57,7 @@ test "content inside the viewport needs no slider" {
 
 ///|
 test "a paired scrollbar and arrows shrink the track" {
-  let state = @view_layout.ScrollbarState::new(
+  let state = @view_layout.ScrollbarState(
     arrow_size=3.0,
     scrollbar_size=14.0,
     opposite_scrollbar_size=14.0,

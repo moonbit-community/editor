@@ -6,7 +6,7 @@ fn seed_lifecycle_marker(
   model : @model.TextModel,
 ) -> Unit {
   markers.change_one("lifecycle-owner", model.uri, [
-    @markers.MarkerData::new(
+    MarkerData(
       severity=Error,
       message="preloaded",
       start_line_number=1,
@@ -35,9 +35,9 @@ struct RootTestServiceBackings {
 fn RootTestServiceBackings::new() -> RootTestServiceBackings {
   let log_output = @log.MemoryLogger()
   let log_service = @log.LogService(level=Trace, logger=log_output)
-  let languages = @languages.Languages::new()
-  let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let languages = @languages.Languages()
+  let markers = @markers.MarkerService()
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   let agent_feedback = @agent_feedback.AgentFeedbackService::new()

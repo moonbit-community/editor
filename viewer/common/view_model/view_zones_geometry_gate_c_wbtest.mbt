@@ -14,7 +14,7 @@ fn geometry_carrier_model() -> @model.TextModel {
 test "viewport carrier keeps ToInt32 start then advances later offsets as Double" {
   let model = geometry_carrier_model()
   let view_model = ViewModel(model)
-  let layout = @view_layout.ViewLayout::new(line_height=10, line_count=2)
+  let layout = @view_layout.ViewLayout(line_height=10, line_count=2)
   layout.set_viewport_size(width=100.0, height=100.0) |> ignore
   layout.change_whitespace(accessor => {
     // Four maximum ToInt32 heights put line 1 at raw top 8589934588 (> 2^32),
@@ -43,7 +43,7 @@ test "viewport carrier keeps ToInt32 start then advances later offsets as Double
   let whitespace_top : Double = viewport.view_zones[0].vertical_offset
   assert_eq(whitespace_top, 0.0)
 
-  let rail = @view_layout.ViewLayout::new(line_height=18, line_count=2)
+  let rail = @view_layout.ViewLayout(line_height=18, line_count=2)
   rail.set_viewport_size(width=100.0, height=20.0) |> ignore
   rail.change_whitespace(accessor => {
     accessor.insert_whitespace(0, 0, 500000.0, 0.0) |> ignore

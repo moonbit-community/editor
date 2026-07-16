@@ -26,12 +26,12 @@ test "LineTokens raw UTF-16 token content preserves lone surrogate matrix" {
     "\u{FEFF}" +
     "A"
   let metadata = LineTokens::default_token_metadata()
-  let tokens = LineTokens::new(
+  let tokens = LineTokens(
     [
       1U, metadata, 2U, metadata, 3U, metadata, 4U, metadata, 5U, metadata, 6U, metadata,
     ],
     text,
-    @services.LanguageIdCodec::new(),
+    LanguageIdCodec(),
   )
   let expected = [0xD800, 0xDBFF, 0xDC00, 0xDFFF, 0xFEFF, 0x41]
   for index in 0..<expected.length() {
@@ -46,10 +46,10 @@ test "LineTokens raw UTF-16 token content preserves lone surrogate matrix" {
 test "LineTokens raw UTF-16 slices preserve both halves of a valid pair" {
   let pair = "\u{10000}"
   assert_utf16_units(pair, [0xD800, 0xDC00])
-  let tokens = LineTokens::new(
+  let tokens = LineTokens(
     [2U, LineTokens::default_token_metadata()],
     pair,
-    @services.LanguageIdCodec::new(),
+    LanguageIdCodec(),
   )
   let high = tokens.slice_and_inflate(0, 1, 0)
   assert_utf16_units(high.get_line_content(), [0xD800])
@@ -64,13 +64,13 @@ test "LineTokens raw UTF-16 slices preserve both halves of a valid pair" {
 ///|
 test "LineTokens withInserted accepts a valid-pair interior UTF-16 offset" {
   let pair = "\u{10000}"
-  let tokens = LineTokens::new(
+  let tokens = LineTokens(
     [2U, LineTokens::default_token_metadata()],
     pair,
-    @services.LanguageIdCodec::new(),
+    LanguageIdCodec(),
   )
   let inserted = tokens.with_inserted([
-    InsertedToken::new(1, "X", LineTokens::default_token_metadata()),
+    InsertedToken(1, "X", LineTokens::default_token_metadata()),
   ])
   assert_utf16_units(inserted.get_line_content(), [0xD800, 0x58, 0xDC00])
 }

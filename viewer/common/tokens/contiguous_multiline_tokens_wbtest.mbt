@@ -25,13 +25,13 @@ fn assert_line_range(
 
 ///|
 test "ContiguousMultilineTokensBuilder starts empty" {
-  let builder = ContiguousMultilineTokensBuilder::new()
+  let builder = ContiguousMultilineTokensBuilder()
   assert_eq(builder.finalize().length(), 0)
 }
 
 ///|
 test "ContiguousMultilineTokensBuilder add groups only exact successors" {
-  let builder = ContiguousMultilineTokensBuilder::new()
+  let builder = ContiguousMultilineTokensBuilder()
   builder.add(5, [1U, 11U])
   builder.add(6, [2U, 12U])
   builder.add(8, [3U, 13U])
@@ -51,7 +51,7 @@ test "ContiguousMultilineTokensBuilder add groups only exact successors" {
 
 ///|
 test "ContiguousMultilineTokens retains order and append extends inclusive end" {
-  let batch = ContiguousMultilineTokens::new(10, [[1U, 21U], [2U, 22U]])
+  let batch = ContiguousMultilineTokens(10, [[1U, 21U], [2U, 22U]])
   assert_eq(batch.start_line_number(), 10)
   assert_eq(batch.end_line_number(), 11)
   assert_line_range(batch.get_line_range(), 10, 12)

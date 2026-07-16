@@ -49,9 +49,7 @@ fn TokenizerSyntaxTokenBackend::new_with_support_resolver(
     resolve_support,
     tokenizer: None,
     default_background_tokenizer: None,
-    tokens: @common_tokens.ContiguousTokensStore::new(
-      @services.language_id_codec,
-    ),
+    tokens: ContiguousTokensStore(@services.language_id_codec),
     attached_view_states: [],
     registry_subscription: None,
     attached_subscription: None,
@@ -278,7 +276,7 @@ fn TokenizerSyntaxTokenBackend::refresh_range(
   let line_count = self.model_state.snapshot.val.line_count()
   let clamped_start = start_line_number.max(1).min(line_count)
   let clamped_end = end_line_number.min(line_count)
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
+  let builder = @common_tokens.ContiguousMultilineTokensBuilder()
   let result = tokenizer.tokenize_heuristically(
     builder, clamped_start, clamped_end,
   )

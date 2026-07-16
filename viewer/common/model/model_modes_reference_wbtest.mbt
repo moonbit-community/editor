@@ -29,7 +29,7 @@ fn model_modes_force_tokenization(
   part : TokenizationTextModelPart,
   line_number : Int,
 ) -> Unit {
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
+  let builder = @common_tokens.ContiguousMultilineTokensBuilder()
   match part.backend.tokenizer {
     Some(tokenizer) => tokenizer.update_tokens_until_line(builder, line_number)
     None => ()

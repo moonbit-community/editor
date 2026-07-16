@@ -89,7 +89,8 @@ pub struct LanguageHandle {
 
 ///|
 /// Creates an isolated language registry.
-pub fn Languages::new() -> Languages {
+#alias(new)
+pub fn Languages::Languages() -> Languages {
   {
     hover_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
@@ -135,7 +136,7 @@ pub async fn LanguageHandle::hover_at(
 
 ///|
 /// Default process-wide language registry used by `ViewerServices::new()`.
-pub let languages : Languages = Languages::new()
+pub let languages : Languages = Languages()
 
 ///|
 pub fn default_languages() -> Languages {

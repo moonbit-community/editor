@@ -31,7 +31,8 @@ pub struct SingleCursorState {
 
 ///|
 /// Builds a cursor state from an explicit anchor range and active position.
-pub fn SingleCursorState::new(
+#alias(new)
+pub fn SingleCursorState::SingleCursorState(
   selection_start_start : @base_common.Position,
   selection_start_end : @base_common.Position,
   selection_start_kind : SelectionStartKind,
@@ -54,7 +55,7 @@ pub fn SingleCursorState::new(
 pub fn SingleCursorState::collapsed(
   position : @base_common.Position,
 ) -> SingleCursorState {
-  SingleCursorState::new(position, position, Simple, position)
+  SingleCursorState(position, position, Simple, position)
 }
 
 ///|
@@ -76,9 +77,9 @@ pub fn SingleCursorState::selection(
 ) -> @core.Selection {
   if self.selection_start_is_empty() ||
     not_before_or_equal(self.position, self.selection_start_start) {
-    @core.Selection::new(self.selection_start_start, self.position)
+    Selection(self.selection_start_start, self.position)
   } else {
-    @core.Selection::new(self.selection_start_end, self.position)
+    Selection(self.selection_start_end, self.position)
   }
 }
 
@@ -102,7 +103,7 @@ pub fn SingleCursorState::moved(
   if in_selection_mode {
     { ..self, position, leftover_visible_columns }
   } else {
-    SingleCursorState::new(
+    SingleCursorState(
       position,
       position,
       Simple,

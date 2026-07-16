@@ -18,7 +18,7 @@ fn lifecycle_marker(
   start_column? : Int = 1,
   end_column? : Int = 2,
 ) -> MarkerData {
-  MarkerData::new(
+  MarkerData(
     severity=Error,
     message~,
     start_line_number=1,
@@ -30,10 +30,10 @@ fn lifecycle_marker(
 
 ///|
 test "preloaded markers seed once and same-identity leases refcount" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("inmemory", "/preload.mbt")
   markers.change_one("host", uri, [lifecycle_marker("preloaded")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "preload.mbt", "alpha")
   let changed : Array[Int] = []
   let changed_subscription = service.on_did_change_marker_decorations(m => {
@@ -70,7 +70,7 @@ test "preloaded markers seed once and same-identity leases refcount" {
   // Ordinary release never owns the host's diagnostics, even for a transient
   // URI. A later lease for the still-live identity re-seeds the same host data
   // in a fresh owner, without any historical watch or ordering entry.
-  assert_eq(markers.read(MarkerReadOptions::new(resource=uri)).length(), 1)
+  assert_eq(markers.read(MarkerReadOptions(resource=uri)).length(), 1)
   let reattached = service.acquire_model(model)
   assert_eq(model.get_all_decorations().length(), 1)
   assert_eq(service.model_registrations.length(), 1)
@@ -79,19 +79,19 @@ test "preloaded markers seed once and same-identity leases refcount" {
   // The final release removed the new model-dispose watch too, so later host
   // disposal is unseen and cannot run transient cleanup.
   model.dispose()
-  assert_eq(markers.read(MarkerReadOptions::new(resource=uri)).length(), 1)
+  assert_eq(markers.read(MarkerReadOptions(resource=uri)).length(), 1)
   changed_subscription.dispose()
   service.dispose()
 }
 
 ///|
 test "same-URI identities fan out and URI lookups preserve acquisition order" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/same-uri.mbt")
   markers.change_one("host", uri, [
     lifecycle_marker("first", start_column=3, end_column=3),
   ])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model_a = lifecycle_model(uri, "a.mbt", "alpha")
   let model_b = lifecycle_model(uri, "b.mbt", "x yz")
   let events : Array[Int] = []
@@ -151,10 +151,10 @@ test "same-URI identities fan out and URI lookups preserve acquisition order" {
 
 ///|
 test "model identities and decoration namespaces do not wrap after 52 models" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/many-same-uri.mbt")
   markers.change_one("host", uri, [lifecycle_marker("shared")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let models : Array[@model.TextModel] = []
   let leases : Array[@base_common.Disposable] = []
   for index = 0; index < 53; index = index + 1 {
@@ -190,10 +190,10 @@ test "model identities and decoration namespaces do not wrap after 52 models" {
 
 ///|
 test "set_value refreshes one owner once without acquiring another lease" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/set-value.mbt")
   markers.change_one("host", uri, [lifecycle_marker("stable")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "set-value.mbt", "before")
   let first = service.acquire_model(model)
   let second = service.acquire_model(model)
@@ -224,10 +224,10 @@ test "set_value refreshes one owner once without acquiring another lease" {
 
 ///|
 test "lease release disposes owner before deleting registration indexes" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/release-order.mbt")
   markers.change_one("host", uri, [lifecycle_marker("ordered")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "release-order.mbt", "alpha")
   let lease = service.acquire_model(model)
   let saw_source_order = Ref(false)
@@ -253,10 +253,10 @@ test "lease release disposes owner before deleting registration indexes" {
 
 ///|
 test "service disposal blocks reentrant marker and model ingress first" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/dispose-reentrant.mbt")
   markers.change_one("host", uri, [lifecycle_marker("before")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "dispose-reentrant.mbt", "before")
   let lease = service.acquire_model(model)
   let outward_events = Ref(0)
@@ -302,12 +302,12 @@ test "service disposal blocks reentrant marker and model ingress first" {
   assert_eq(service.model_registrations.length(), 0)
   assert_eq(service.model_ids_by_uri.length(), 0)
   assert_eq(model.get_all_decorations().length(), 0)
-  let stored = markers.read(MarkerReadOptions::new(resource=uri))
+  let stored = markers.read(MarkerReadOptions(resource=uri))
   assert_eq(stored.length(), 1)
   assert_eq(stored[0].message, "during-dispose")
   // The injected store remains usable and is never disposed by this service.
   markers.change_one("after", uri, [lifecycle_marker("after-dispose")])
-  assert_eq(markers.read(MarkerReadOptions::new(resource=uri)).length(), 2)
+  assert_eq(markers.read(MarkerReadOptions(resource=uri)).length(), 2)
   lease.dispose()
   outward_subscription.dispose()
   model_subscription.dispose()
@@ -315,10 +315,10 @@ test "service disposal blocks reentrant marker and model ingress first" {
 
 ///|
 test "reentrant marker updates drain after the active decoration delta" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("file", "/nested-update.mbt")
   markers.change_one("host", uri, [lifecycle_marker("before")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "nested-update.mbt", "alpha")
   let lease = service.acquire_model(model)
   let reentered = Ref(false)
@@ -360,10 +360,10 @@ fn assert_active_model_dispose_cleanup(
   scheme : String,
   cleans : Bool,
 ) -> Unit raise {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri(scheme, "/active-dispose.mbt")
   markers.change_one("host", uri, [lifecycle_marker("owned by host")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "active-dispose.mbt", "value")
   let lease = service.acquire_model(model)
   let saw_source_order = Ref(false)
@@ -380,7 +380,7 @@ fn assert_active_model_dispose_cleanup(
   assert_eq(service.model_registrations.length(), 0)
   assert_eq(service.model_ids_by_uri.length(), 0)
   assert_eq(
-    markers.read(MarkerReadOptions::new(resource=uri)).length(),
+    markers.read(MarkerReadOptions(resource=uri)).length(),
     if cleans {
       0
     } else {
@@ -402,20 +402,20 @@ test "only active transient ModelDisposed removes diagnostics" {
 
 ///|
 test "transient cleanup waits for the last same-URI identity" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = lifecycle_uri("inmemory", "/shared-transient.mbt")
   markers.change_one("host", uri, [lifecycle_marker("shared")])
-  let service = MarkerDecorationsService::new(markers.marker_service_handle())
+  let service = MarkerDecorationsService(markers.marker_service_handle())
   let model_a = lifecycle_model(uri, "a.mbt", "alpha")
   let model_b = lifecycle_model(uri, "b.mbt", "beta")
   let lease_a = service.acquire_model(model_a)
   let lease_b = service.acquire_model(model_b)
 
   model_a.dispose()
-  assert_eq(markers.read(MarkerReadOptions::new(resource=uri)).length(), 1)
+  assert_eq(markers.read(MarkerReadOptions(resource=uri)).length(), 1)
   assert_eq(service.get_live_markers_for_model(model_b).length(), 1)
   model_b.dispose()
-  assert_eq(markers.read(MarkerReadOptions::new(resource=uri)).length(), 0)
+  assert_eq(markers.read(MarkerReadOptions(resource=uri)).length(), 0)
   lease_a.dispose()
   lease_b.dispose()
   service.dispose()

@@ -43,7 +43,7 @@ priv struct CurrentLineHighlightState {
 /// `AbstractLineHighlightOverlay` constructor defaults before a live
 /// configuration reader is installed by the owning browser `View`.
 fn CurrentLineHighlightState::CurrentLineHighlightState() -> CurrentLineHighlightState {
-  let selection = @core.Selection::new(Position(1, 1), Position(1, 1))
+  let selection = @core.Selection(Position(1, 1), Position(1, 1))
   {
     render_line_highlight: Line,
     word_wrap: false,

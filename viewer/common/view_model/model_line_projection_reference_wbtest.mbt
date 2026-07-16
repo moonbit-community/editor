@@ -298,7 +298,7 @@ fn projection_injected_expected() -> Array[ProjectionExpectedLine] {
 ///|
 test "getViewLinesData - no wrapping" {
   let model = projection_reference_model("projection-reference-no-wrap")
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,
@@ -329,7 +329,7 @@ test "getViewLinesData - no wrapping" {
 ///|
 test "getViewLinesData - with wrapping" {
   let model = projection_reference_model("projection-reference-wrap")
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,
@@ -375,7 +375,7 @@ test "getViewLinesData - with wrapping and injected text" {
     },
   ])
   |> ignore
-  let lines = ViewModelLinesFromProjectedModel::new(
+  let lines = ViewModelLinesFromProjectedModel(
     model,
     font_info=@config.FontInfo::default(),
     tab_size=4,

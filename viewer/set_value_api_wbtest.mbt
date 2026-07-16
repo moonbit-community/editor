@@ -111,7 +111,7 @@ test "marker decorations re-seed after a flush (Track E)" {
   // Host diagnostics may predate attachment. Acquiring the model seeds them;
   // ordinary detach and set_value never clear the host-owned store.
   backings.markers.change_one("owner", model.uri, [
-    @markers.MarkerData::new(
+    MarkerData(
       severity=Error,
       message="broken",
       start_line_number=1,

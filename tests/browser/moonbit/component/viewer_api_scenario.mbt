@@ -84,10 +84,8 @@ fn run_viewer_api_test() -> Unit {
     Some(host) => {
       let log_service = @log.LogService()
       let log_handle = log_service.log_handle()
-      let languages = @languages.Languages::new()
-      let markers = @markers.MarkerService::new(
-        schedule=component_queue_microtask,
-      )
+      let languages = @languages.Languages()
+      let markers = @markers.MarkerService(schedule=component_queue_microtask)
       let services = @viewer.ViewerServices::new(
         languages=languages.language_handle(log_handle),
         markers=MarkerStore(markers.marker_service_handle()),

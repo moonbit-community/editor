@@ -29,12 +29,13 @@ pub struct CharacterMapping {
   length : Int
   entries : Array[CharacterMappingEntry]
 } derive(Eq, @debug.Debug)
+#alias(new)
+pub fn CharacterMapping::CharacterMapping(Int) -> Self
 pub fn CharacterMapping::column_horizontal_offset(Self, Int, space_width~ : Double) -> Double
 pub fn CharacterMapping::get_column(Self, DomPosition, Int) -> Int
 pub fn CharacterMapping::get_dom_position(Self, Int) -> DomPosition
 pub fn CharacterMapping::get_horizontal_offset(Self, Int) -> Int
 pub fn CharacterMapping::inflate(Self) -> Array[CharacterMappingEntry]
-pub fn CharacterMapping::new(Int) -> Self
 pub fn CharacterMapping::set_column_info(Self, Int, Int, Int, Int) -> Unit
 
 pub struct CharacterMappingEntry {
@@ -86,18 +87,20 @@ pub struct EditorScrollDimensions {
   content_height : Double
   scroll_height : Double
 } derive(Eq, @debug.Debug)
-pub fn EditorScrollDimensions::new(Double, Double, Double, Double) -> Self
+#alias(new)
+pub fn EditorScrollDimensions::EditorScrollDimensions(Double, Double, Double, Double) -> Self
 
 pub struct EditorScrollable {
   // private fields
 }
+#alias(new)
+pub fn EditorScrollable::EditorScrollable(Double, (() -> Unit) -> @common.Disposable, () -> Double) -> Self
 pub fn EditorScrollable::dimensions(Self) -> ScrollDimensions
 pub fn EditorScrollable::dispose(Self) -> Unit
 pub fn EditorScrollable::editor_dimensions(Self) -> EditorScrollDimensions
 pub fn EditorScrollable::future_position(Self) -> ScrollPosition
 pub fn EditorScrollable::get_scrollable(Self) -> Scrollable
 pub fn EditorScrollable::has_pending_scroll_animation(Self) -> Bool
-pub fn EditorScrollable::new(Double, (() -> Unit) -> @common.Disposable, () -> Double) -> Self
 pub fn EditorScrollable::on_did_content_size_change(Self, (ContentSizeChange) -> Unit) -> @common.Disposable
 pub fn EditorScrollable::on_did_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn EditorScrollable::position(Self) -> ScrollPosition
@@ -116,7 +119,8 @@ pub struct EditorWhitespace {
   min_width : Int
   mut prefix_sum : Double
 } derive(Eq, @debug.Debug)
-pub fn EditorWhitespace::new(String, Int, Int, Int, Int) -> Self
+#alias(new)
+pub fn EditorWhitespace::EditorWhitespace(String, Int, Int, Int, Int) -> Self
 
 pub(all) enum ForeignElementType {
   None
@@ -171,6 +175,8 @@ pub(all) struct LineWindow {
 pub struct LinesLayout {
   // private fields
 }
+#alias(new)
+pub fn LinesLayout::LinesLayout(Int, Int, Int, Int) -> Self
 pub fn LinesLayout::change_whitespace(Self, (WhitespaceChangeAccessor) -> Unit raise?) -> Bool raise?
 pub fn LinesLayout::find_insertion_index(Array[EditorWhitespace], Int, Int) -> Int
 pub fn LinesLayout::get_after_line_number_for_whitespace_index(Self, Int) -> Int
@@ -197,7 +203,6 @@ pub fn LinesLayout::has_whitespace(Self) -> Bool
 pub fn LinesLayout::is_after_lines(Self, Double) -> Bool
 pub fn LinesLayout::is_in_bottom_padding(Self, Double) -> Bool
 pub fn LinesLayout::is_in_top_padding(Self, Double) -> Bool
-pub fn LinesLayout::new(Int, Int, Int, Int) -> Self
 pub fn LinesLayout::on_flushed(Self, Int) -> Unit
 pub fn LinesLayout::on_lines_deleted(Self, Int, Int) -> Unit
 pub fn LinesLayout::on_lines_inserted(Self, Int, Int) -> Unit
@@ -341,20 +346,22 @@ pub struct ScrollState {
   scroll_height : Double
   scroll_top : Double
 } derive(Eq, @debug.Debug)
+#alias(new)
+pub fn ScrollState::ScrollState(force_integer_values~ : Bool, Double, Double, Double, Double, Double, Double) -> Self
 pub fn ScrollState::create_scroll_event(Self, Self, Bool) -> ScrollChange
 pub fn ScrollState::equals(Self, Self) -> Bool
-pub fn ScrollState::new(force_integer_values~ : Bool, Double, Double, Double, Double, Double, Double) -> Self
 pub fn ScrollState::with_scroll_dimensions(Self, ScrollDimensionsUpdate, Bool) -> Self
 pub fn ScrollState::with_scroll_position(Self, ScrollPositionUpdate) -> Self
 
 pub struct Scrollable {
   // private fields
 }
+#alias(new)
+pub fn Scrollable::Scrollable(force_integer_values~ : Bool, smooth_scroll_duration? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub fn Scrollable::dimensions(Self) -> ScrollDimensions
 pub fn Scrollable::dispose(Self) -> Unit
 pub fn Scrollable::future_position(Self) -> ScrollPosition
 pub fn Scrollable::has_pending_scroll_animation(Self) -> Bool
-pub fn Scrollable::new(force_integer_values~ : Bool, smooth_scroll_duration? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub fn Scrollable::on_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn Scrollable::position(Self) -> ScrollPosition
 pub fn Scrollable::scroll_by(Self, delta_left? : Double, delta_top? : Double) -> ScrollChange?
@@ -369,13 +376,14 @@ pub fn Scrollable::validate_scroll_position(Self, ScrollPositionUpdate) -> Scrol
 pub struct ScrollbarState {
   // private fields
 }
+#alias(new)
+pub fn ScrollbarState::ScrollbarState(arrow_size? : Double, scrollbar_size~ : Double, opposite_scrollbar_size? : Double) -> Self
 pub fn ScrollbarState::clone(Self) -> Self
 pub fn ScrollbarState::desired_position_from_delta(Self, Double) -> Double
 pub fn ScrollbarState::desired_position_from_offset(Self, Double) -> Double
 pub fn ScrollbarState::desired_position_from_offset_paged(Self, Double) -> Double
 pub fn ScrollbarState::desired_position_from_slider(Self, Double) -> Double
 pub fn ScrollbarState::is_needed(Self) -> Bool
-pub fn ScrollbarState::new(arrow_size? : Double, scrollbar_size~ : Double, opposite_scrollbar_size? : Double) -> Self
 pub fn ScrollbarState::rectangle_large_size(Self) -> Double
 pub fn ScrollbarState::rectangle_small_size(Self) -> Double
 pub fn ScrollbarState::scroll_position(Self) -> Double
@@ -401,10 +409,11 @@ pub struct SmoothScrollingOperation {
   mut scroll_left_animation : (Double) -> Double
   mut scroll_top_animation : (Double) -> Double
 }
+#alias(new)
+pub fn SmoothScrollingOperation::SmoothScrollingOperation(SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
 pub fn SmoothScrollingOperation::accept_scroll_dimensions(Self, ScrollState) -> Unit
 pub fn SmoothScrollingOperation::combine(Self, SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
 pub fn SmoothScrollingOperation::dispose(Self) -> Unit
-pub fn SmoothScrollingOperation::new(SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
 pub fn SmoothScrollingOperation::start(SmoothScrollPosition, SmoothScrollPosition, Double, Double) -> Self
 pub fn SmoothScrollingOperation::tick_at(Self, Double) -> SmoothScrollingUpdate
 
@@ -413,7 +422,8 @@ pub struct SmoothScrollingUpdate {
   scroll_top : Double
   is_done : Bool
 } derive(Eq, @debug.Debug)
-pub fn SmoothScrollingUpdate::new(Double, Double, Bool) -> Self
+#alias(new)
+pub fn SmoothScrollingUpdate::SmoothScrollingUpdate(Double, Double, Bool) -> Self
 
 pub(all) enum TextDirection {
   LTR
@@ -434,6 +444,8 @@ pub struct ViewLayout {
   scrollable : EditorScrollable
   // private fields
 }
+#alias(new)
+pub fn ViewLayout::ViewLayout(line_height~ : Int, line_count? : Int, smooth_scrolling? : Bool, is_viewport_wrapping? : Bool, vertical_scrollbar_width? : Double, horizontal_scrollbar_height? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub fn ViewLayout::big_numbers_delta_for_window(Self, LineWindow) -> Int
 pub fn ViewLayout::change_whitespace(Self, (WhitespaceChangeAccessor) -> Unit raise?) -> Bool raise?
 pub fn ViewLayout::completely_visible_line_range(Self) -> (Int, Int)
@@ -467,7 +479,6 @@ pub fn ViewLayout::is_in_top_padding(Self, Double) -> Bool
 pub fn ViewLayout::line_at_vertical_offset(Self, Double) -> Int
 pub fn ViewLayout::line_count(Self) -> Int
 pub fn ViewLayout::line_height(Self) -> Int
-pub fn ViewLayout::new(line_height~ : Int, line_count? : Int, smooth_scrolling? : Bool, is_viewport_wrapping? : Bool, vertical_scrollbar_width? : Double, horizontal_scrollbar_height? : Double, schedule_at_next_animation_frame? : (() -> Unit) -> @common.Disposable, now? : () -> Double) -> Self
 pub fn ViewLayout::on_did_content_size_change(Self, (ContentSizeChange) -> Unit) -> @common.Disposable
 pub fn ViewLayout::on_did_scroll(Self, (ScrollChange) -> Unit) -> @common.Disposable
 pub fn ViewLayout::on_flushed(Self, Int) -> Unit

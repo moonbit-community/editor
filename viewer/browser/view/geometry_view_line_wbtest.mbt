@@ -57,7 +57,7 @@ fn mapped_fixture_line(
   fixture : ViewLineFixture,
   mapping_length : Int,
 ) -> ViewLine {
-  let mapping = @view_layout.CharacterMapping::new(mapping_length)
+  let mapping = @view_layout.CharacterMapping(mapping_length)
   for column in 1..<=mapping_length {
     mapping.set_column_info(column, 0, column - 1, column - 1)
   }

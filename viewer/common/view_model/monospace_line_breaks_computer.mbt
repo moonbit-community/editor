@@ -92,7 +92,8 @@ pub struct MonospaceLineBreaksComputerFactory {
 }
 
 ///|
-pub fn MonospaceLineBreaksComputerFactory::new(
+#alias(new)
+pub fn MonospaceLineBreaksComputerFactory::MonospaceLineBreaksComputerFactory(
   break_before_chars : String,
   break_after_chars : String,
 ) -> MonospaceLineBreaksComputerFactory {
@@ -107,7 +108,7 @@ pub fn MonospaceLineBreaksComputerFactory::new(
 /// Monaco `MonospaceLineBreaksComputerFactory.create`, over the
 /// `wordWrapBreakBeforeCharacters`/`wordWrapBreakAfterCharacters` defaults.
 pub fn MonospaceLineBreaksComputerFactory::create() -> MonospaceLineBreaksComputerFactory {
-  MonospaceLineBreaksComputerFactory::new(
+  MonospaceLineBreaksComputerFactory(
     word_wrap_break_before_characters, word_wrap_break_after_characters,
   )
 }

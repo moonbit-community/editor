@@ -22,7 +22,7 @@ pub fn line_tokens_from_lexer_tokens(
 ) -> @common_tokens.LineTokens {
   let words = encode_raw_start_offsets(tokens, line_text.length(), language_id~)
   start_offsets_to_end_offsets(words, line_text.length())
-  @common_tokens.LineTokens::new(words, line_text, decoder)
+  LineTokens(words, line_text, decoder)
 }
 
 ///|

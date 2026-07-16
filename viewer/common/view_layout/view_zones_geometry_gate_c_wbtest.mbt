@@ -1,6 +1,6 @@
 ///|
 fn view_layout_with_min_width(min_width : Double) -> ViewLayout {
-  let layout = ViewLayout::new(
+  let layout = ViewLayout(
     line_height=10,
     line_count=5,
     vertical_scrollbar_width=14.0,
@@ -33,7 +33,7 @@ test "ViewLayout whitespace min width covers below equal above content and scrol
 
 ///|
 fn rail_layout(offset : Int) -> ViewLayout {
-  let layout = ViewLayout::new(line_height=18, line_count=3)
+  let layout = ViewLayout(line_height=18, line_count=3)
   layout.set_viewport_size(width=100.0, height=1.0) |> ignore
   layout.change_whitespace(accessor => {
     accessor.insert_whitespace(0, 0, offset.to_double(), 0.0) |> ignore

@@ -39,7 +39,7 @@ pub fn Viewer::set_position(
   position : @base_common.Position,
   source? : String = "api",
 ) -> Unit {
-  self.apply_selection(@core.Selection::new(position, position), source, NotSet)
+  self.apply_selection(Selection(position, position), source, NotSet)
 }
 
 ///|

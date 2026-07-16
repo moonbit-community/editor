@@ -38,7 +38,7 @@ fn assert_indent_guides(
     sb.write_string(l.4)
   }
   let snapshot = TextSnapshot::TextSnapshot(sb.to_string())
-  let guides = GuidesTextModelPart::new(
+  let guides = @model.GuidesTextModelPart(
     snapshot,
     tab_size=4,
     indent_size~,
@@ -271,7 +271,7 @@ test "issue #49173" {
       "\t}", "}",
     ] : Array[String]).join("\n")
   let snapshot = TextSnapshot::TextSnapshot(text)
-  let guides = GuidesTextModelPart::new(snapshot, tab_size=4, indent_size=4)
+  let guides = @model.GuidesTextModelPart(snapshot, tab_size=4, indent_size=4)
   let actual = guides.get_active_indent_guide(2, 4, 9)
   assert_eq(actual.start_line_number, 2)
   assert_eq(actual.end_line_number, 9)

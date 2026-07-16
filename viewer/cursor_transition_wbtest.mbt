@@ -24,7 +24,7 @@ test "set_selections without a model is an event-free no-op" {
   let mut selections = 0
   viewer.on_did_change_cursor_position(_ => positions += 1) |> ignore
   viewer.on_did_change_cursor_selection(_ => selections += 1) |> ignore
-  viewer.set_selections([@core.Selection::new(Position(1, 1), Position(1, 1))])
+  viewer.set_selections([Selection(Position(1, 1), Position(1, 1))])
   assert_true(viewer.get_position() is None)
   assert_true(viewer.get_selection() is None)
   assert_eq(positions, 0)
@@ -62,10 +62,7 @@ test "cursor transition metadata uses internal model version for api keyboard an
   guard api.old_selections is Some(old) else {
     fail("ordinary API transition must retain old selections")
   }
-  assert_selection_eq(
-    old[0],
-    @core.Selection::new(Position(1, 1), Position(1, 1)),
-  )
+  assert_selection_eq(old[0], Selection(Position(1, 1), Position(1, 1)))
 
   viewer.dispatch_mouse(reference_mouse_data(Position(2, 2)))
   let mouse = selections[selections.length() - 1]
@@ -113,7 +110,7 @@ test "cursor transition fires position before selection after view state commit"
         )
     })
     |> ignore
-    viewer.set_selection(@core.Selection::new(Position(1, 2), Position(2, 3)))
+    viewer.set_selection(Selection(Position(1, 2), Position(2, 3)))
     assert_true(order == ["position", "selection"])
     assert_true(position_committed)
     assert_true(selection_committed)
@@ -494,8 +491,8 @@ test "set_selections keeps primary and forwards public source reason with empty 
     |> ignore
     viewer.set_selections(
       [
-        @core.Selection::new(Position(2, 2), Position(2, 3)),
-        @core.Selection::new(Position(1, 1), Position(1, 2)),
+        Selection(Position(2, 2), Position(2, 3)),
+        Selection(Position(1, 1), Position(1, 2)),
       ],
       source="selection-api",
       reason=Undo,
@@ -510,7 +507,7 @@ test "set_selections keeps primary and forwards public source reason with empty 
     assert_true(selections[0].reason == Undo)
     assert_selection_eq(
       selections[0].selection,
-      @core.Selection::new(Position(2, 2), Position(2, 3)),
+      Selection(Position(2, 2), Position(2, 3)),
     )
   })
 }
@@ -523,7 +520,7 @@ test "public ContentFlush reason does not open a model-content delivery barrier"
     viewer.on_did_change_cursor_selection(_ => order.push("selection"))
     |> ignore
     viewer.set_selections(
-      [@core.Selection::new(Position(2, 1), Position(2, 2))],
+      [Selection(Position(2, 1), Position(2, 2))],
       source="api-with-flush-reason",
       reason=ContentFlush,
     )

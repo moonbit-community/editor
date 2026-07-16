@@ -278,7 +278,12 @@ fn IntervalNode::set_right(self : IntervalNode, v : IntervalNode) -> Unit {
 
 ///|
 /// `IntervalNode` constructor (`intervalTree.ts:166-195`).
-pub fn IntervalNode::new(id : String, start : Int, end : Int) -> IntervalNode {
+#alias(new)
+pub fn IntervalNode::IntervalNode(
+  id : String,
+  start : Int,
+  end : Int,
+) -> IntervalNode {
   let node : IntervalNode = {
     identity: next_interval_node_identity(),
     metadata: 0,
@@ -397,7 +402,7 @@ pub let sentinel : IntervalNode = init_sentinel()
 
 ///|
 fn init_sentinel() -> IntervalNode {
-  let node = IntervalNode::new("", 0, 0)
+  let node = IntervalNode("", 0, 0)
   set_node_color(node, Black)
   node
 }
@@ -410,7 +415,8 @@ pub struct IntervalTree {
 }
 
 ///|
-pub fn IntervalTree::new() -> IntervalTree {
+#alias(new)
+pub fn IntervalTree::IntervalTree() -> IntervalTree {
   { root: sentinel, request_normalize_delta: false }
 }
 

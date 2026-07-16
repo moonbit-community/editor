@@ -739,7 +739,7 @@ fn DefaultBackgroundTokenizer::background_tokenize_for_at_least_1ms(
   self : DefaultBackgroundTokenizer,
 ) -> Unit {
   let line_count = self.tokenizer_with_state_store.model_state.snapshot.val.line_count()
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
+  let builder = @common_tokens.ContiguousMultilineTokensBuilder()
   let started = match
     self.tokenizer_with_state_store.model_state.scheduler.val {
     Some(scheduler) => scheduler.now()

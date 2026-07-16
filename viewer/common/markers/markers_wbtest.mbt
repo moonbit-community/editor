@@ -2,7 +2,7 @@
 /// Builds error marker input matching Monaco's `randomMarkerData` shape
 /// (line/col all 1), with a deterministic message.
 fn marker_data(severity : MarkerSeverity, message : String) -> MarkerData {
-  MarkerData::new(
+  MarkerData(
     severity~,
     message~,
     start_line_number=1,
@@ -14,7 +14,7 @@ fn marker_data(severity : MarkerSeverity, message : String) -> MarkerData {
 
 ///|
 test "marker decorations expose squiggles and marker hover lookup" {
-  let markers = MarkerService::new()
+  let markers = MarkerService()
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -31,9 +31,7 @@ test "marker decorations expose squiggles and marker hover lookup" {
       tags: None,
     },
   ])
-  let decorations = MarkerDecorationsService::new(
-    markers.marker_service_handle(),
-  )
+  let decorations = MarkerDecorationsService(markers.marker_service_handle())
   decorations.on_model_added(model)
   // Squiggles now live in the model's decoration storage.
   let stored = model.get_all_decorations()
@@ -50,7 +48,7 @@ test "marker decorations expose squiggles and marker hover lookup" {
 
 ///|
 test "marker service replaces owner resource and supports limits" {
-  let service = MarkerService::new()
+  let service = MarkerService()
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -128,7 +126,7 @@ test "MarkerData sanitize clamps line/column and drops empty message" {
   // empty message dropped (markerService.ts:238)
   assert_true(marker_data(Error, "").to_marker("o", uri) is None)
   // start/end clamping (markerService.ts:243-246)
-  let raw = MarkerData::new(
+  let raw = MarkerData(
     severity=Error,
     message="m",
     start_line_number=0,

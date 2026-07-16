@@ -103,7 +103,7 @@ fn run_cursor_input_events_test() -> Unit {
     "cursor-input-rev-1",
     cursor_input_source(),
   )
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), CursorInputHoverProvider::{
 
   })
@@ -159,7 +159,7 @@ fn run_cursor_input_events_test() -> Unit {
     }
     let committed = viewer
       .get_selection()
-      .unwrap_or(@core.Selection::new(Position(-1, -1), Position(-1, -1)))
+      .unwrap_or(Selection(Position(-1, -1), Position(-1, -1)))
     let committed_anchor = committed.get_selection_start()
     let committed_active = committed.get_position()
     record_cursor_selection_event(
@@ -192,7 +192,7 @@ fn run_cursor_input_events_test() -> Unit {
     (line, column) => viewer.set_position(Position(line, column)),
     (anchor_line, anchor_column, active_line, active_column) => {
       viewer.set_selection(
-        @core.Selection::new(
+        Selection(
           Position(anchor_line, anchor_column),
           Position(active_line, active_column),
         ),

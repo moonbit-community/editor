@@ -45,7 +45,7 @@ test "SimpleMoveDirection and Unit retain their exact source member contracts" {
   assert_eq(simple_directions.length(), 11)
   assert_eq(directions.length(), 15)
   assert_eq(units.length(), 6)
-  let arguments = SimpleMoveArguments::new(Left, WrappedLine, true, 3)
+  let arguments = SimpleMoveArguments(Left, WrappedLine, true, 3)
   assert_true(arguments.direction == Left)
   assert_true(arguments.unit == WrappedLine)
   assert_true(arguments.select)

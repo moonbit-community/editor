@@ -174,7 +174,7 @@ test "stationary multi-line reveal retains a pending browser request" {
 
 ///|
 test "vertical reveal resets an in-flight horizontal animation target" {
-  let layout = @view_layout.ViewLayout::new(
+  let layout = @view_layout.ViewLayout(
     line_height=18,
     line_count=200,
     smooth_scrolling=true,

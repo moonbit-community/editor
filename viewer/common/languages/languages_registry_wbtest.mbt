@@ -18,7 +18,7 @@ fn test_model() -> @model.TextModel {
 async test "provider failures are logged and isolated" {
   let memory = @log.MemoryLogger()
   let log_service = @log.LogService(logger=memory)
-  let languages = Languages::new()
+  let languages = Languages()
   languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
 
   })
@@ -39,7 +39,7 @@ async test "provider failures are logged and isolated" {
 ///|
 async test "language handle prebinds logging and forwards the exact capability" {
   let memory = @log.MemoryLogger()
-  let languages = Languages::new()
+  let languages = Languages()
   languages.set_language_configuration("moonbit", {
     folding_rules: Some({ off_side: true, markers: None }),
   })
@@ -66,7 +66,7 @@ async test "language handle prebinds logging and forwards the exact capability" 
 
 ///|
 test "token providers dispose only the active registration" {
-  let languages = Languages::new()
+  let languages = Languages()
   let first = languages.set_tokens_provider(
     "toy-dispose",
     @syntax.PlainTokenizer(),
@@ -83,7 +83,7 @@ test "token providers dispose only the active registration" {
 
 ///|
 async test "language provider registrations preserve order after disposal" {
-  let languages = Languages::new()
+  let languages = Languages()
   let first = languages.register_hover_provider(LanguageId("moonbit"), NamedHoverProvider::{
     text: "first",
   })

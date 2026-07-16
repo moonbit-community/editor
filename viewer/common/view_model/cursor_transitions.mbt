@@ -51,7 +51,7 @@ fn ViewModel::validate_view_cursor_state(
     valid_end == state.selection_start_end {
     return state
   }
-  @cursor.SingleCursorState::new(
+  SingleCursorState(
     valid_start,
     valid_end,
     state.selection_start_kind,

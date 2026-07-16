@@ -1,6 +1,6 @@
 ///|
 test "scrollable clamps positions inside its dimensions" {
-  let scrollable = @view_layout.Scrollable::new(force_integer_values=false)
+  let scrollable = @view_layout.Scrollable(force_integer_values=false)
   // Without dimensions the validated position clamps to the origin, while
   // Monaco retains the changed raw request and therefore emits an event.
   assert_true(
@@ -43,7 +43,7 @@ test "scrollable clamps positions inside its dimensions" {
 
 ///|
 test "shrinking dimensions re-clamps the position as one change fact" {
-  let scrollable = @view_layout.Scrollable::new(force_integer_values=false)
+  let scrollable = @view_layout.Scrollable(force_integer_values=false)
   scrollable.set_dimensions({
     width: 100.0,
     scroll_width: 100.0,
@@ -84,7 +84,7 @@ test "shrinking dimensions re-clamps the position as one change fact" {
 /// (the editor's configuration): raw dimensions and positions truncate toward
 /// zero before clamping, so scroll truth is always whole pixels.
 test "force_integer_values truncates dimensions and positions" {
-  let scrollable = @view_layout.Scrollable::new(force_integer_values=true)
+  let scrollable = @view_layout.Scrollable(force_integer_values=true)
   scrollable.set_dimensions({
     width: 800.4,
     scroll_width: 1000.9,
@@ -122,7 +122,7 @@ test "force_integer_values truncates dimensions and positions" {
 /// (over the faithful 1-based `LinesLayout`); this is the regression net that
 /// confirms the migration preserved that behavior.
 test "lines layout answers offsets and lines for uniform heights" {
-  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=100)
+  let lines = @view_layout.ViewLayout(line_height=18, line_count=100)
   assert_eq(lines.vertical_offset_for_line(1), 0.0)
   assert_eq(lines.vertical_offset_for_line(11), 180.0)
   // One past the end probes the bottom edge; beyond clamps.
@@ -133,14 +133,14 @@ test "lines layout answers offsets and lines for uniform heights" {
   assert_eq(lines.line_at_vertical_offset(18.0), 2)
   assert_eq(lines.line_at_vertical_offset(99999.0), 100)
   assert_eq(lines.get_content_height(), 1800.0)
-  let empty = @view_layout.ViewLayout::new(line_height=18)
+  let empty = @view_layout.ViewLayout(line_height=18)
   assert_eq(empty.line_at_vertical_offset(50.0), 1)
   assert_eq(empty.get_content_height(), 0.0)
 }
 
 ///|
 test "lines layout accounts for view zone displacement" {
-  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=5)
+  let lines = @view_layout.ViewLayout(line_height=18, line_count=5)
   let ids : Array[String] = []
   lines.change_whitespace(accessor => {
     ids.push(accessor.insert_whitespace(1, 0, 36.0, 0.0))
@@ -169,7 +169,7 @@ test "lines layout accounts for view zone displacement" {
 
 ///|
 test "lines layout supports top and bottom view zones" {
-  let lines = @view_layout.ViewLayout::new(line_height=18, line_count=3)
+  let lines = @view_layout.ViewLayout(line_height=18, line_count=3)
   lines.set_viewport_size(width=100.0, height=84.0) |> ignore
   lines.change_whitespace(accessor => {
     accessor.insert_whitespace(0, 0, 10.0, 0.0) |> ignore
@@ -202,7 +202,7 @@ test "lines layout supports top and bottom view zones" {
 /// intersecting `[scrollTop, scrollTop + height)`, partial edge lines
 /// included, no overscan.
 test "view layout window is exactly the viewport lines" {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   // 600px / 18px = 33.3 line heights: 34 lines intersect the viewport.
   debug_inspect(
@@ -227,7 +227,7 @@ test "view layout window is exactly the viewport lines" {
     ),
   )
   // Tiny documents render entirely.
-  let tiny = @view_layout.ViewLayout::new(line_height=18, line_count=10)
+  let tiny = @view_layout.ViewLayout(line_height=18, line_count=10)
   tiny.set_viewport_size(width=800.0, height=600.0) |> ignore
   debug_inspect(
     tiny.visible_window(),
@@ -241,7 +241,7 @@ test "view layout window is exactly the viewport lines" {
 /// Every full-line scroll shifts the window immediately (no hysteresis);
 /// a sub-line scroll inside the same band keeps it.
 test "view layout window tracks every scroll" {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   layout.scroll_to(scroll_top=9000.0) |> ignore
   debug_inspect(
@@ -269,7 +269,7 @@ test "view layout window tracks every scroll" {
 
 ///|
 test "view layout windows and dimensions account for view zones" {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=20)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=20)
   layout.set_viewport_size(width=200.0, height=54.0) |> ignore
   layout.change_whitespace(accessor => {
     accessor.insert_whitespace(1, 0, 36.0, 0.0) |> ignore
@@ -299,7 +299,7 @@ test "view layout windows and dimensions account for view zones" {
 
 ///|
 test "view layout derives scroll dimensions from document and viewport" {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=10000)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=10000)
   layout.set_viewport_size(width=800.0, height=600.0) |> ignore
   debug_inspect(
     layout.dimensions(),

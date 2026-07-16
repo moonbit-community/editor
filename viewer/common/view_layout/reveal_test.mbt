@@ -5,7 +5,7 @@
 /// `vertical_offset_for_line(n) == (n - 1) * 18`, so every expectation below is
 /// hand-computable.
 fn reveal_layout() -> @view_layout.ViewLayout {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=1000)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=1000)
   layout.set_viewport_size(width=800.0, height=180.0) |> ignore
   layout.scroll_to(scroll_top=360.0) |> ignore
   layout
@@ -135,7 +135,7 @@ test "reveal NearTop near the document top yields an unclamped offset" {
 /// scrolling has room. Viewport width 800, vertical scrollbar 14 ⇒
 /// `viewport_end_x = scroll_left + 800 - 14`.
 fn horizontal_layout() -> @view_layout.ViewLayout {
-  let layout = @view_layout.ViewLayout::new(line_height=18, line_count=1000)
+  let layout = @view_layout.ViewLayout(line_height=18, line_count=1000)
   layout.set_viewport_size(width=800.0, height=180.0) |> ignore
   layout.set_content_width(2000.0) |> ignore
   layout

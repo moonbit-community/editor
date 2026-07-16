@@ -115,7 +115,7 @@ fn run_render_invalidation_test() -> Unit {
     "render-invalidation-rev-1",
     render_invalidation_source(),
   )
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), RenderInvalidationHoverProvider::{
 
   })

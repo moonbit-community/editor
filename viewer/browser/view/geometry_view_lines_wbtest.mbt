@@ -115,7 +115,7 @@ test "LastRenderedData initializes and replaces the exact visible Range" {
 ///|
 test "ViewLines configuration resets widths from exact event bits" {
   let fixture = new_view_line_fixture(10.0, 10.0)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   let view_lines = geometry_view_lines(
     [],
     { start: 1, end: 1 },
@@ -153,7 +153,7 @@ test "ViewLines raw multi-line query intersects rounds and adds only model newli
     second_fixture,
     second_input.line_content.length() + 1,
   )
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=2)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let view_lines = geometry_view_lines(
     [first, second],
     { start: 1, end: 3 },
@@ -207,7 +207,7 @@ test "ViewLines newline width skips wraps and shifts RTL left" {
     tail_fixture,
     tail_input.line_content.length() + 1,
   )
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=2)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let wrapped = geometry_view_lines(
     [wrapped_line, tail],
     { start: 1, end: 3 },
@@ -260,7 +260,7 @@ test "ViewLines converter progression covers first middle final and partial wind
   let first = mapped_fixture_line(input, first_fixture, 3)
   let middle = mapped_fixture_line(input, middle_fixture, 3)
   let last_line = mapped_fixture_line(input, final_fixture, 3)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=3)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=3)
   let view_lines = geometry_view_lines(
     [first, middle, last_line],
     { start: 1, end: 4 },
@@ -342,7 +342,7 @@ test "ViewLines width sweep preserves one ceil monotonic and full-document reset
   let second_input = geometry_line_input("b")
   let first = mapped_fixture_line(first_input, first_fixture, 2)
   let second = mapped_fixture_line(second_input, second_fixture, 2)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=2)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let view_lines = geometry_view_lines(
     [first, second],
     { start: 1, end: 3 },
@@ -416,7 +416,7 @@ test "ViewLines 200ms scheduler guards and cancel-before-slow ordering" {
   let fixture = new_view_line_fixture(12.0, 10.0)
   let input = geometry_line_input("a")
   let line = mapped_fixture_line(input, fixture, 2)
-  let layout = @view_layout.ViewLayout::new(line_height=20, line_count=1)
+  let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   let view_lines = geometry_view_lines(
     [line],
     { start: 1, end: 2 },

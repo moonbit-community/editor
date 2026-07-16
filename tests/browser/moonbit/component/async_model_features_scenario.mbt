@@ -289,7 +289,7 @@ fn run_async_model_features_test() -> Unit {
   guard mount_async_feature_host() is Some(host) else { return }
   let harness = AsyncFeatureHarness::new()
   let provider = DeferredAsyncFeatureProvider::{ harness, }
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("moonbit"), provider) |> ignore
   let log_service = @log.LogService()
   let log_handle = log_service.log_handle()

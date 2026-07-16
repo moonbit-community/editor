@@ -9,11 +9,7 @@ test "encoder fills gaps and trailing text with default metadata" {
     { start: 0, end: 3, tag: Keyword },
     { start: 8, end: 9, tag: Number },
   ]
-  let lt = line_tokens_from_lexer_tokens(
-    line,
-    tokens,
-    @services.LanguageIdCodec::new(),
-  )
+  let lt = line_tokens_from_lexer_tokens(line, tokens, LanguageIdCodec())
   assert_eq(lt.get_line_content(), line)
   assert_eq(lt.get_count(), 3)
   // "let" | " x = " (gap) | "1"
@@ -27,11 +23,7 @@ test "encoder fills gaps and trailing text with default metadata" {
 
 ///|
 test "empty line encodes to a single zero-length default token" {
-  let lt = line_tokens_from_lexer_tokens(
-    "",
-    [],
-    @services.LanguageIdCodec::new(),
-  )
+  let lt = line_tokens_from_lexer_tokens("", [], LanguageIdCodec())
   assert_eq(lt.get_line_content(), "")
   assert_eq(lt.get_count(), 1)
   assert_eq(lt.get_end_offset(0), 0)
@@ -42,7 +34,7 @@ test "tokens past the line end clamp to the line" {
   let lt = line_tokens_from_lexer_tokens(
     "ab",
     [{ start: 0, end: 5, tag: Keyword }],
-    @services.LanguageIdCodec::new(),
+    LanguageIdCodec(),
   )
   assert_eq(lt.get_line_content(), "ab")
   assert_eq(lt.get_count(), 1)
@@ -74,11 +66,7 @@ test "raw UTF16 encoder preserves lone surrogates pair halves FEFF and BMP bound
     assert_eq(words[0], 0)
     assert_eq(words[2], 1)
     start_offsets_to_end_offsets(words, line.length())
-    let tokens = @common_tokens.LineTokens::new(
-      words,
-      line,
-      @services.LanguageIdCodec::new(),
-    )
+    let tokens = @common_tokens.LineTokens(words, line, LanguageIdCodec())
     assert_same_code_units(tokens.get_token_text(0), held)
     assert_same_code_units(tokens.get_token_text(1), "x")
   }

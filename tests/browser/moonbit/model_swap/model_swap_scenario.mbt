@@ -90,7 +90,7 @@ fn run_model_swap_test() -> Unit {
     placeholder_host,
     options=ViewerOptions(placeholder="dispose-placeholder"),
   )
-  let markers = @markers.MarkerService::new(schedule=model_swap_queue_microtask)
+  let markers = @markers.MarkerService(schedule=model_swap_queue_microtask)
   let services = @viewer.ViewerServices::new(
     markers=MarkerStore(markers.marker_service_handle()),
   )

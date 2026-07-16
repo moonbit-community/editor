@@ -70,7 +70,7 @@ fn remove_whitespace(
 ///|
 test "LinesLayout 1" {
   // Start off with 10 lines
-  let lines_layout = @view_layout.LinesLayout::new(10, 10, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 10, 0, 0)
 
   // lines: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   // whitespace: -
@@ -233,7 +233,7 @@ test "LinesLayout 1" {
 ///|
 test "LinesLayout 2" {
   // Start off with 10 lines and one whitespace after line 2, of height 5
-  let lines_layout = @view_layout.LinesLayout::new(10, 1, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 1, 0, 0)
   let a = insert_whitespace(lines_layout, 2, 0, 5, 0)
 
   // 10 lines
@@ -331,7 +331,7 @@ test "LinesLayout 2" {
 ///|
 test "LinesLayout Padding" {
   // Start off with 10 lines
-  let lines_layout = @view_layout.LinesLayout::new(10, 10, 15, 20)
+  let lines_layout = @view_layout.LinesLayout(10, 10, 15, 20)
 
   // lines: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   // whitespace: -
@@ -454,7 +454,7 @@ test "LinesLayout Padding" {
 
 ///|
 test "LinesLayout getLineNumberAtOrAfterVerticalOffset" {
-  let lines_layout = @view_layout.LinesLayout::new(10, 1, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 1, 0, 0)
   insert_whitespace(lines_layout, 6, 0, 10, 0) |> ignore
 
   // 10 lines
@@ -504,7 +504,7 @@ test "LinesLayout getLineNumberAtOrAfterVerticalOffset" {
 
 ///|
 test "LinesLayout getCenteredLineInViewport" {
-  let lines_layout = @view_layout.LinesLayout::new(10, 1, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 1, 0, 0)
   insert_whitespace(lines_layout, 6, 0, 10, 0) |> ignore
 
   // 10 lines
@@ -627,7 +627,7 @@ test "LinesLayout getCenteredLineInViewport" {
 
 ///|
 test "LinesLayout getLinesViewportData 1" {
-  let lines_layout = @view_layout.LinesLayout::new(10, 10, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 10, 0, 0)
   insert_whitespace(lines_layout, 6, 0, 100, 0) |> ignore
 
   // 10 lines
@@ -769,7 +769,7 @@ test "LinesLayout getLinesViewportData 1" {
 
 ///|
 test "LinesLayout getLinesViewportData 2 & getWhitespaceViewportData" {
-  let lines_layout = @view_layout.LinesLayout::new(10, 10, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 10, 0, 0)
   let a = insert_whitespace(lines_layout, 6, 0, 100, 0)
   let b = insert_whitespace(lines_layout, 7, 0, 50, 0)
 
@@ -840,7 +840,7 @@ test "LinesLayout getLinesViewportData 2 & getWhitespaceViewportData" {
 
 ///|
 test "LinesLayout getWhitespaceAtVerticalOffset" {
-  let lines_layout = @view_layout.LinesLayout::new(10, 10, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(10, 10, 0, 0)
   let a = insert_whitespace(lines_layout, 6, 0, 100, 0)
   let b = insert_whitespace(lines_layout, 7, 0, 50, 0)
   assert_true(lines_layout.get_whitespace_at_vertical_offset(0) is None)
@@ -859,7 +859,7 @@ test "LinesLayout getWhitespaceAtVerticalOffset" {
 
 ///|
 test "LinesLayout" {
-  let lines_layout = @view_layout.LinesLayout::new(100, 20, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(100, 20, 0, 0)
 
   // Insert a whitespace after line number 2, of height 10
   let a = insert_whitespace(lines_layout, 2, 0, 10, 0)
@@ -1277,7 +1277,7 @@ test "LinesLayout findInsertionIndex" {
     ordinal : Int,
   ) -> Array[@view_layout.EditorWhitespace] {
     after_line_numbers.map(fn(after_line_number) {
-      @view_layout.EditorWhitespace::new("", after_line_number, ordinal, 0, 0)
+      EditorWhitespace("", after_line_number, ordinal, 0, 0)
     })
   }
   let arr = make_internal_whitespace([], 0)
@@ -1384,7 +1384,7 @@ test "LinesLayout findInsertionIndex" {
 
 ///|
 test "LinesLayout changeWhitespaceAfterLineNumber & getFirstWhitespaceIndexAfterLineNumber" {
-  let lines_layout = @view_layout.LinesLayout::new(100, 20, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(100, 20, 0, 0)
   let a = insert_whitespace(lines_layout, 0, 0, 1, 0)
   let b = insert_whitespace(lines_layout, 7, 0, 1, 0)
   let c = insert_whitespace(lines_layout, 3, 0, 1, 0)
@@ -1491,7 +1491,7 @@ test "LinesLayout changeWhitespaceAfterLineNumber & getFirstWhitespaceIndexAfter
 
 ///|
 test "LinesLayout Bug" {
-  let lines_layout = @view_layout.LinesLayout::new(100, 20, 0, 0)
+  let lines_layout = @view_layout.LinesLayout(100, 20, 0, 0)
   let a = insert_whitespace(lines_layout, 0, 0, 1, 0)
   let b = insert_whitespace(lines_layout, 7, 0, 1, 0)
   assert_eq(lines_layout.get_id_for_whitespace_index(0), a) // 0

@@ -67,7 +67,7 @@ test "Home End cover whitespace empty wrapped continuation and boundaries" {
 ///|
 test "nonempty selection collapse paths cover Left Right Up Down" {
   with_test_viewer("abcdefgh\nabcdefgh\nabcdefgh\nabcdefgh\nabcdefgh", viewer => {
-    let selection = @core.Selection::new(Position(2, 3), Position(4, 5))
+    let selection = @core.Selection(Position(2, 3), Position(4, 5))
     viewer.set_selection(selection)
     assert_true(dispatch_navigation_key(viewer, "ArrowLeft"))
     assert_position(viewer.get_position().unwrap(), Position(2, 3))
@@ -114,8 +114,8 @@ test "set_selections keeps only primary with default and override metadata" {
     |> ignore
     viewer.on_did_change_cursor_selection(event => selections.push(event))
     |> ignore
-    let primary = @core.Selection::new(Position(2, 1), Position(2, 3))
-    let secondary = @core.Selection::new(Position(1, 1), Position(1, 2))
+    let primary = @core.Selection(Position(2, 1), Position(2, 3))
+    let secondary = @core.Selection(Position(1, 1), Position(1, 2))
     viewer.set_selections([primary, secondary])
     assert_true(viewer.get_selections().unwrap() == [primary])
     assert_eq(positions.length(), 1)
@@ -150,7 +150,7 @@ test "one-element set_selections forwards exact source and reason" {
     |> ignore
     viewer.on_did_change_cursor_selection(event => selections.push(event))
     |> ignore
-    let expected = @core.Selection::new(Position(2, 1), Position(2, 3))
+    let expected = @core.Selection(Position(2, 1), Position(2, 3))
     viewer.set_selections([expected], source="one-element", reason=Redo)
     assert_true(viewer.get_selections().unwrap() == [expected])
     assert_eq(outgoing.length(), 1)

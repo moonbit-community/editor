@@ -21,7 +21,7 @@ test "AgentFeedbackHandle forwards its exact callback floor" {
   let calls : Array[String] = []
   let changed_ids : Array[String] = []
   let navigated : Array[String] = []
-  let handle = AgentFeedbackHandle::new(
+  let handle = @agent_feedback_api.AgentFeedbackHandle(
     on_did_change_feedback=listener => {
       calls.push("subscribe-feedback")
       listener({ resource, feedback_items: [feedback] })

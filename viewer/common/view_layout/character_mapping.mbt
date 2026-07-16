@@ -23,7 +23,8 @@ pub struct CharacterMapping {
 
 ///|
 /// Creates a mapping with `length` column slots.
-pub fn CharacterMapping::new(length : Int) -> CharacterMapping {
+#alias(new)
+pub fn CharacterMapping::CharacterMapping(length : Int) -> CharacterMapping {
   let entries : Array[CharacterMappingEntry] = []
   for _ in 0..<length {
     entries.push({ part_index: 0, char_index: 0, visible_column: 0 })

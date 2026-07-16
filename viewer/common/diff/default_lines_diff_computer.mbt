@@ -36,7 +36,8 @@ pub struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
 #warnings("-unnecessary_annotation")
-pub fn DefaultLinesDiffComputer::new() -> DefaultLinesDiffComputer {
+#alias(new)
+pub fn DefaultLinesDiffComputer::DefaultLinesDiffComputer() -> DefaultLinesDiffComputer {
   // The qualifier is required because a bare `{}` is parsed as a `Map`.
   DefaultLinesDiffComputer::{  }
 }

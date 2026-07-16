@@ -15,7 +15,8 @@ pub struct CursorContext {
 
 ///|
 /// Builds a cursor context from the active view model's required conversions.
-pub fn CursorContext::new(
+#alias(new)
+pub fn CursorContext::CursorContext(
   view_to_model~ : (@base_common.Position) -> @base_common.Position,
   view_range_to_model~ : (@base_common.Range) -> @base_common.Range,
   model_to_view~ : (@base_common.Position) -> @base_common.Position,

@@ -1,6 +1,6 @@
 ///|
 fn dispatcher_selection(column : Int) -> @core.Selection {
-  @core.Selection::new(Position(1, column), Position(1, column))
+  Selection(Position(1, column), Position(1, column))
 }
 
 ///|
@@ -96,16 +96,16 @@ test "cursor outgoing merge keeps earliest old state and latest new state" {
   assert_true(merged.kind == CursorStateChanged)
   assert_false(merged.reached_max_cursor_count)
   assert_true(
-    first.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new())) is None,
+    first.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent())) is None,
   )
 }
 
 ///|
 test "ViewZones outgoing is live and merges only its own kind" {
-  let zones = ViewZonesChangedEvent::new()
+  let zones = ViewZonesChangedEvent()
   assert_true(zones.kind == ViewZonesChanged)
   assert_false(zones.is_no_op())
-  guard zones.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  guard zones.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent()))
     is Some(merged) else {
     fail("same-kind ViewZones events must merge")
   }
@@ -118,7 +118,7 @@ test "ViewZones outgoing is live and merges only its own kind" {
 ///|
 test "model-token outgoing retains identity and never no-ops or merges" {
   let model_event = dispatcher_model_tokens_event(2, 4)
-  let outgoing = ModelTokensChangedOutgoingEvent::new(model_event)
+  let outgoing = ModelTokensChangedOutgoingEvent(model_event)
   assert_true(outgoing.kind == ModelTokensChanged)
   assert_true(physical_equal(outgoing.event, model_event))
   assert_false(outgoing.is_no_op())
@@ -128,8 +128,7 @@ test "model-token outgoing retains identity and never no-ops or merges" {
     is None,
   )
   assert_true(
-    outgoing.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent::new()))
-    is None,
+    outgoing.attempt_to_merge(ViewZonesEvent(ViewZonesChangedEvent())) is None,
   )
 }
 
@@ -143,12 +142,12 @@ test "model-token outgoing typed listener receives every event in FIFO order" {
   |> ignore
   dispatcher.add_outgoing_event(
     ModelTokensEvent(
-      ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(1, 1)),
+      ModelTokensChangedOutgoingEvent(dispatcher_model_tokens_event(1, 1)),
     ),
   )
   dispatcher.add_outgoing_event(
     ModelTokensEvent(
-      ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(2, 2)),
+      ModelTokensChangedOutgoingEvent(dispatcher_model_tokens_event(2, 2)),
     ),
   )
   assert_eq(dispatcher.outgoing_events.length(), 2)
@@ -167,7 +166,7 @@ test "empty model-token outgoing event remains observable" {
   })
   |> ignore
   dispatcher.emit_model_tokens_changed(
-    ModelTokensChangedOutgoingEvent::new({
+    ModelTokensChangedOutgoingEvent({
       semantic_tokens_applied: false,
       ranges: [],
     }),
@@ -187,16 +186,14 @@ test "model-token outgoing reentrant delivery preserves event identity order" {
     if !reentered {
       reentered = true
       dispatcher.emit_model_tokens_changed(
-        ModelTokensChangedOutgoingEvent::new(
-          dispatcher_model_tokens_event(2, 2),
-        ),
+        ModelTokensChangedOutgoingEvent(dispatcher_model_tokens_event(2, 2)),
       )
     }
     delivered.push("exit:\{line}")
   })
   |> ignore
   dispatcher.emit_model_tokens_changed(
-    ModelTokensChangedOutgoingEvent::new(dispatcher_model_tokens_event(1, 1)),
+    ModelTokensChangedOutgoingEvent(dispatcher_model_tokens_event(1, 1)),
   )
   assert_true(delivered == ["enter:1", "enter:2", "exit:2", "exit:1"])
 }
@@ -231,7 +228,7 @@ test "cursor outgoing queue merges into first same-kind slot and drops no-ops" {
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 1, 1, 1)),
   )
-  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent()))
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 3, 1, 2, source="latest")),
   )
@@ -243,11 +240,11 @@ test "cursor outgoing queue merges into first same-kind slot and drops no-ops" {
 test "cursor outgoing different-kind slots retain FIFO position around merge" {
   let dispatcher = CursorEventDispatcher::new()
   let one = dispatcher_selection(1)
-  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent()))
   dispatcher.add_outgoing_event(
     CursorEvent(dispatcher_event(Some([one]), 2, 1, 2, source="first")),
   )
-  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent()))
   dispatcher.add_outgoing_event(
     CursorEvent(
       dispatcher_event(
@@ -280,7 +277,7 @@ test "heterogeneous queue delivers cursor and ViewZones facts in FIFO order" {
   })
   |> ignore
   dispatcher.on_view_zones_changed(_ => delivered.push("zones")) |> ignore
-  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent::new()))
+  dispatcher.add_outgoing_event(ViewZonesEvent(ViewZonesChangedEvent()))
   dispatcher.add_outgoing_event(CursorEvent(dispatcher_event(None, 3, 0, 1)))
   dispatcher.emit_outgoing_events()
   assert_true(delivered == ["zones", "cursor:3"])
@@ -292,7 +289,7 @@ test "reentrant cross-kind fire uses the shared outgoing listener delivery" {
   let delivered : Array[String] = []
   dispatcher.on_event(_event => {
     delivered.push("cursor:before")
-    dispatcher.emit_view_zones_changed(ViewZonesChangedEvent::new())
+    dispatcher.emit_view_zones_changed(ViewZonesChangedEvent())
     delivered.push("cursor:after")
   })
   |> ignore

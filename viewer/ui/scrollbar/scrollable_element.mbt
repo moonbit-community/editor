@@ -105,10 +105,8 @@ pub fn ScrollableElementDom::new(
     top_left_shadow,
     vertical_size,
     horizontal_size,
-    vertical_state: @view_layout.ScrollbarState::new(
-      scrollbar_size=vertical_size,
-    ),
-    horizontal_state: @view_layout.ScrollbarState::new(
+    vertical_state: ScrollbarState(scrollbar_size=vertical_size),
+    horizontal_state: ScrollbarState(
       scrollbar_size=horizontal_size,
       opposite_scrollbar_size=vertical_size,
     ),

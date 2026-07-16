@@ -71,7 +71,7 @@ pub fn AgentFeedbackService::dispose(self : AgentFeedbackService) -> Unit {
 pub fn AgentFeedbackService::agent_feedback_handle(
   self : AgentFeedbackService,
 ) -> @agent_feedback_api.AgentFeedbackHandle {
-  @agent_feedback_api.AgentFeedbackHandle::new(
+  AgentFeedbackHandle(
     on_did_change_feedback=listener => self.on_did_change_feedback(listener),
     on_did_change_navigation=listener => self.on_did_change_navigation(listener),
     is_feedback_enabled=resource => self.is_feedback_enabled(resource),

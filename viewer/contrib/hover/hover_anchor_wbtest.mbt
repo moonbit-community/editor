@@ -181,8 +181,8 @@ fn anchor_test_model() -> @model.TextModel {
 
 ///|
 test "marker participant filters by anchor-line columns with the showIfCollapsed relaxation" {
-  let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let markers = @markers.MarkerService()
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   let model = anchor_test_model()
@@ -263,7 +263,7 @@ test "marker participant isolates distinct live models sharing one URI" {
   let model_b : @model.TextModel = TextModel(
     uri, "b.mbt", "moonbit", 1, "b", "x yz",
   )
-  let markers = @markers.MarkerService::new()
+  let markers = @markers.MarkerService()
   // The same raw empty range expands against each model's own word facts:
   // A -> [1,6), B -> [3,5). A URI-union hover lookup would therefore leak
   // A's marker into B at column 1.
@@ -275,7 +275,7 @@ test "marker participant isolates distinct live models sharing one URI" {
       tags: None,
     },
   ])
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   let lease_a = marker_decorations.acquire_model(model_a)

@@ -162,7 +162,8 @@ pub(all) struct MarkerData {
 ///|
 /// Builds marker input from the required fields, leaving the optional metadata
 /// (`code`, `source`, `tags`, …) defaulted to absent.
-pub fn MarkerData::new(
+#alias(new)
+pub fn MarkerData::MarkerData(
   severity~ : MarkerSeverity,
   message~ : String,
   start_line_number~ : Int,
@@ -312,7 +313,8 @@ pub(all) struct MarkerReadOptions {
 ///|
 /// Builds a read filter; every field is optional, `ignore_resource_filters`
 /// defaults to false.
-pub fn MarkerReadOptions::new(
+#alias(new)
+pub fn MarkerReadOptions::MarkerReadOptions(
   owner? : String,
   resource? : @base_common.Uri,
   severities? : Int,

@@ -249,9 +249,9 @@ struct DecorationsTrees {
 ///|
 fn DecorationsTrees::new() -> DecorationsTrees {
   {
-    decorations_tree_0: IntervalTree::new(),
-    decorations_tree_1: IntervalTree::new(),
-    injected_text_decorations_tree: IntervalTree::new(),
+    decorations_tree_0: IntervalTree(),
+    decorations_tree_1: IntervalTree(),
+    injected_text_decorations_tree: IntervalTree(),
   }
 }
 
@@ -916,7 +916,7 @@ fn TextModel::delta_decorations_impl(
         None => {
           self.last_decoration_id += 1
           let decoration_id = "\{self.decoration_id_namespace};\{self.last_decoration_id}"
-          let created = IntervalNode::new(decoration_id, 0, 0)
+          let created = IntervalNode(decoration_id, 0, 0)
           self.decorations[decoration_id] = created
           created
         }

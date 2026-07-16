@@ -5,7 +5,7 @@
 
 ///|
 fn store_test_codec() -> @services.LanguageIdCodec {
-  let codec = @services.LanguageIdCodec::new()
+  let codec = @services.LanguageIdCodec()
   ignore(codec.register("store-top"))
   ignore(codec.register("store-embedded"))
   codec
@@ -30,7 +30,7 @@ fn assert_change(
 ///|
 test "ContiguousTokensStore missing read returns exact default metadata" {
   let codec = store_test_codec()
-  let store = ContiguousTokensStore::new(codec)
+  let store = ContiguousTokensStore(codec)
   assert_eq(store.has_tokens(), false)
   let tokens = store.get_tokens("store-top", 0, "abc")
   assert_eq(tokens.get_count(), 1)
@@ -58,7 +58,7 @@ test "ContiguousTokensStore distinguishes Missing Empty and Words" {
   let codec = store_test_codec()
   let top_id = codec.encode_language_id("store-top")
   let embedded_id = codec.encode_language_id("store-embedded")
-  let store = ContiguousTokensStore::new(codec)
+  let store = ContiguousTokensStore(codec)
 
   // The first Missing -> Empty write changes; a repeated Empty write is equal.
   assert_eq(store.set_tokens("store-top", 0, 0, None, true), true)
@@ -102,7 +102,7 @@ test "ContiguousTokensStore distinguishes Missing Empty and Words" {
 test "ContiguousTokensStore massages words and compares every state branch" {
   let codec = store_test_codec()
   let top_id = codec.encode_language_id("store-top")
-  let store = ContiguousTokensStore::new(codec)
+  let store = ContiguousTokensStore(codec)
   let first_metadata = metadata_for(top_id, foreground=3)
   let second_metadata = metadata_for(top_id, foreground=4)
 
@@ -168,7 +168,7 @@ test "ContiguousTokensStore setMultilineTokens reports one suffix range per chan
   let top_id = codec.encode_language_id("store-top")
   let metadata_a = metadata_for(top_id, foreground=3)
   let metadata_b = metadata_for(top_id, foreground=4)
-  let store = ContiguousTokensStore::new(codec)
+  let store = ContiguousTokensStore(codec)
   ignore(store.set_tokens("store-top", 0, 1, Some([1U, metadata_a]), true))
   ignore(store.set_tokens("store-top", 1, 2, Some([2U, metadata_a]), true))
   ignore(store.set_tokens("store-top", 2, 3, Some([3U, metadata_a]), true))
@@ -176,12 +176,12 @@ test "ContiguousTokensStore setMultilineTokens reports one suffix range per chan
   let line_length_calls : Array[Int] = []
   let update = store.set_multiline_tokens(
     [
-      ContiguousMultilineTokens::new(1, [
+      ContiguousMultilineTokens(1, [
         [1U, metadata_a], // equal prefix
         [2U, metadata_b], // first difference
         [3U, metadata_a], // unchecked suffix still extends max
       ]),
-      ContiguousMultilineTokens::new(5, [[5U, metadata_b]]),
+      ContiguousMultilineTokens(5, [[5U, metadata_b]]),
     ],
     "store-top",
     line_number => {
@@ -201,7 +201,7 @@ test "ContiguousTokensStore setMultilineTokens reports one suffix range per chan
   assert_eq(no_batches.changes.length(), 0)
   let equal_again = store.set_multiline_tokens(
     [
-      ContiguousMultilineTokens::new(1, [
+      ContiguousMultilineTokens(1, [
         [1U, metadata_a],
         [2U, metadata_b],
         [3U, metadata_a],

@@ -8,7 +8,8 @@ pub struct CursorState {
 
 ///|
 /// Retains a complete model/view pair.
-pub fn CursorState::new(
+#alias(new)
+pub fn CursorState::CursorState(
   model_state : SingleCursorState,
   view_state : SingleCursorState,
 ) -> CursorState {
@@ -23,7 +24,8 @@ pub struct PartialModelCursorState {
 } derive(Eq, Debug)
 
 ///|
-pub fn PartialModelCursorState::new(
+#alias(new)
+pub fn PartialModelCursorState::PartialModelCursorState(
   model_state : SingleCursorState,
 ) -> PartialModelCursorState {
   { model_state, view_state: None }
@@ -37,7 +39,8 @@ pub struct PartialViewCursorState {
 } derive(Eq, Debug)
 
 ///|
-pub fn PartialViewCursorState::new(
+#alias(new)
+pub fn PartialViewCursorState::PartialViewCursorState(
   view_state : SingleCursorState,
 ) -> PartialViewCursorState {
   { model_state: None, view_state }
@@ -58,14 +61,14 @@ pub enum PartialCursorState {
 pub fn CursorState::from_model_state(
   state : SingleCursorState,
 ) -> PartialCursorState {
-  ModelCursorState(PartialModelCursorState::new(state))
+  ModelCursorState(PartialModelCursorState(state))
 }
 
 ///|
 pub fn CursorState::from_view_state(
   state : SingleCursorState,
 ) -> PartialCursorState {
-  ViewCursorState(PartialViewCursorState::new(state))
+  ViewCursorState(PartialViewCursorState(state))
 }
 
 ///|
@@ -75,7 +78,7 @@ pub fn CursorState::from_model_selection(
 ) -> PartialCursorState {
   let anchor = selection.get_selection_start()
   CursorState::from_model_state(
-    SingleCursorState::new(anchor, anchor, Simple, selection.get_position()),
+    SingleCursorState(anchor, anchor, Simple, selection.get_position()),
   )
 }
 

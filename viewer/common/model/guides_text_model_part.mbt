@@ -38,7 +38,8 @@ pub struct GuidesTextModelPart {
 }
 
 ///|
-pub fn GuidesTextModelPart::new(
+#alias(new)
+pub fn GuidesTextModelPart::GuidesTextModelPart(
   text_model : TextSnapshot,
   tab_size? : Int = 4,
   indent_size? : Int = 4,

@@ -42,7 +42,8 @@ pub struct LineTokens {
 }
 
 ///|
-pub fn LineTokens::new(
+#alias(new)
+pub fn LineTokens::LineTokens(
   tokens : Array[UInt],
   text : String,
   decoder : @services.LanguageIdCodec,
@@ -72,7 +73,7 @@ pub fn LineTokens::create_empty(
     line_content.length().reinterpret_as_uint(),
     LineTokens::default_token_metadata(),
   ]
-  LineTokens::new(tokens, line_content, decoder)
+  LineTokens(tokens, line_content, decoder)
 }
 
 ///|
@@ -90,7 +91,7 @@ pub fn LineTokens::create_from_text_and_metadata(
     tokens.push(metadata)
     full_text = full_text + text
   }
-  LineTokens::new(tokens, full_text, decoder)
+  LineTokens(tokens, full_text, decoder)
 }
 
 ///|
@@ -183,7 +184,8 @@ pub struct InsertedToken {
 }
 
 ///|
-pub fn InsertedToken::new(
+#alias(new)
+pub fn InsertedToken::InsertedToken(
   offset : Int,
   text : String,
   token_metadata : UInt,
@@ -251,7 +253,7 @@ pub fn LineTokens::with_inserted(
       break
     }
   }
-  LineTokens::new(new_tokens, text, self.language_id_codec)
+  LineTokens(new_tokens, text, self.language_id_codec)
 }
 
 ///|

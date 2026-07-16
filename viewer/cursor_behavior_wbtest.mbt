@@ -11,7 +11,7 @@
 test "MoveTo positions the cursor in model coordinates" {
   with_test_viewer("line one\nline two\nline three", viewer => {
     @cursor.move_to(viewer.test_cursor(), Position(2, 5))
-    assert_cursor(viewer, @core.Selection::new(Position(2, 5), Position(2, 5)))
+    assert_cursor(viewer, Selection(Position(2, 5), Position(2, 5)))
   })
 }
 
@@ -33,7 +33,7 @@ test "move_to_select extends the selection from the anchor" {
     let cursor = viewer.test_cursor()
     @cursor.move_to(cursor, Position(1, 3))
     @cursor.move_to_select(cursor, Position(1, 7))
-    assert_cursor(viewer, @core.Selection::new(Position(1, 3), Position(1, 7)))
+    assert_cursor(viewer, Selection(Position(1, 3), Position(1, 7)))
   })
 }
 
@@ -71,7 +71,7 @@ test "view and model selections coincide without wrapping" {
 test "set_position collapses the selection at the target" {
   with_test_viewer("line one\nline two\nline three", viewer => {
     viewer.set_position(Position(2, 5))
-    assert_cursor(viewer, @core.Selection::new(Position(2, 5), Position(2, 5)))
+    assert_cursor(viewer, Selection(Position(2, 5), Position(2, 5)))
     assert_position(viewer.get_position().unwrap(), Position(2, 5))
     assert_true(viewer.get_selection().unwrap().is_empty())
   })
@@ -83,12 +83,12 @@ test "set_position collapses the selection at the target" {
 /// active is LTR, anchor after active (backward selecting) is RTL.
 test "set_selection preserves direction for forward and backward input" {
   with_test_viewer("line one\nline two\nline three", viewer => {
-    viewer.set_selection(@core.Selection::new(Position(1, 3), Position(2, 4)))
+    viewer.set_selection(Selection(Position(1, 3), Position(2, 4)))
     let forward = viewer.get_selection().unwrap()
     assert_true(forward.direction() == LTR)
     assert_position(forward.get_selection_start(), Position(1, 3))
     assert_position(forward.get_position(), Position(2, 4))
-    viewer.set_selection(@core.Selection::new(Position(2, 4), Position(1, 3)))
+    viewer.set_selection(Selection(Position(2, 4), Position(1, 3)))
     let backward = viewer.get_selection().unwrap()
     assert_true(backward.direction() == RTL)
     assert_position(backward.get_selection_start(), Position(2, 4))
@@ -107,16 +107,16 @@ test "set_selection clamps out-of-range positions to the model" {
   with_test_viewer("line one\nline two", viewer => {
     viewer.set_position(Position(99, 1))
     assert_position(viewer.get_position().unwrap(), Position(2, 9))
-    viewer.set_selection(@core.Selection::new(Position(1, 2), Position(1, 50)))
+    viewer.set_selection(Selection(Position(1, 2), Position(1, 50)))
     assert_selection_eq(
       viewer.get_selection().unwrap(),
-      @core.Selection::new(Position(1, 2), Position(1, 9)),
+      Selection(Position(1, 2), Position(1, 9)),
     )
   })
   with_test_viewer("a\u{1F4DA}b", viewer => {
     // column 3 splits the U+1F4DA high-low pair; snaps before it, to column 2
     viewer.set_position(Position(1, 3))
-    assert_cursor(viewer, @core.Selection::new(Position(1, 2), Position(1, 2)))
+    assert_cursor(viewer, Selection(Position(1, 2), Position(1, 2)))
   })
 }
 
@@ -129,10 +129,7 @@ test "set_selection fires cursor events only when the state changes" {
     let mut position_fires = 0
     let mut selection_fires = 0
     let mut last_position : @base_common.Position = Position(1, 1)
-    let mut last_selection = @core.Selection::new(
-      Position(1, 1),
-      Position(1, 1),
-    )
+    let mut last_selection = @core.Selection(Position(1, 1), Position(1, 1))
     viewer.on_did_change_cursor_position(event => {
       position_fires += 1
       last_position = event.position
@@ -143,7 +140,7 @@ test "set_selection fires cursor events only when the state changes" {
       last_selection = event.selection
     })
     |> ignore
-    let target = @core.Selection::new(Position(1, 3), Position(2, 4))
+    let target = @core.Selection(Position(1, 3), Position(2, 4))
     viewer.set_selection(target)
     assert_eq(position_fires, 1)
     assert_eq(selection_fires, 1)
@@ -166,10 +163,10 @@ test "set_selection re-derives the view state under wrap" {
     "abcdefghij",
     viewer => {
       viewer.test_set_soft_wrap_column(6)
-      viewer.set_selection(@core.Selection::new(Position(1, 3), Position(1, 9)))
+      viewer.set_selection(Selection(Position(1, 3), Position(1, 9)))
       assert_selection_eq(
         viewer.get_selection().unwrap(),
-        @core.Selection::new(Position(1, 3), Position(1, 9)),
+        Selection(Position(1, 3), Position(1, 9)),
       )
       let view_range = viewer.selection_view_range().unwrap()
       assert_eq(view_range.start_line_number, 1)
@@ -190,7 +187,7 @@ test "set_position and set_selection are no-ops without a model" {
   viewer.on_did_change_cursor_position(_ => fires += 1) |> ignore
   viewer.on_did_change_cursor_selection(_ => fires += 1) |> ignore
   viewer.set_position(Position(2, 2))
-  viewer.set_selection(@core.Selection::new(Position(1, 1), Position(2, 2)))
+  viewer.set_selection(Selection(Position(1, 1), Position(2, 2)))
   assert_eq(fires, 0)
   assert_true(viewer.get_selection() is None)
   viewer.dispose()
@@ -207,7 +204,7 @@ test "wrap-width change re-projects the selection inside the view model" {
     "abcdefghij",
     viewer => {
       viewer.test_set_soft_wrap_column(6)
-      viewer.set_selection(@core.Selection::new(Position(1, 9), Position(1, 9)))
+      viewer.set_selection(Selection(Position(1, 9), Position(1, 9)))
       // Wrapped at 6: model col 9 sits on view line 2, col 3.
       assert_position(
         viewer.test_cursor().get_view_selection().get_position(),
@@ -218,7 +215,7 @@ test "wrap-width change re-projects the selection inside the view model" {
       viewer.test_set_soft_wrap_column(4)
       assert_selection_eq(
         viewer.get_selection().unwrap(),
-        @core.Selection::new(Position(1, 9), Position(1, 9)),
+        Selection(Position(1, 9), Position(1, 9)),
       )
       // Wrapped at 4: model col 9 starts the third view line.
       assert_position(

@@ -100,7 +100,7 @@ pub fn render_view_line(
         }
       }
       html.write_string("</span>")
-      let character_mapping = CharacterMapping::new(1)
+      let character_mapping = CharacterMapping(1)
       character_mapping.set_column_info(1, before_count, 0, 0)
       return { character_mapping, contains_foreign_elements: contains_foreign }
     }
@@ -115,7 +115,7 @@ pub fn render_view_line(
       )
     }
     return {
-      character_mapping: CharacterMapping::new(0),
+      character_mapping: CharacterMapping(0),
       contains_foreign_elements: None,
     }
   }
@@ -739,7 +739,7 @@ fn render_line(
   let render_whitespace = input.render_whitespace
   let render_control_characters = input.render_control_characters
   let view = line_content.view()
-  let character_mapping = CharacterMapping::new(len + 1)
+  let character_mapping = CharacterMapping(len + 1)
   let mut last_character_mapping_defined = false
   let mut char_index = 0
   let mut visible_column = input.start_visible_column

@@ -86,7 +86,7 @@ test "TokenizerWithStateStore demands through line and records hasEOL true" {
     harness.model_state,
     @services.language_id_codec,
   )
-  let builder = @common_tokens.ContiguousMultilineTokensBuilder::new()
+  let builder = @common_tokens.ContiguousMultilineTokensBuilder()
   tokenizer.update_tokens_until_line(builder, 2)
   assert_eq(initial_calls.val, 1)
   assert_eq(calls.length(), 2)

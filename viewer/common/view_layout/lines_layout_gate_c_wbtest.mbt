@@ -42,7 +42,7 @@ fn gate_c_assert_rows(
 
 ///|
 test "LinesLayout setters update line geometry, padding, and whitespace state" {
-  let layout = LinesLayout::new(3, 10, 2, 3)
+  let layout = LinesLayout(3, 10, 2, 3)
   assert_false(layout.has_whitespace())
   assert_eq(layout.get_line_height_for_line_number(2), 10)
   assert_eq(layout.get_lines_total_height(), 35)
@@ -79,7 +79,7 @@ test "LinesLayout setters update line geometry, padding, and whitespace state" {
 
 ///|
 test "LinesLayout min-width cache hits and invalidates on inserts and removes" {
-  let layout = LinesLayout::new(4, 10, 0, 0)
+  let layout = LinesLayout(4, 10, 0, 0)
   assert_eq(layout.min_width, -1)
   assert_eq(layout.get_whitespace_min_width(), 0)
   assert_eq(layout.min_width, 0)
@@ -131,7 +131,7 @@ test "LinesLayout min-width cache hits and invalidates on inserts and removes" {
 
 ///|
 test "LinesLayout delicate missing-id changes and removes are harmless" {
-  let layout = LinesLayout::new(3, 10, 0, 0)
+  let layout = LinesLayout(3, 10, 0, 0)
   let present = gate_c_insert_whitespace(layout, 1, 7, 9, 21)
   assert_eq(layout.get_whitespaces_accumulated_height(0), 9)
   assert_eq(layout.prefix_sum_valid_index, 0)
@@ -165,7 +165,7 @@ test "LinesLayout delicate missing-id changes and removes are harmless" {
 
 ///|
 test "LinesLayout mixed bulk commit resolves conflicts, stably sorts, and resets prefixes" {
-  let layout = LinesLayout::new(10, 10, 0, 0)
+  let layout = LinesLayout(10, 10, 0, 0)
   let old_primary_before = gate_c_insert_whitespace(layout, 2, 9, 50, 0)
   let old_ordinal_before = gate_c_insert_whitespace(layout, 4, 1, 51, 0)
   let old_peers : Array[String] = []
@@ -303,13 +303,13 @@ test "LinesLayout bulk ordering matches delicate inserts at Int extremes" {
     (0, 0, 7),
     (0, 0, 8),
   ]
-  let delicate = LinesLayout::new(1, 10, 0, 0)
+  let delicate = LinesLayout(1, 10, 0, 0)
   for entry in entries {
     let (after_line_number, ordinal, height) = entry
     gate_c_insert_whitespace(delicate, after_line_number, ordinal, height, 0)
     |> ignore
   }
-  let bulk = LinesLayout::new(1, 10, 0, 0)
+  let bulk = LinesLayout(1, 10, 0, 0)
   bulk.change_whitespace(accessor => {
     for entry in entries {
       let (after_line_number, ordinal, height) = entry

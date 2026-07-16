@@ -15,7 +15,7 @@ pub enum CoordinatesConverter {
 fn CoordinatesConverter::cursor_context(
   self : CoordinatesConverter,
 ) -> @cursor.CursorContext {
-  @cursor.CursorContext::new(
+  CursorContext(
     view_to_model=position => self.view_position_to_model_position(position),
     view_range_to_model=range => self.view_range_to_model_range(range),
     model_to_view=position => self.model_position_to_view_position(position),

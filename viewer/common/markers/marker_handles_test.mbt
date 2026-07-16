@@ -1,6 +1,6 @@
 ///|
 test "MarkerServiceHandle forwards only borrowed store operations" {
-  let markers = @markers.MarkerService::new()
+  let markers = @markers.MarkerService()
   let handle = markers.marker_service_handle()
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
@@ -12,7 +12,7 @@ test "MarkerServiceHandle forwards only borrowed store operations" {
     changed.push(resources)
   })
   markers.change_one("owner", uri, [
-    @markers.MarkerData::new(
+    MarkerData(
       severity=Error,
       message="diagnostic",
       start_line_number=1,
@@ -22,28 +22,25 @@ test "MarkerServiceHandle forwards only borrowed store operations" {
     ),
   ])
   assert_eq(changed.length(), 1)
-  let live = handle.read(@markers.MarkerReadOptions::new(resource=uri))
+  let live = handle.read(MarkerReadOptions(resource=uri))
   assert_eq(live.length(), 1)
   assert_eq(live[0].message, "diagnostic")
   handle.remove("owner", [uri])
   assert_eq(changed.length(), 2)
-  assert_eq(
-    handle.read(@markers.MarkerReadOptions::new(resource=uri)).length(),
-    0,
-  )
+  assert_eq(handle.read(MarkerReadOptions(resource=uri)).length(), 0)
   subscription.dispose()
   markers.dispose()
 }
 
 ///|
 test "MarkerDecorationsHandle preserves model leases and change events" {
-  let markers = @markers.MarkerService::new()
+  let markers = @markers.MarkerService()
   let marker_service_handle = markers.marker_service_handle()
   let source : @markers.MarkerDecorationsSource = MarkerStore(
     marker_service_handle,
   )
   guard source is MarkerStore(_) else { fail("expected marker store source") }
-  let service = @markers.MarkerDecorationsService::new(marker_service_handle)
+  let service = @markers.MarkerDecorationsService(marker_service_handle)
   let handle = service.marker_decorations_handle()
   let adapted : @markers.MarkerDecorationsSource = Decorations(handle)
   guard adapted is Decorations(_) else { fail("expected decorations source") }
@@ -61,7 +58,7 @@ test "MarkerDecorationsHandle preserves model leases and change events" {
   })
   let lease = handle.acquire_model(model)
   markers.change_one("owner", uri, [
-    @markers.MarkerData::new(
+    MarkerData(
       severity=Warning,
       message="projected",
       start_line_number=1,

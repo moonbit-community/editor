@@ -71,7 +71,7 @@ pub fn QuickDiffService::new() -> QuickDiffService {
 pub fn QuickDiffService::quick_diff_handle(
   self : QuickDiffService,
 ) -> @quick_diff_api.QuickDiffHandle {
-  @quick_diff_api.QuickDiffHandle::new(
+  QuickDiffHandle(
     get_original_content=resource => self.get_original_content(resource),
     on_did_change_original=listener => self.on_did_change_original(listener),
   )

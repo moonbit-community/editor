@@ -33,6 +33,6 @@ fn ViewModel::emit_model_tokens_changed(
   event : @model.ModelTokensChangedEvent,
 ) -> Unit {
   self.cursor_event_dispatcher.emit_model_tokens_changed(
-    ModelTokensChangedOutgoingEvent::new(event),
+    ModelTokensChangedOutgoingEvent(event),
   )
 }

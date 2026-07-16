@@ -26,7 +26,8 @@ pub struct Selection {
 ///|
 /// Builds a selection from its anchor (`selection_start`) and active
 /// (`position`) endpoints without reordering them; the orientation is kept.
-pub fn Selection::new(
+#alias(new)
+pub fn Selection::Selection(
   selection_start : @base_common.Position,
   position : @base_common.Position,
 ) -> Selection {
@@ -105,9 +106,9 @@ pub fn Selection::set_start_position(
     start_line_number, start_column,
   )
   if self.direction() == LTR {
-    Selection::new(new_start, self.end())
+    Selection(new_start, self.end())
   } else {
-    Selection::new(self.end(), new_start)
+    Selection(self.end(), new_start)
   }
 }
 
@@ -121,9 +122,9 @@ pub fn Selection::set_end_position(
 ) -> Selection {
   let new_end : @base_common.Position = Position(end_line_number, end_column)
   if self.direction() == LTR {
-    Selection::new(self.start(), new_end)
+    Selection(self.start(), new_end)
   } else {
-    Selection::new(new_end, self.start())
+    Selection(new_end, self.start())
   }
 }
 

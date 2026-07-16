@@ -49,7 +49,7 @@ fn reference_mouse_data(
 test "select all" {
   with_test_viewer(cursor_reference_text(), viewer => {
     viewer.run_select_all_core_command() |> ignore
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(5, 2)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(5, 2)))
     let state = viewer.test_cursor().model_state()
     assert_position(state.selection_start_start, Position(1, 1))
     assert_position(state.selection_start_end, Position(1, 1))
@@ -88,7 +88,7 @@ test "move eventing" {
     assert_eq(events.length(), 1)
     assert_selection_eq(
       events[0].selections[0],
-      @core.Selection::new(Position(1, 2), Position(1, 2)),
+      Selection(Position(1, 2), Position(1, 2)),
     )
   })
 }
@@ -108,7 +108,7 @@ test "move in selection mode eventing" {
     assert_eq(events.length(), 1)
     assert_selection_eq(
       events[0].selections[0],
-      @core.Selection::new(Position(1, 1), Position(1, 2)),
+      Selection(Position(1, 1), Position(1, 2)),
     )
   })
 }
@@ -120,7 +120,7 @@ test "setSelection / setPosition with source" {
     viewer.on_did_change_cursor_position(event => sources.push(event.source))
     |> ignore
     viewer.set_selection(
-      @core.Selection::new(Position(1, 2), Position(1, 3)),
+      Selection(Position(1, 2), Position(1, 3)),
       source="navigation",
     )
     assert_eq(sources[sources.length() - 1], "navigation")
@@ -135,7 +135,7 @@ test "issue #33788: Wrong cursor position when double click to select a word" {
     viewer.dispatch_mouse(
       reference_mouse_data(Position(1, 8), mouse_down_count=2),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 6), Position(1, 10)))
+    assert_cursor(viewer, Selection(Position(1, 6), Position(1, 10)))
     viewer.dispatch_mouse(
       reference_mouse_data(
         Position(1, 8),
@@ -143,7 +143,7 @@ test "issue #33788: Wrong cursor position when double click to select a word" {
         mouse_down_count=2,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 6), Position(1, 10)))
+    assert_cursor(viewer, Selection(Position(1, 6), Position(1, 10)))
   })
 }
 
@@ -153,7 +153,7 @@ test "issue #12887: Double-click highlighting separating white space" {
     viewer.dispatch_mouse(
       reference_mouse_data(Position(1, 5), mouse_down_count=2),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 5), Position(1, 8)))
+    assert_cursor(viewer, Selection(Position(1, 5), Position(1, 8)))
   })
 }
 
@@ -165,11 +165,11 @@ test "issue #12887: Double-click highlighting separating white space" {
 /// unavailable setup step.
 test "issue #23983: Calling model.setValue() resets cursor position" {
   with_test_viewer("first line\nsecond line", viewer => {
-    viewer.set_selection(@core.Selection::new(Position(2, 2), Position(2, 2)))
+    viewer.set_selection(Selection(Position(2, 2), Position(2, 2)))
     viewer.set_value(
       "different first line\ndifferent second line\nnew third line",
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 1), Position(1, 1)))
+    assert_cursor(viewer, Selection(Position(1, 1), Position(1, 1)))
   })
 }
 
@@ -181,10 +181,7 @@ test "issue #7100: Mouse word selection is strange when non-word character is at
       viewer.dispatch_mouse(
         reference_mouse_data(Position(3, 7), mouse_down_count=2),
       )
-      assert_cursor(
-        viewer,
-        @core.Selection::new(Position(3, 7), Position(3, 7)),
-      )
+      assert_cursor(viewer, Selection(Position(3, 7), Position(3, 7)))
       viewer.dispatch_mouse(
         reference_mouse_data(
           Position(4, 7),
@@ -192,10 +189,7 @@ test "issue #7100: Mouse word selection is strange when non-word character is at
           mouse_down_count=2,
         ),
       )
-      assert_cursor(
-        viewer,
-        @core.Selection::new(Position(3, 7), Position(4, 7)),
-      )
+      assert_cursor(viewer, Selection(Position(3, 7), Position(4, 7)))
     },
   )
 }
@@ -209,7 +203,7 @@ test "issue #112039: shift-continuing a double/triple-click and drag selection d
     viewer.dispatch_mouse(
       reference_mouse_data(Position(1, 8), in_selection_mode=true),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(2, 12), Position(1, 6)))
+    assert_cursor(viewer, Selection(Position(2, 12), Position(1, 6)))
   })
 }
 
@@ -224,6 +218,6 @@ test "issue #158236: Shift click selection does not work on line number indicato
         started_on_line_numbers=true,
       ),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(3, 5), Position(2, 1)))
+    assert_cursor(viewer, Selection(Position(3, 5), Position(2, 1)))
   })
 }

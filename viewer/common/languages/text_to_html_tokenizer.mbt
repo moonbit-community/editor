@@ -171,7 +171,7 @@ pub fn tokenize_to_string(
     }
     let tokens = tokenize_encoded(line)
     @tokens.LineTokens::convert_to_end_offset(tokens, line.length())
-    let line_tokens = @tokens.LineTokens::new(tokens, line, codec)
+    let line_tokens = @tokens.LineTokens(tokens, line, codec)
     let view_line_tokens = line_tokens.inflate()
     let mut start_offset = 0
     for j in 0..<view_line_tokens.get_count() {

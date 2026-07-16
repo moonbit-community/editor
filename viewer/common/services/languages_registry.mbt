@@ -25,7 +25,8 @@ pub struct LanguageIdCodec {
 }
 
 ///|
-pub fn LanguageIdCodec::new() -> LanguageIdCodec {
+#alias(new)
+pub fn LanguageIdCodec::LanguageIdCodec() -> LanguageIdCodec {
   let codec = {
     language_id_to_language: [],
     language_to_language_id: Map([]),
@@ -41,7 +42,7 @@ pub fn LanguageIdCodec::new() -> LanguageIdCodec {
 /// The process-wide codec instance, the role of Monaco's
 /// `LanguageService.languageIdCodec` (one `LanguagesRegistry` threads through
 /// every model). Isolated codecs remain constructible for tests.
-pub let language_id_codec : LanguageIdCodec = LanguageIdCodec::new()
+pub let language_id_codec : LanguageIdCodec = LanguageIdCodec()
 
 ///|
 /// Registers `language`, returning its numeric id (the existing id if already

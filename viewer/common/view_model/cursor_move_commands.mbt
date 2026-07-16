@@ -67,7 +67,8 @@ pub struct SimpleMoveArguments {
 } derive(Eq, Debug)
 
 ///|
-pub fn SimpleMoveArguments::new(
+#alias(new)
+pub fn SimpleMoveArguments::SimpleMoveArguments(
   direction : SimpleMoveDirection,
   unit : CursorMoveUnit,
   select : Bool,
@@ -198,7 +199,7 @@ pub fn ViewModel::move_cursor(
   reason? : @editor_api.CursorChangeReason = Explicit,
 ) -> Bool {
   self.move_cursor_with_arguments(
-    SimpleMoveArguments::new(direction, unit, in_selection_mode, value),
+    SimpleMoveArguments(direction, unit, in_selection_mode, value),
     source~,
     reason~,
   )
@@ -452,7 +453,7 @@ fn ViewModel::cursor_word_move_result(
       model_position.line_number,
       end_column,
     )
-    return ByModel(@cursor.SingleCursorState::new(anchor, active, Word, active))
+    return ByModel(SingleCursorState(anchor, active, Word, active))
   }
   let anchor = cursor.model_state.selection_start_start
   let active : @base_common.Position = if model_position.line_number <
@@ -566,7 +567,7 @@ pub fn ViewModel::move_cursor_line(
     let active = @base_common.Position::Position(
       select_to_line_number, select_to_column,
     )
-    ByModel(@cursor.SingleCursorState::new(start, active, Line, active))
+    ByModel(SingleCursorState(start, active, Line, active))
   } else {
     self.cursor_line_move_result(cursor, model_position, view_position)
   }

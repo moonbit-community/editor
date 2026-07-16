@@ -9,7 +9,7 @@ fn contract_disposable() -> @base_common.Disposable {
 
 ///|
 fn contract_feedback_handle() -> @agent_feedback_api.AgentFeedbackHandle {
-  @agent_feedback_api.AgentFeedbackHandle::new(
+  AgentFeedbackHandle(
     on_did_change_feedback=_ => contract_disposable(),
     on_did_change_navigation=_ => contract_disposable(),
     is_feedback_enabled=_ => false,
@@ -44,7 +44,7 @@ fn contract_feedback_handle() -> @agent_feedback_api.AgentFeedbackHandle {
 
 ///|
 fn contract_quick_diff_handle() -> @quick_diff_api.QuickDiffHandle {
-  @quick_diff_api.QuickDiffHandle::new(get_original_content=_ => None, on_did_change_original=_ => {
+  QuickDiffHandle(get_original_content=_ => None, on_did_change_original=_ => {
     contract_disposable()
   })
 }
@@ -99,9 +99,9 @@ fn compile_external_viewer_api_contract(
   model : @model.TextModel,
 ) -> Unit {
   let log_service = @log.LogService()
-  let languages = @languages.Languages::new()
-  let markers = @markers.MarkerService::new()
-  let marker_decorations = @markers.MarkerDecorationsService::new(
+  let languages = @languages.Languages()
+  let markers = @markers.MarkerService()
+  let marker_decorations = @markers.MarkerDecorationsService(
     markers.marker_service_handle(),
   )
   let services = @viewer.ViewerServices::new(

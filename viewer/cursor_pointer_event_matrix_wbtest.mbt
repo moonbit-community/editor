@@ -124,12 +124,12 @@ test "ctrl and meta pointer modifiers retain ordinary and non-multi behavior" {
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(1, 3), ctrl_key=true, reveal_type=None),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(1, 3), Position(1, 3)))
+    assert_cursor(viewer, Selection(Position(1, 3), Position(1, 3)))
     assert_last_cursor_transition(events, "mouse")
     viewer.dispatch_mouse(
       mouse_dispatch_data(Position(2, 4), meta_key=true, reveal_type=None),
     )
-    assert_cursor(viewer, @core.Selection::new(Position(2, 4), Position(2, 4)))
+    assert_cursor(viewer, Selection(Position(2, 4), Position(2, 4)))
     assert_last_cursor_transition(events, "mouse")
 
     let before = viewer.test_cursor().get_primary_cursor_state()
@@ -188,7 +188,7 @@ test "pointer converts a wrapped injected position across a hidden model line" {
       viewer.dispatch_mouse(
         mouse_dispatch_data(projected, ctrl_key=true, reveal_type=None),
       )
-      assert_cursor(viewer, @core.Selection::new(target, target))
+      assert_cursor(viewer, Selection(target, target))
       assert_position(viewer.test_cursor().view_state().position, projected)
     },
     options~,

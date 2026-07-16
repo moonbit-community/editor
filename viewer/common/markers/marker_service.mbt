@@ -209,7 +209,7 @@ fn MarkerStats::resource_stats(
   if unsupported_schemes.contains(resource.scheme) {
     return result
   }
-  for marker in self.service.read(MarkerReadOptions::new(resource~)) {
+  for marker in self.service.read(MarkerReadOptions(resource~)) {
     match marker.severity {
       Error => result.errors += 1
       Warning => result.warnings += 1
@@ -268,7 +268,10 @@ pub struct MarkerService {
 /// change event's `MicrotaskEmitter` (`markerService.ts:154-156` hardcodes
 /// `queueMicrotask`; the default here flushes inline — see the deviation note
 /// on `@base_common.MicrotaskEmitter`).
-pub fn MarkerService::new(schedule? : (() -> Unit) -> Unit) -> MarkerService {
+#alias(new)
+pub fn MarkerService::MarkerService(
+  schedule? : (() -> Unit) -> Unit,
+) -> MarkerService {
   let did_change_markers : @base_common.MicrotaskEmitter[
     Array[@base_common.Uri],
   ] = match schedule {
@@ -597,7 +600,7 @@ pub fn MarkerService::set_diagnostics(
   let data : Array[MarkerData] = []
   for diagnostic in diagnostics {
     data.push(
-      MarkerData::new(
+      MarkerData(
         severity=MarkerSeverity::from_diagnostic_severity(diagnostic.severity),
         message=diagnostic.message,
         start_line_number=diagnostic.range.start_line_number,
@@ -626,7 +629,7 @@ pub fn MarkerService::clear_resource(
   self : MarkerService,
   resource : @base_common.Uri,
 ) -> Unit {
-  for owner in self.read(MarkerReadOptions::new(resource~)).map(m => m.owner) {
+  for owner in self.read(MarkerReadOptions(resource~)).map(m => m.owner) {
     self.remove(owner, [resource])
   }
 }
@@ -638,7 +641,7 @@ pub fn MarkerService::markers_for_resource(
   resource : @base_common.Uri,
   limit? : Int = 0,
 ) -> Array[Marker] {
-  self.read(MarkerReadOptions::new(resource~, take=limit))
+  self.read(MarkerReadOptions(resource~, take=limit))
 }
 
 ///|

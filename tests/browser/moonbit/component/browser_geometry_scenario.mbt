@@ -310,7 +310,7 @@ fn BrowserGeometryFixture::new(
   family : String,
   host : @rdom.Element,
 ) -> BrowserGeometryFixture {
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), BrowserGeometryHoverProvider::{
 
   })

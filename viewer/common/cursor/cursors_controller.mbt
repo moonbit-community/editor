@@ -15,7 +15,8 @@ pub struct CursorsController {
 ///|
 /// Builds a controller at the document origin and captures the model's
 /// internal content version, never its caller-owned host metadata version.
-pub fn CursorsController::new(
+#alias(new)
+pub fn CursorsController::CursorsController(
   model : @model.TextModel,
   context : CursorContext,
 ) -> CursorsController {
@@ -23,7 +24,7 @@ pub fn CursorsController::new(
     model,
     known_model_version_id: model.get_version_id(),
     context,
-    cursor: Cursor::new(),
+    cursor: Cursor(),
     is_handling: false,
   }
 }
@@ -112,7 +113,7 @@ fn CursorsController::validate_model_state(
   let anchor_unchanged = validated_start == state.selection_start_start &&
     validated_end == state.selection_start_end
   let validated_position = self.model.validate_position(state.position)
-  SingleCursorState::new(
+  SingleCursorState(
     validated_start,
     validated_end,
     state.selection_start_kind,
@@ -293,7 +294,7 @@ pub fn CursorsController::on_model_content_changed(
   if !event.raw_content_changed_event.contains_event(Flush) {
     return None
   }
-  self.cursor = Cursor::new()
+  self.cursor = Cursor()
   self.finish_transition(None, "model", ContentFlush)
 }
 

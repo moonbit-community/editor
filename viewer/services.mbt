@@ -46,16 +46,14 @@ pub fn ViewerServices::new(
     None => {
       // The change event merges same-tick updates on a real microtask here
       // (Monaco's `MicrotaskEmitter`); headless tests use the sync default.
-      let store = @markers.MarkerService::new(
-        schedule=@base_browser.queue_microtask,
-      )
-      let decorations = @markers.MarkerDecorationsService::new(
+      let store = @markers.MarkerService(schedule=@base_browser.queue_microtask)
+      let decorations = @markers.MarkerDecorationsService(
         store.marker_service_handle(),
       )
       (decorations.marker_decorations_handle(), Some(decorations), Some(store))
     }
     Some(MarkerStore(store)) => {
-      let decorations = @markers.MarkerDecorationsService::new(store)
+      let decorations = @markers.MarkerDecorationsService(store)
       (decorations.marker_decorations_handle(), Some(decorations), None)
     }
     Some(Decorations(decorations)) => (decorations, None, None)

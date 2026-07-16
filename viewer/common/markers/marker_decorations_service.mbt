@@ -47,7 +47,8 @@ pub struct MarkerDecorationsService {
 ///|
 /// Creates a decoration facade over the marker store and subscribes to its change
 /// event (`markerDecorationsService.ts:43`).
-pub fn MarkerDecorationsService::new(
+#alias(new)
+pub fn MarkerDecorationsService::MarkerDecorationsService(
   markers : MarkerServiceHandle,
 ) -> MarkerDecorationsService {
   let service : MarkerDecorationsService = {
@@ -315,7 +316,7 @@ fn MarkerDecorationsService::remove_transient_markers(
   let scheme = model.uri.scheme
   if scheme == "inmemory" || scheme == "internal" || scheme == "vscode" {
     let owners : Map[String, Unit] = Map([])
-    for marker in self.markers.read(MarkerReadOptions::new(resource=model.uri)) {
+    for marker in self.markers.read(MarkerReadOptions(resource=model.uri)) {
       owners.set(marker.owner, ())
     }
     for owner, _ in owners {
@@ -426,7 +427,7 @@ fn MarkerDecorationsService::update_decorations_once(
   let marker_decorations = registration.marker_decorations
   // Limit to the first 500 errors/warnings
   let mut markers = self.markers.read(
-    MarkerReadOptions::new(resource=marker_decorations.model.uri, take=500),
+    MarkerReadOptions(resource=marker_decorations.model.uri, take=500),
   )
   // filter markers from suppressed ranges
   match self.suppressed_ranges.get(marker_decorations.model.uri.to_string()) {

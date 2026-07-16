@@ -8,7 +8,8 @@ pub struct QuickDiffHandle {
 
 ///|
 /// Constructs a handle from both required quick-diff callbacks.
-pub fn QuickDiffHandle::new(
+#alias(new)
+pub fn QuickDiffHandle::QuickDiffHandle(
   get_original_content~ : (@base_common.Uri) -> String?,
   on_did_change_original~ : ((@base_common.Uri) -> Unit) -> @base_common.Disposable,
 ) -> QuickDiffHandle {

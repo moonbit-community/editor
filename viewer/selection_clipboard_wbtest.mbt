@@ -8,7 +8,7 @@ fn selection_from_offsets(
   anchor_offset : Int,
   focus_offset : Int,
 ) -> @core.Selection {
-  @core.Selection::new(
+  Selection(
     snapshot.get_position_at(anchor_offset),
     snapshot.get_position_at(focus_offset),
   )

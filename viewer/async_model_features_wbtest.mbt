@@ -135,7 +135,7 @@ struct AsyncModelFeatureTestServices {
 ///|
 fn AsyncModelFeatureTestServices::new() -> AsyncModelFeatureTestServices {
   let log_service = @log.LogService()
-  let languages = @languages.Languages::new()
+  let languages = @languages.Languages()
   let services = ViewerServices::new(
     languages=languages.language_handle(log_service.log_handle()),
     log_service=log_service.log_handle(),
@@ -301,7 +301,7 @@ fn hover_scroll_change(
   left_changed : Bool,
   top_changed : Bool,
 ) -> @view_layout.ScrollChange {
-  let before = @view_layout.ScrollState::new(
+  let before = @view_layout.ScrollState(
     force_integer_values=false,
     100.0,
     500.0,
@@ -310,7 +310,7 @@ fn hover_scroll_change(
     500.0,
     0.0,
   )
-  let after = @view_layout.ScrollState::new(
+  let after = @view_layout.ScrollState(
     force_integer_values=false,
     100.0,
     500.0,

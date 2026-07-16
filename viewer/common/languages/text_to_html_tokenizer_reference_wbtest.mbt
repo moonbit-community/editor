@@ -20,7 +20,7 @@ fn make_meta(foreground : Int, font_style : Int) -> UInt {
 /// Inflated `ViewLineTokens` over `text` with explicit end-offset/metadata
 /// tokens (mirrors the suite's `TestLineTokens`).
 fn view_tokens(text : String, tokens : Array[UInt]) -> @tokens.ViewLineTokens {
-  @tokens.LineTokens::new(tokens, text, @services.LanguageIdCodec::new()).inflate()
+  @tokens.LineTokens(tokens, text, LanguageIdCodec()).inflate()
 }
 
 ///|
@@ -44,11 +44,7 @@ fn tth_mode(line : String) -> Array[UInt] {
 
 ///|
 test "TextToHtmlTokenizer 1" {
-  let actual = tokenize_to_string(
-    ".abc..def...gh",
-    @services.LanguageIdCodec::new(),
-    tth_mode,
-  )
+  let actual = tokenize_to_string(".abc..def...gh", LanguageIdCodec(), tth_mode)
   assert_eq(
     actual,
     "<div class=\"monaco-tokenized-source\">" +
@@ -66,7 +62,7 @@ test "TextToHtmlTokenizer 1" {
 test "TextToHtmlTokenizer 2" {
   let actual = tokenize_to_string(
     ".abc..def...gh\n.abc..def...gh",
-    @services.LanguageIdCodec::new(),
+    LanguageIdCodec(),
     tth_mode,
   )
   let one = "<span class=\"mtk7\">.</span>" +

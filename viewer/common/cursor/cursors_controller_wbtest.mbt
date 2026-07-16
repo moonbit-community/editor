@@ -35,7 +35,7 @@ fn CursorTestConverter::view_range_to_model_range(
 
 ///|
 fn CursorTestConverter::context(self : CursorTestConverter) -> CursorContext {
-  CursorContext::new(
+  CursorContext(
     view_to_model=position => self.view_position_to_model_position(position),
     view_range_to_model=range => self.view_range_to_model_range(range),
     model_to_view=position => self.model_position_to_view_position(position),
@@ -62,10 +62,10 @@ fn cursor_controller_test_model(text? : String = "abc") -> @model.TextModel {
 test "model validation resets only residues whose endpoints changed" {
   let model = cursor_controller_test_model(text="a\u{1F4DA}b")
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
-  let controller = CursorsController::new(model, identity.context())
+  let controller = CursorsController(model, identity.context())
 
   controller.set_model_cursor_state(
-    SingleCursorState::new(
+    SingleCursorState(
       Position(0, 0),
       Position(1, 4),
       Simple,
@@ -81,7 +81,7 @@ test "model validation resets only residues whose endpoints changed" {
   assert_eq(clamped_anchor.leftover_visible_columns, 9)
 
   controller.set_model_cursor_state(
-    SingleCursorState::new(
+    SingleCursorState(
       Position(1, 2),
       Position(1, 4),
       Simple,
@@ -99,26 +99,26 @@ test "model validation resets only residues whose endpoints changed" {
 
 ///|
 test "partial cursor-state constructors retain exact present and absent sides" {
-  let model_state = SingleCursorState::new(
+  let model_state = SingleCursorState(
     Position(1, 2),
     Position(1, 2),
     Simple,
     Position(1, 3),
   )
-  let view_state = SingleCursorState::new(
+  let view_state = SingleCursorState(
     Position(1, 3),
     Position(1, 3),
     Simple,
     Position(1, 4),
   )
-  let model_only = PartialModelCursorState::new(model_state)
+  let model_only = PartialModelCursorState(model_state)
   assert_true(model_only.model_state == model_state)
   assert_true(model_only.view_state is None)
-  let view_only = PartialViewCursorState::new(view_state)
+  let view_only = PartialViewCursorState(view_state)
   assert_true(view_only.model_state is None)
   assert_true(view_only.view_state == view_state)
 
-  let full = FullCursorState(CursorState::new(model_state, view_state))
+  let full = FullCursorState(CursorState(model_state, view_state))
   assert_true(full.model_state() == Some(model_state))
   assert_true(full.view_state() == Some(view_state))
   let from_model = CursorState::from_model_state(model_state)
@@ -131,8 +131,8 @@ test "partial cursor-state constructors retain exact present and absent sides" {
 
 ///|
 test "model selections become collapsed Simple anchors in source order" {
-  let first = @core.Selection::new(Position(1, 3), Position(1, 1))
-  let second = @core.Selection::new(Position(1, 1), Position(1, 2))
+  let first = @core.Selection(Position(1, 3), Position(1, 1))
+  let second = @core.Selection(Position(1, 1), Position(1, 2))
   let states = CursorState::from_model_selections([first, second])
   assert_eq(states.length(), 2)
   guard states[0].model_state() is Some(first_state) else {
@@ -155,11 +155,11 @@ test "model selections become collapsed Simple anchors in source order" {
 test "central partial transition covers null model view and full shapes" {
   let model = cursor_controller_test_model()
   let converter = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
-  let raw_cursor = Cursor::new()
+  let raw_cursor = Cursor()
   let raw_before = raw_cursor.as_cursor_state()
   assert_false(raw_cursor.set_state(converter.context(), None, None))
   assert_true(raw_cursor.as_cursor_state() == raw_before)
-  let controller = CursorsController::new(model, converter.context())
+  let controller = CursorsController(model, converter.context())
 
   assert_true(controller.set_cursor_state(None) is None)
   assert_true(controller.model_state().position == Position(1, 1))
@@ -175,7 +175,7 @@ test "central partial transition covers null model view and full shapes" {
   assert_true(controller.model_state().position == Position(1, 2))
   assert_true(controller.view_state().position == Position(1, 3))
 
-  let view_state = SingleCursorState::new(
+  let view_state = SingleCursorState(
     Position(1, 4),
     Position(1, 4),
     Simple,
@@ -196,7 +196,7 @@ test "central partial transition covers null model view and full shapes" {
   let inconsistent_view = SingleCursorState::collapsed(Position(1, 99))
   assert_true(
     controller.set_cursor_state(
-      Some(FullCursorState(CursorState::new(model_state, inconsistent_view))),
+      Some(FullCursorState(CursorState(model_state, inconsistent_view))),
     )
     is Some(_),
   )
@@ -208,9 +208,9 @@ test "central partial transition covers null model view and full shapes" {
 test "single-cursor normalize returns without changing primary state" {
   let model = cursor_controller_test_model()
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
-  let controller = CursorsController::new(model, identity.context())
+  let controller = CursorsController(model, identity.context())
   controller.set_model_cursor_state(
-    SingleCursorState::new(
+    SingleCursorState(
       Position(1, 1),
       Position(1, 3),
       Simple,
@@ -229,8 +229,8 @@ test "single-cursor normalize returns without changing primary state" {
 test "view-only state converts its complete anchor range as one unit" {
   let model = cursor_controller_test_model()
   let converter = CursorTestConverter::{ column_delta: 1, range_delta: 2 }
-  let controller = CursorsController::new(model, converter.context())
-  let view_state = SingleCursorState::new(
+  let controller = CursorsController(model, converter.context())
+  let view_state = SingleCursorState(
     Position(1, 4),
     Position(1, 5),
     Word,
@@ -249,7 +249,7 @@ test "mapping reprojection observes handling and pending model-version guards" {
   let model = cursor_controller_test_model()
   let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
   let shifted = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
-  let controller = CursorsController::new(model, identity.context())
+  let controller = CursorsController(model, identity.context())
   controller.set_model_cursor_state(
     SingleCursorState::collapsed(Position(1, 2)),
   )

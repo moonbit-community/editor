@@ -324,7 +324,7 @@ test "token source preserves inclusive ranges in producer order" {
 
 ///|
 test "scroll source copies consumed width and independent flags" {
-  let previous = @view_layout.ScrollState::new(
+  let previous = @view_layout.ScrollState(
     force_integer_values=false,
     100.0,
     500.0,
@@ -333,7 +333,7 @@ test "scroll source copies consumed width and independent flags" {
     800.0,
     20.0,
   )
-  let current = @view_layout.ScrollState::new(
+  let current = @view_layout.ScrollState(
     force_integer_values=false,
     100.0,
     550.0,
@@ -352,7 +352,7 @@ test "scroll source copies consumed width and independent flags" {
   assert_true(event_flags[2])
   assert_true(event_flags[3])
 
-  let left_only = @view_layout.ScrollState::new(
+  let left_only = @view_layout.ScrollState(
     force_integer_values=false,
     100.0,
     500.0,

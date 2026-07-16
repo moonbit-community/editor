@@ -40,7 +40,8 @@ let smooth_scrolling_time : Double = 125.0
 
 ///|
 /// Creates a view layout with a fixed line height and optional line count.
-pub fn ViewLayout::new(
+#alias(new)
+pub fn ViewLayout::ViewLayout(
   line_height~ : Int,
   line_count? : Int = 0,
   smooth_scrolling? : Bool = false,
@@ -55,7 +56,7 @@ pub fn ViewLayout::new(
     // `forceIntegerValues: true` (viewLayout.ts): the editor's scroll truth is
     // whole pixels, so fractional trackpad deltas never render at a subpixel
     // transform offset.
-    scrollable: EditorScrollable::new(
+    scrollable: EditorScrollable(
       if smooth_scrolling {
         smooth_scrolling_time
       } else {
@@ -64,7 +65,7 @@ pub fn ViewLayout::new(
       schedule_at_next_animation_frame,
       now,
     ),
-    lines: LinesLayout::new(line_count, line_height, 0, 0),
+    lines: LinesLayout(line_count, line_height, 0, 0),
     line_height,
     line_count,
     max_line_width: 0.0,
@@ -156,7 +157,7 @@ pub fn ViewLayout::set_viewport_size(
 ) -> ScrollChange? {
   let dimensions = self.scrollable.editor_dimensions()
   self.scrollable.set_editor_dimensions(
-    EditorScrollDimensions::new(
+    EditorScrollDimensions(
       width,
       dimensions.content_width,
       height,
@@ -652,7 +653,7 @@ fn ViewLayout::compute_content_height(
 fn ViewLayout::update_height(self : ViewLayout) -> ScrollChange? {
   let dimensions = self.scrollable.editor_dimensions()
   self.scrollable.set_editor_dimensions(
-    EditorScrollDimensions::new(
+    EditorScrollDimensions(
       dimensions.width,
       dimensions.content_width,
       dimensions.height,
@@ -687,7 +688,7 @@ fn ViewLayout::compute_content_width(self : ViewLayout) -> Double {
 fn ViewLayout::update_content_width(self : ViewLayout) -> ScrollChange? {
   let dimensions = self.scrollable.editor_dimensions()
   let width_change = self.scrollable.set_editor_dimensions(
-    EditorScrollDimensions::new(
+    EditorScrollDimensions(
       dimensions.width,
       self.compute_content_width(),
       dimensions.height,

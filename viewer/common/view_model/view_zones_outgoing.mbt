@@ -31,7 +31,5 @@ pub fn ViewModel::on_view_zones_changed(
 /// Emits one outgoing ViewZones fact after the browser tier has completed its
 /// internal `ViewZonesChanged` delivery.
 pub fn ViewModel::emit_view_zones_changed(self : ViewModel) -> Unit {
-  self.cursor_event_dispatcher.emit_view_zones_changed(
-    ViewZonesChangedEvent::new(),
-  )
+  self.cursor_event_dispatcher.emit_view_zones_changed(ViewZonesChangedEvent())
 }

@@ -27,7 +27,8 @@ pub struct EditorWhitespace {
 
 ///|
 /// Constructs a whitespace; `prefix_sum` starts at 0 (lazily computed).
-pub fn EditorWhitespace::new(
+#alias(new)
+pub fn EditorWhitespace::EditorWhitespace(
   id : String,
   after_line_number : Int,
   ordinal : Int,
@@ -173,9 +174,7 @@ pub fn WhitespaceChangeAccessor::insert_whitespace(
   self.layout.last_whitespace_id = self.layout.last_whitespace_id + 1
   let id = "\{self.layout.instance_id}\{self.layout.last_whitespace_id}"
   self.layout.pending_changes.insert(
-    EditorWhitespace::new(
-      id, after_line_number, ordinal, height_in_px, min_width,
-    ),
+    EditorWhitespace(id, after_line_number, ordinal, height_in_px, min_width),
   )
   id
 }
@@ -222,7 +221,8 @@ pub struct LinesLayout {
 ///|
 /// Creates a lines layout. `custom_line_height_data` is accepted for shape
 /// parity with Monaco but ignored (uniform heights — see file deviation).
-pub fn LinesLayout::new(
+#alias(new)
+pub fn LinesLayout::LinesLayout(
   line_count : Int,
   default_line_height : Int,
   padding_top : Int,

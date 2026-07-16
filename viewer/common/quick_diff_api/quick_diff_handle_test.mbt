@@ -3,7 +3,7 @@ test "QuickDiffHandle forwards lookup, subscription, and disposal" {
   let resource = try! @base_common.Uri::parse("memory://workspace/a.mbt")
   let calls : Array[String] = []
   let changed : Array[String] = []
-  let handle = QuickDiffHandle::new(
+  let handle = @quick_diff_api.QuickDiffHandle(
     get_original_content=uri => {
       calls.push("get:" + uri.to_string())
       Some("original")

@@ -35,7 +35,7 @@ test "LinesLayout applies exact JavaScript ToInt32 to raw whitespace numbers" {
     (-2147483649.0, 2147483647),
     (-4294967297.0, -1),
   ]
-  let layout = LinesLayout::new(3, 10, 0, 0)
+  let layout = LinesLayout(3, 10, 0, 0)
   let ids : Array[String] = []
   layout.change_whitespace(accessor => {
     for index, pair in cases {
@@ -61,7 +61,7 @@ test "LinesLayout applies exact JavaScript ToInt32 to raw whitespace numbers" {
 
 ///|
 test "LinesLayout commits and clears its pending batch when callback raises" {
-  let layout = LinesLayout::new(3, 10, 0, 0)
+  let layout = LinesLayout(3, 10, 0, 0)
   let result = Some(layout.change_whitespace(insert_then_fail)) catch {
     WhitespaceCallbackFailure => None
   }
@@ -81,13 +81,13 @@ test "LinesLayout commits and clears its pending batch when callback raises" {
 
 ///|
 test "LinesLayout snapshots copy the array and alias whitespace objects" {
-  let layout = LinesLayout::new(3, 10, 0, 0)
+  let layout = LinesLayout(3, 10, 0, 0)
   layout.change_whitespace(accessor => {
     accessor.insert_whitespace(1, 0, 5.0, 0.0) |> ignore
   })
   |> ignore
   let snapshot = layout.get_whitespaces()
-  snapshot.push(EditorWhitespace::new("detached", 0, 0, 1, 0))
+  snapshot.push(EditorWhitespace("detached", 0, 0, 1, 0))
   assert_eq(snapshot.length(), 2)
   assert_eq(layout.get_whitespaces_count(), 1)
   snapshot[0].height = 9
@@ -96,14 +96,14 @@ test "LinesLayout snapshots copy the array and alias whitespace objects" {
 
 ///|
 test "LinesLayout IDs keep per-instance counters and cross-instance uniqueness" {
-  let first = LinesLayout::new(1, 10, 0, 0)
+  let first = LinesLayout(1, 10, 0, 0)
   let first_ids : Array[String] = []
   first.change_whitespace(accessor => {
     first_ids.push(accessor.insert_whitespace(0, 0, 1.0, 0.0))
     first_ids.push(accessor.insert_whitespace(0, 0, 1.0, 0.0))
   })
   |> ignore
-  let second = LinesLayout::new(1, 10, 0, 0)
+  let second = LinesLayout(1, 10, 0, 0)
   let second_id = Ref("")
   second.change_whitespace(accessor => {
     second_id.val = accessor.insert_whitespace(0, 0, 1.0, 0.0)
@@ -124,7 +124,7 @@ test "LinesLayout IDs keep per-instance counters and cross-instance uniqueness" 
 
 ///|
 test "ViewLayout incremental whitespace facade updates height and preserves IDs" {
-  let layout = ViewLayout::new(line_height=10, line_count=3)
+  let layout = ViewLayout(line_height=10, line_count=3)
   assert_false(layout.change_whitespace(_ => ()))
   assert_eq(layout.get_content_height(), 30.0)
   let id = Ref("")
@@ -158,7 +158,7 @@ test "ViewLayout incremental whitespace facade updates height and preserves IDs"
 
 ///|
 test "ViewLayout exposes ID whitespace viewport and explicit scrollTop data" {
-  let layout = ViewLayout::new(line_height=10, line_count=20)
+  let layout = ViewLayout(line_height=10, line_count=20)
   layout.set_viewport_size(width=100.0, height=25.0) |> ignore
   let ids : Array[String] = []
   layout.change_whitespace(accessor => {
@@ -197,11 +197,7 @@ test "ViewLayout exposes ID whitespace viewport and explicit scrollTop data" {
 fn saved_state_with_zones(
   zone_count : Int,
 ) -> (SavedScrollState, Double, Double) {
-  let layout = ViewLayout::new(
-    line_height=10,
-    line_count=20,
-    smooth_scrolling=true,
-  )
+  let layout = ViewLayout(line_height=10, line_count=20, smooth_scrolling=true)
   layout.set_viewport_size(width=100.0, height=20.0) |> ignore
   if zone_count > 0 {
     layout.change_whitespace(accessor => {

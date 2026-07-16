@@ -24,3 +24,17 @@ cross-package or browser-visible implementation complete.
 - The shell/backend remains optional to embedders.
 - `just check` is authoritative for the scripted boundary rules; see
   `docs/architecture.md` for the complete dependency policy.
+
+## Reference Tests
+
+Use `*_reference_test.mbt` / `*_reference_wbtest.mbt` when a test is traceable
+to a pinned Monaco, VS Code, or CodeMirror source test or behavior cluster.
+
+- Name the source path and pinned revision in the file or test comment.
+- Preserve source labels, inputs, outputs, ordering, and boundary values when
+  they are part of the behavior under test.
+- Within the selected source-test or behavior scope, keep unsupported cases
+  visible as `SKIPPED` with a product-boundary reason instead of silently
+  deleting them.
+- Test observable behavior and algorithmic invariants. TypeScript interfaces,
+  class hierarchies, and private field layout are not conformance contracts.

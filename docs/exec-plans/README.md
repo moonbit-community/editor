@@ -3,8 +3,10 @@
 Create a plan here for future work spanning packages or changing harness
 behavior. It must let another engineer execute the work without rediscovery.
 
-For Monaco/VS Code or CodeMirror ports, follow `_PORT_PLAYBOOK.md`; inventory
-and ledger review precede implementation.
+For Monaco/VS Code or CodeMirror ports, follow `_PORT_PLAYBOOK.md`. Use its
+behavior-port mode by default. Require source-shaped algorithm review only for
+sensitive arithmetic, ordering, timing, or state machines; require a complete
+source-unit ledger only when the user explicitly asks for a full audit.
 
 When the user asks to execute a plan, review gates are internal validation
 checkpoints, not user-approval pauses. Complete and record each review, then

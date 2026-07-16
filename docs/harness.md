@@ -78,8 +78,11 @@ scenario bundles, then assembles owner-adjacent CSS and codicons under
   when no user path exists.
 - Use Playwright for caret-API hit testing, measured selection/widget geometry,
   browser event wiring, server/file-watch integration, and screenshots/traces.
-- Monaco parity comes from source-faithful code plus ported conformance tests,
-  not browser DOM snapshots against Monaco.
+- Monaco parity comes from an explicit behavior mapping plus focused
+  conformance evidence, not from copying TypeScript representation or relying
+  on browser DOM snapshots against Monaco. Source-shaped control flow is
+  required only for algorithm-fidelity slices where ordering or arithmetic is
+  part of the contract.
 - The MoonBit reporter only emits data; Playwright validates the report and
   owns pass/fail.
 

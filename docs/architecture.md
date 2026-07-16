@@ -11,9 +11,12 @@ For exact APIs use the owning package's `pkg.generated.mbti`; for exact
 dependencies use `moon.pkg`. Implemented files under `docs/exec-plans/` are
 historical evidence, not current architecture.
 
-Monaco/VS Code is the primary behavioral and structural reference. CodeMirror
-is secondary. `vscode/` and `codemirror/` are pinned research trees only;
-product code never imports them and public names remain MoonBit-owned.
+Monaco/VS Code is the primary behavioral reference and a source of tested
+algorithmic and ownership patterns. It is not a required type, class, package,
+or inheritance template: local representation follows MoonBit capabilities,
+lifetime boundaries, and dependency direction. CodeMirror is secondary.
+`vscode/` and `codemirror/` are pinned research trees only; product code never
+imports them and public names remain MoonBit-owned.
 
 ## Runtime Shape
 

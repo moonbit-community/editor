@@ -13,20 +13,23 @@
 
 Implemented execution plans are history, not current contracts.
 
-## 1:1 Ports
+## Reference Ports
 
-Follow `docs/exec-plans/_PORT_PLAYBOOK.md` for every Monaco/VS Code or
-CodeMirror port. The non-negotiables are:
+Follow `docs/exec-plans/_PORT_PLAYBOOK.md` for Monaco/VS Code or CodeMirror
+ports. Monaco is the behavioral oracle, not a required MoonBit representation.
+The non-negotiables are:
 
-1. Inventory the whole named source unit—public/private members, constants,
-   behavior-changing branches, and owned DOM/CSS—then review the inventory
-   before implementation.
-2. Give every inventory member a parity-ledger row ending in
-   `PORTED`/`TESTED`/`PASS`/`DEFERRED (reason)`/`N-A (reason)`; absence is a bug.
-3. Preserve source control flow, ordering, early returns, and constants. Cite
-   every logic line or list it under `Deviations` with a real seam-based reason.
-4. Derive tests from source branches and run the behavior-variable matrix across
-   configurations. Green repository checks alone do not establish 1:1 parity.
+1. Choose and state the port mode: behavior port by default, algorithm-fidelity
+   port for sensitive arithmetic/state machines, or full source audit only when
+   explicitly requested.
+2. Account for observable behavior, boundary cases, algorithmic invariants, and
+   intentional exclusions. Do not create one ledger row per TypeScript member
+   unless the selected full-audit mode needs it.
+3. Preserve exact control flow and constants only where they affect the selected
+   algorithm-fidelity contract. Otherwise prefer MoonBit-native concrete types,
+   enums, handles, callback records, and ownership.
+4. Link each claimed behavior to focused evidence or mark it `DEFERRED (reason)`
+   / `N-A (reason)`. Green repository checks alone do not prove parity.
 
 ## Execution Plan Continuation
 

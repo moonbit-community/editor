@@ -22,8 +22,11 @@ Read every scoped source file and enumerate:
 - every behavior-changing branch and early return;
 - every owned DOM attribute, class, CSS property, and custom property.
 
-The inventory is a review deliverable. Record its member count and stop for
-review before writing port code. A search such as
+The inventory is a review deliverable. Record its member count and review the
+artifact before writing port code. When the user has asked to execute the plan,
+this is an internal quality checkpoint: record the review result and continue
+without pausing for user approval unless an unresolved material choice changes
+scope, public API, or behavior. A search such as
 `rg -n '<member-pattern>' vscode/<path>` is only a discovery aid; reading the
 whole source unit is authoritative.
 
@@ -99,7 +102,8 @@ Explicitly out of scope: <complete sibling clusters>.
 - DOM/CSS: <all owned attributes/classes/properties, or N-A>
 - Member count: N
 
-Review gate: stop here before implementation.
+Review gate: review and record this artifact before implementation, then
+continue without pausing for user approval.
 
 ## Parity Ledger (Phase 2)
 

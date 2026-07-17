@@ -27,7 +27,7 @@ pub struct ViewerServices {
 /// model registrations and host state. Omitting the Viewer constructor's
 /// `services` argument creates the same shape internally and transfers only
 /// that internal bundle's lifetime to the Viewer.
-#alias(new)
+#alias(new, deprecated)
 pub fn ViewerServices::ViewerServices(
   languages? : @languages.LanguageHandle,
   markers? : @markers.MarkerDecorationsSource,

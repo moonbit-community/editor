@@ -89,7 +89,7 @@ pub struct LanguageHandle {
 
 ///|
 /// Creates an isolated language registry.
-#alias(new)
+#alias(new, deprecated)
 pub fn Languages::Languages() -> Languages {
   {
     hover_provider: LanguageFeatureRegistry::new(),

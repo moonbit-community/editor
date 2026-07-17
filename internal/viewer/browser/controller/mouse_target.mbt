@@ -320,7 +320,7 @@ pub struct HitTestContext {
 }
 
 ///|
-#alias(new)
+#alias(new, deprecated)
 pub fn HitTestContext::HitTestContext(
   view_model : @view_model.ViewModel,
   view_helper : PointerHandlerHelper,
@@ -563,7 +563,7 @@ pub struct HitTestRequest {
 }
 
 ///|
-#alias(new)
+#alias(new, deprecated)
 pub fn HitTestRequest::HitTestRequest(
   ctx : HitTestContext,
   editor_pos : @editor_browser.EditorPagePosition,
@@ -827,7 +827,7 @@ pub struct MouseTargetFactory {
 }
 
 ///|
-#alias(new)
+#alias(new, deprecated)
 pub fn MouseTargetFactory::MouseTargetFactory(
   view_helper : PointerHandlerHelper,
 ) -> MouseTargetFactory {

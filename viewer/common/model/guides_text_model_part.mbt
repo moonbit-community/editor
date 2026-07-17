@@ -38,7 +38,7 @@ pub struct GuidesTextModelPart {
 }
 
 ///|
-#alias(new)
+#alias(new, deprecated)
 pub fn GuidesTextModelPart::GuidesTextModelPart(
   text_model : TextSnapshot,
   tab_size? : Int = 4,

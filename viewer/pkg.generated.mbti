@@ -142,7 +142,7 @@ pub fn ViewerOptions::with_theme(Self, String) -> Self
 pub struct ViewerServices {
   // private fields
 }
-#alias(new)
+#alias(new, deprecated)
 pub fn ViewerServices::ViewerServices(languages? : @languages.LanguageHandle, markers? : @markers.MarkerDecorationsSource, agent_feedback? : @agent_feedback_api.AgentFeedbackHandle, quick_diff? : @quick_diff_api.QuickDiffHandle, log_service? : @log.LogHandle) -> Self
 pub fn ViewerServices::dispose(Self) -> Unit
 

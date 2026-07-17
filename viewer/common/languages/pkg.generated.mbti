@@ -48,7 +48,7 @@ pub async fn LanguageHandle::hover_at(Self, @model.TextModel, Int, token? : @lan
 pub struct Languages {
   // private fields
 }
-#alias(new)
+#alias(new, deprecated)
 pub fn Languages::Languages() -> Self
 pub async fn Languages::document_symbols(Self, @model.TextModel, @log.LogService) -> Array[@language.DocumentSymbol] noraise
 pub fn Languages::get_language_configuration(Self, String) -> LanguageConfiguration

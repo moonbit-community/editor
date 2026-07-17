@@ -3,8 +3,9 @@
 // `IPointerHandlerHelper`, `MouseHandler`, `MouseDownOperation` and
 // `MouseDownState`. The handler registers its own DOM listeners through
 // `EditorMouseEventFactory` on the view DOM node, exactly like the source —
-// the root package only constructs it (`pointerHandler.ts`'s touch/pen
-// dispatch is not ported; the plain `MouseHandler` is the one handler).
+// the root package only constructs it. The touch-scroll slice from
+// `pointerHandler.ts`/`touch.ts` is installed by this handler; touch tap,
+// context-menu, and pen-selection dispatch remain intentionally unported.
 //
 // Shape notes:
 //   * Monaco's `MouseHandler` also holds a `ViewContext` (view model, view
@@ -136,6 +137,7 @@ pub struct MouseHandler {
   priv mouse_target_factory : MouseTargetFactory
   priv mouse_down_operation : MouseDownOperation
   priv scrollbar_drag_monitor : @base_browser.GlobalPointerMoveMonitor
+  priv mut touch_scroll_gesture : TouchScrollGesture?
   priv mut last_mouse_leave_time : Double
   priv mut mouse_leave_monitor : @base_common.Disposable?
   priv listeners : Array[@base_common.Disposable]
@@ -157,6 +159,7 @@ pub fn MouseHandler::MouseHandler(
       view_helper, mouse_target_factory,
     ),
     scrollbar_drag_monitor: GlobalPointerMoveMonitor(),
+    touch_scroll_gesture: None,
     last_mouse_leave_time: -1.0,
     mouse_leave_monitor: None,
     listeners: [],
@@ -241,6 +244,7 @@ pub fn MouseHandler::MouseHandler(
       handler.on_mouse_down(e, capture_pointer_id.val)
     }),
   )
+  handler.install_touch_scroll_gesture()
   handler
 }
 
@@ -252,6 +256,11 @@ pub fn MouseHandler::dispose(self : MouseHandler) -> Unit {
   self.disposed = true
   self.end_scrollable_drag()
   self.scrollbar_drag_monitor.dispose()
+  match self.touch_scroll_gesture {
+    Some(gesture) => gesture.dispose()
+    None => ()
+  }
+  self.touch_scroll_gesture = None
   for listener in self.listeners {
     listener.dispose()
   }

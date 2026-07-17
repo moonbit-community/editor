@@ -182,3 +182,80 @@ test('drags editor scrollbar thumb after auto reveal', async ({ page }) => {
     .toBeGreaterThan(before.top);
   await expect(verticalBar.locator('> .slider')).not.toHaveClass(/active/);
 });
+
+test.describe('mobile touch scrolling', () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+
+  test('pans, coasts, and keeps the surrounding page fixed', async ({ page }) => {
+    const events = collectReadonlyEvents(page);
+    await page.goto('/');
+    await openWorkspaceFile(page, 'src/generated_scroll.mbt', {
+      waitForActiveReveal: false,
+    });
+
+    const editorScrollable = page.locator('.monaco-scrollable-element.editor-scrollable');
+    const verticalBar = editorScrollable.locator('> .scrollbar.vertical');
+    await expect(editorScrollable).toBeVisible();
+    await expect(verticalBar).toHaveClass(/(^|\s)invisible(\s|$)/);
+    const box = await editorScrollable.boundingBox();
+    expect(box).not.toBeNull();
+
+    await page.evaluate(() => {
+      globalThis.__touchMoveDefaultPrevented = [];
+      document.querySelector('.lines-content').addEventListener(
+        'touchmove',
+        (event) => globalThis.__touchMoveDefaultPrevented.push(event.defaultPrevented),
+        { passive: false },
+      );
+    });
+    const pageScrollBefore = await page.evaluate(() => window.scrollY);
+    const scrollEventsBefore = events.count('view:scroll');
+    const client = await page.context().newCDPSession(page);
+    const x = Math.round(box.x + Math.min(box.width / 2, 120));
+    const startY = Math.round(box.y + box.height * 0.75);
+
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y: startY, id: 1 }],
+    });
+    for (let step = 1; step <= 5; step++) {
+      await page.waitForTimeout(16);
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: startY - step * 24, id: 1 }],
+      });
+    }
+    await expect
+      .poll(() => lastScrollTop(events), { timeout: 3_000 })
+      .toBeGreaterThan(0);
+    await page.waitForTimeout(50);
+    const scrollTopAtRelease = lastScrollTop(events);
+    expect(events.count('view:scroll')).toBeGreaterThan(scrollEventsBefore);
+    expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBefore);
+    expect(await page.evaluate(() => globalThis.__touchMoveDefaultPrevented)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    await expect(verticalBar).toHaveClass(/(^|\s)visible(\s|$)/);
+
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect
+      .poll(() => lastScrollTop(events), { timeout: 3_000 })
+      .toBeGreaterThan(scrollTopAtRelease);
+    await expect.poll(() => firstVisibleLine(page), { timeout: 3_000 }).toBeGreaterThan(1);
+    await expect(verticalBar).toHaveClass(
+      /(^|\s)invisible(\s|$).*($|\s)fade(\s|$)/,
+      { timeout: 2_500 },
+    );
+  });
+});

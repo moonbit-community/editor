@@ -29,15 +29,16 @@ fn TouchScrollTestHarness::runtime(
 ) -> TouchScrollRuntime {
   {
     now: () => self.now,
-    request_animation_frame: callback => {
+    schedule_at_next_animation_frame: callback => {
       let handle = self.next_handle
       self.next_handle += 1
       self.frames[handle] = callback
-      handle.to_double()
-    },
-    cancel_animation_frame: handle => {
-      self.frames.remove(handle.to_int())
-      self.cancel_count += 1
+      @base_common.Disposable::from(() => {
+        if self.frames.get(handle) is Some(_) {
+          self.frames.remove(handle)
+          self.cancel_count += 1
+        }
+      })
     },
   }
 }
@@ -76,8 +77,9 @@ test "pointerHandler touch change preserves translation signs and ViewLayout eve
   let gesture = TouchScrollGesture::new(
     {
       now: () => 0.0,
-      request_animation_frame: _ => 1.0,
-      cancel_animation_frame: _ => (),
+      schedule_at_next_animation_frame: _ => {
+        @base_common.Disposable::from(() => ())
+      },
     },
     (translation_x, translation_y) => {
       layout.delta_scroll_now(-translation_x, -translation_y)
@@ -156,8 +158,7 @@ test "touch inertia exclusions and cancellation close every gesture lifetime" {
   assert_true(gesture.end_touch(4, 2, 40.0))
   assert_eq(harness.frames.length(), 0)
 
-  // A fresh touch cancels pending inertia; touchcancel and dispose clear all
-  // active identifiers and are idempotent.
+  // A fresh touch cancels pending inertia.
   gesture.begin_touch_event()
   gesture.start_touch(5, 0.0, 0.0, 50.0)
   assert_true(gesture.move_touch(5, 40.0, 0.0, 60.0))
@@ -166,10 +167,27 @@ test "touch inertia exclusions and cancellation close every gesture lifetime" {
   gesture.begin_touch_event()
   assert_eq(harness.frames.length(), 0)
   assert_eq(harness.cancel_count, 1)
+
+  // The touchcancel path clears active identifiers and pending inertia.
   gesture.start_touch(6, 1.0, 1.0, 70.0)
+  assert_true(gesture.move_touch(6, 41.0, 1.0, 80.0))
+  assert_true(gesture.end_touch(6, 1, 80.0))
+  assert_eq(harness.frames.length(), 1)
   gesture.cancel_touches()
   assert_eq(gesture.active_touches.length(), 0)
+  assert_eq(harness.frames.length(), 0)
+  assert_eq(harness.cancel_count, 2)
+
+  // Per-View teardown cancels the final pending inertia frame and is
+  // idempotent.
+  gesture.begin_touch_event()
+  gesture.start_touch(7, 0.0, 0.0, 90.0)
+  assert_true(gesture.move_touch(7, 40.0, 0.0, 100.0))
+  assert_true(gesture.end_touch(7, 1, 100.0))
+  assert_eq(harness.frames.length(), 1)
   gesture.dispose()
+  assert_eq(harness.frames.length(), 0)
+  assert_eq(harness.cancel_count, 3)
   gesture.dispose()
   assert_true(gesture.disposed)
 }

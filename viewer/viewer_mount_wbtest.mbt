@@ -155,6 +155,139 @@ test "mounted scheduler clears publication before a reentrant schedule" {
 }
 
 ///|
+test "mounted render joins a strict-next tick at priority 100" {
+  install_mounted_test_browser()
+  defer restore_mounted_test_browser()
+  let viewer = Viewer::Viewer()
+  defer viewer.dispose()
+  let host = @rdom.document().create_element("div")
+  viewer.attach(host)
+  flush_mounted_test_frames()
+  guard viewer.mount is Mounted(mounted) else {
+    fail("attached Viewer did not publish Mounted state")
+  }
+  let events : Array[String] = []
+  @base_browser.schedule_at_next_animation_frame(
+    () => {
+      events.push("tick")
+      mounted.schedule_render(() => events.push("render-100"))
+      @base_browser.schedule_at_next_animation_frame(() => {
+        events.push("next-tick")
+      })
+      |> ignore
+    },
+    priority=200,
+  )
+  |> ignore
+  @base_browser.schedule_at_next_animation_frame(
+    () => events.push("before-render-101"),
+    priority=101,
+  )
+  |> ignore
+  @base_browser.schedule_at_next_animation_frame(
+    () => events.push("after-render-99"),
+    priority=99,
+  )
+  |> ignore
+  assert_eq(mounted_test_frame_count(), 1)
+  run_one_mounted_test_frame()
+  assert_true(
+    events == ["tick", "before-render-101", "render-100", "after-render-99"],
+  )
+  assert_eq(mounted_test_frame_count(), 1)
+  run_one_mounted_test_frame()
+  assert_true(events.last() == Some("next-tick"))
+}
+
+///|
+test "two mounted Viewers share one request and isolate cancellation" {
+  install_mounted_test_browser()
+  defer restore_mounted_test_browser()
+  let first = Viewer::Viewer()
+  defer first.dispose()
+  let second = Viewer::Viewer()
+  defer second.dispose()
+  first.attach(@rdom.document().create_element("div"))
+  second.attach(@rdom.document().create_element("div"))
+  flush_mounted_test_frames()
+  guard first.mount is Mounted(first_mounted) else {
+    fail("first Viewer did not publish Mounted state")
+  }
+  guard second.mount is Mounted(second_mounted) else {
+    fail("second Viewer did not publish Mounted state")
+  }
+  let events : Array[String] = []
+  first_mounted.schedule_render(() => events.push("first"))
+  second_mounted.schedule_render(() => events.push("second"))
+  assert_eq(mounted_test_frame_count(), 1)
+  run_one_mounted_test_frame()
+  assert_true(events == ["first", "second"])
+
+  events.clear()
+  first_mounted.schedule_render(() => events.push("disposed-first"))
+  second_mounted.schedule_render(() => events.push("live-second"))
+  assert_eq(mounted_test_frame_count(), 1)
+  first.dispose()
+  run_one_mounted_test_frame()
+  assert_true(events == ["live-second"])
+  assert_false(first_mounted.has_pending_render())
+  assert_false(second_mounted.has_pending_render())
+}
+
+///|
+priv enum PendingSmoothExit {
+  ReplaceModel
+  DetachModel
+  DisposeViewer
+}
+
+///|
+fn assert_pending_smooth_exit_cancels(exit : PendingSmoothExit) -> Unit raise {
+  let viewer = Viewer::Viewer(
+    options=ViewerOptions(smooth_scrolling=true, font_size=12, line_height=18),
+  )
+  let first = test_model(
+    "01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20",
+  )
+  let replacement = test_model("replacement")
+  viewer.attach(@rdom.document().create_element("div"))
+  viewer.set_model(Some(first))
+  // This test needs the mounted ViewModel and held native queue, not a DOM
+  // measurement pass from the intentionally minimal fake document.
+  viewer.cancel_render_frame()
+  guard viewer.get_view_model() is Some(old_view_model) else {
+    fail("mounted Viewer did not install its ViewModel")
+  }
+  old_view_model.view_layout.scroll_to_smooth(scroll_top=90.0)
+  assert_true(old_view_model.view_layout.has_pending_scroll_animation())
+  assert_eq(mounted_test_frame_count(), 1)
+  match exit {
+    ReplaceModel => viewer.set_model(Some(replacement))
+    DetachModel => viewer.set_model(None)
+    DisposeViewer => viewer.dispose()
+  }
+  // The assertion targets the retired model's smooth item. Cancel the new
+  // model/placeholder paint so this minimal DOM fixture only drains canceled
+  // queue entries after the lifecycle transition.
+  viewer.cancel_render_frame()
+  assert_false(old_view_model.view_layout.has_pending_scroll_animation())
+  run_one_mounted_test_frame()
+  assert_eq(old_view_model.view_layout.position().scroll_top, 0.0)
+  viewer.dispose()
+  first.dispose()
+  replacement.dispose()
+}
+
+///|
+test "model replacement detach and disposal cancel pending smooth frames" {
+  install_mounted_test_browser()
+  defer restore_mounted_test_browser()
+  assert_pending_smooth_exit_cancels(ReplaceModel)
+  assert_pending_smooth_exit_cancels(DetachModel)
+  assert_pending_smooth_exit_cancels(DisposeViewer)
+}
+
+///|
 test "dispose retains mount and host until and after the dispose event" {
   install_mounted_test_browser()
   defer restore_mounted_test_browser()

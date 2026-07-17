@@ -30,19 +30,15 @@ priv struct TouchScrollData {
 ///|
 priv struct TouchScrollRuntime {
   now : () -> Double
-  request_animation_frame : (() -> Unit) -> Double
-  cancel_animation_frame : (Double) -> Unit
+  schedule_at_next_animation_frame : (() -> Unit) -> @base_common.Disposable
 }
 
 ///|
 fn browser_touch_scroll_runtime() -> TouchScrollRuntime {
   {
     now: @base_browser.wall_clock_now_ms,
-    request_animation_frame: callback => {
-      @rdom.window().request_animation_frame(_timestamp => callback())
-    },
-    cancel_animation_frame: handle => {
-      @rdom.window().cancel_animation_frame(handle)
+    schedule_at_next_animation_frame: callback => {
+      @base_browser.schedule_at_next_animation_frame(callback)
     },
   }
 }
@@ -52,7 +48,7 @@ priv struct TouchScrollGesture {
   runtime : TouchScrollRuntime
   on_translation : (Double, Double) -> Unit
   active_touches : Map[Int, TouchScrollData]
-  mut inertia_handle : Double?
+  mut inertia_frame : @base_common.Disposable?
   mut disposed : Bool
 }
 
@@ -65,18 +61,20 @@ fn TouchScrollGesture::new(
     runtime,
     on_translation,
     active_touches: Map([]),
-    inertia_handle: None,
+    inertia_frame: None,
     disposed: false,
   }
 }
 
 ///|
 fn TouchScrollGesture::cancel_inertia(self : TouchScrollGesture) -> Unit {
-  match self.inertia_handle {
-    Some(handle) => (self.runtime.cancel_animation_frame)(handle)
+  match self.inertia_frame {
+    Some(frame) => {
+      self.inertia_frame = None
+      frame.dispose()
+    }
     None => ()
   }
-  self.inertia_handle = None
 }
 
 ///|
@@ -202,9 +200,9 @@ fn TouchScrollGesture::schedule_inertia(
   if self.disposed {
     return
   }
-  self.inertia_handle = Some(
-    (self.runtime.request_animation_frame)(() => {
-      self.inertia_handle = None
+  self.inertia_frame = Some(
+    (self.runtime.schedule_at_next_animation_frame)(() => {
+      self.inertia_frame = None
       if self.disposed {
         return
       }

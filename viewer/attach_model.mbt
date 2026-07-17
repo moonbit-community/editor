@@ -340,7 +340,9 @@ fn Viewer::build_view_model(
     model,
     options,
     smooth_scrolling=configuration.options.smooth_scrolling,
-    schedule_at_next_animation_frame~,
+    schedule_at_next_animation_frame=callback => {
+      @base_browser.schedule_at_next_animation_frame(callback)
+    },
     now=@base_browser.wall_clock_now_ms,
     attached_view~,
     emit_view_tokens_changed=ranges => {

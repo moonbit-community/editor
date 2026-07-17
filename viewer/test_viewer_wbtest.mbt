@@ -216,6 +216,17 @@ extern "js" fn flush_mounted_test_frames() -> Unit =
   #| }
 
 ///|
+extern "js" fn run_one_mounted_test_frame() -> Unit =
+  #| () => {
+  #|   if (globalThis.__mountedTestFrames.size === 0) {
+  #|     throw new Error("expected one pending mounted-test frame");
+  #|   }
+  #|   const pending = Array.from(globalThis.__mountedTestFrames.values());
+  #|   globalThis.__mountedTestFrames.clear();
+  #|   for (const callback of pending) callback(0);
+  #| }
+
+///|
 extern "js" fn mounted_test_frame_count() -> Int =
   #| () => globalThis.__mountedTestFrames.size
 

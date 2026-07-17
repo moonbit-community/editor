@@ -89,11 +89,14 @@ fn MountedViewer::schedule_render(
     return
   }
   self.render_frame = Some(
-    run_at_this_or_schedule_at_next_animation_frame(() => {
-      // The scheduled slot is idle before any Viewer callback runs.
-      self.render_frame = None
-      callback()
-    }),
+    @base_browser.run_at_this_or_schedule_at_next_animation_frame(
+      () => {
+        // The scheduled slot is idle before any Viewer callback runs.
+        self.render_frame = None
+        callback()
+      },
+      priority=100,
+    ),
   )
 }
 

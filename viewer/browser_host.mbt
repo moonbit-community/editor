@@ -1,20 +1,4 @@
 ///|
-extern "js" fn request_animation_frame(callback : () -> Unit) -> Double =
-  #| (callback) => globalThis.requestAnimationFrame(callback)
-
-///|
-extern "js" fn cancel_animation_frame(handle : Double) -> Unit =
-  #| (handle) => globalThis.cancelAnimationFrame(handle)
-
-///|
-fn schedule_at_next_animation_frame(
-  callback : () -> Unit,
-) -> @base_common.Disposable {
-  let handle = request_animation_frame(callback)
-  @base_common.Disposable::from(() => cancel_animation_frame(handle))
-}
-
-///|
 #external
 priv type TokenizationIdleTarget
 
@@ -124,55 +108,6 @@ let browser_tokenization_scheduler : @model.TokenizationScheduler = Tokenization
   },
   now=@base_browser.monotonic_now_ms,
 )
-
-///|
-/// Monaco `dom.runAtThisOrScheduleAtNextAnimationFrame` for the single-window
-/// Viewer root. A render requested while the native frame queue is already
-/// draining joins the current queue; otherwise one native rAF owns the next
-/// queue. Smooth scrolling deliberately continues to use the stricter
-/// `schedule_at_next_animation_frame` helper above.
-extern "js" fn run_at_this_or_schedule_at_next_animation_frame_cancel(
-  callback : () -> Unit,
-) -> () -> Unit =
-  #| (() => {
-  #|   let nextQueue = [];
-  #|   let currentQueue = [];
-  #|   let frameRequested = false;
-  #|   let inFrameRunner = false;
-  #|   const drain = () => {
-  #|     frameRequested = false;
-  #|     currentQueue = nextQueue;
-  #|     nextQueue = [];
-  #|     inFrameRunner = true;
-  #|     while (currentQueue.length > 0) {
-  #|       const item = currentQueue.shift();
-  #|       if (item.canceled) continue;
-  #|       item.callback();
-  #|     }
-  #|     inFrameRunner = false;
-  #|   };
-  #|   return (callback) => {
-  #|     const item = { callback, canceled: false };
-  #|     if (inFrameRunner) {
-  #|       currentQueue.push(item);
-  #|     } else {
-  #|       nextQueue.push(item);
-  #|       if (!frameRequested) {
-  #|         frameRequested = true;
-  #|         globalThis.requestAnimationFrame(drain);
-  #|       }
-  #|     }
-  #|     return () => { item.canceled = true; };
-  #|   };
-  #| })()
-
-///|
-fn run_at_this_or_schedule_at_next_animation_frame(
-  callback : () -> Unit,
-) -> @base_common.Disposable {
-  let cancel = run_at_this_or_schedule_at_next_animation_frame_cancel(callback)
-  @base_common.Disposable::from(cancel)
-}
 
 ///|
 /// Starts every task in its own JavaScript async continuation and resumes when

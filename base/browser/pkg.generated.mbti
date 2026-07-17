@@ -29,6 +29,10 @@ pub fn queue_microtask(() -> Unit) -> Unit
 
 pub fn remove_element(@dom.Element) -> Unit
 
+pub fn run_at_this_or_schedule_at_next_animation_frame(() -> Unit, priority? : Int) -> @common.Disposable
+
+pub fn schedule_at_next_animation_frame(() -> Unit, priority? : Int) -> @common.Disposable
+
 pub fn schedule_timeout(() -> Unit, Int) -> @common.Disposable
 
 pub fn set_style_property(@dom.Element, String, String) -> Unit

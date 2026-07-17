@@ -1,6 +1,6 @@
 # Monaco Unified Frame Scheduling and Commit-Frame Parity
 
-Status: Proposed  
+Status: In progress (Gate A reviewed)
 Date: 2026-07-17  
 Behavior oracle: VS Code / Monaco revision `b18492a288de038fbc7643aae6de8247029d11bd`
 
@@ -120,9 +120,9 @@ updates the shared `.lines-content` node's cached `top` and `left` setters.
 | Strict next-frame queue, one native rAF, descending priority | `src/vs/base/browser/dom.ts`, `scheduleAtNextAnimationFrame` and queue drain | Algorithm-fidelity | Queue/coalescing/priority tests |
 | Append to current drain when already in a frame | `src/vs/base/browser/dom.ts`, `runAtThisOrScheduleAtNextAnimationFrame` | Algorithm-fidelity | Reentrant current/next queue tests |
 | Editor render priority `100` | `src/vs/editor/browser/view.ts`, `EditorRenderingCoordinator` | Behavior | Mounted Viewer trace and registration test |
-| `ViewModel` uses shared strict-next scheduling | `src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts` | Behavior | Smooth-scroll state/flush/commit trace |
+| `ViewModel` uses shared strict-next scheduling | `src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts` plus `src/vs/base/common/scrollable.ts` | Behavior | Smooth-scroll state/flush/commit trace |
 | Touch inertia uses shared strict-next scheduling | `src/vs/base/browser/touch.ts` | Behavior; inertia arithmetic remains the existing algorithm-fidelity port | Touch lifecycle white-box tests and mobile browser trace |
-| Scroll state reaches `.lines-content` in the expected frame | Monaco editor scroll events plus DOM mutation under the pinned build | Behavioral conformance | Playwright source-relative commit-frame matrix |
+| Scroll state reaches `.lines-content` in the expected frame | `src/vs/editor/browser/viewParts/viewLines/viewLines.ts`, `src/vs/base/browser/fastDomNode.ts`, Monaco editor scroll events, and DOM mutation under the pinned build | Behavioral conformance | Playwright source-relative commit-frame matrix |
 
 This is not a full source audit. DOM utility members, unrelated animation
 consumers, browser workarounds, and editor view parts not named above are
@@ -148,6 +148,13 @@ scroll-commit contract. MoonBit representation, one coordinator per JavaScript
 realm rather than Monaco's explicit per-window map, and internal trace plumbing
 are non-observable representation differences for the supported single-realm
 runtime.
+
+The Gate A source review retained three pre-existing touch-port deviations:
+zero-duration velocity windows do not start inertia, the stopped zero-delta
+callback is not forwarded, and touch cancellation/per-View teardown is
+stronger than Monaco's process-global Gesture lifetime. They remain outside
+this scheduler rewrite's arithmetic scope and are covered by the existing
+touch lifecycle tests.
 
 Multiple browser windows sharing one JavaScript module instance are
 `DEFERRED (the current Viewer host does not expose that ownership shape)`.
@@ -234,7 +241,7 @@ The critical ordering for an animation-driven scroll becomes:
 ```text
 native frame N drain
   smooth/touch tick (strict-next item)
-    -> ViewLayout state and public scroll event
+    -> ViewLayout state and internal View scroll event
     -> Viewer render request (priority 100, current queue)
   Viewer render flush
     -> ViewLines writes .lines-content top/left
@@ -332,9 +339,10 @@ diagnostic output. They do not substitute for the phase correlation above.
 - Cancellation before execution, repeated disposal, cancellation during a
   drain, and a queue containing only canceled items are deterministic and do
   not cause duplicate native requests.
-- Reentrant scheduling loses no callback, executes no callback twice, and
-  cannot spin indefinitely without crossing a strict-next native-frame
-  boundary.
+- Bounded reentrant scheduling loses no callback and executes no callback
+  twice. As in Monaco, an unbounded callback that recursively uses the
+  current-frame operation can keep the drain alive; animation consumers must
+  use the strict-next operation for their next tick.
 
 ### Scroll and rendering behavior
 
@@ -467,6 +475,38 @@ Before product edits:
 
 Gate A produces evidence, not a standalone architecture-lint script.
 
+#### Gate A review record (2026-07-17)
+
+- The existing 12-cell physical-wheel/trackpad matrix passed at the host's
+  observed 120 Hz cadence with zero dropped-frame ratio and the expected final
+  positions (`50px` physical, `6px` trackpad); deterministic 60 Hz remains
+  unavailable on this host.
+- A temporary callback-span probe confirmed the split-scheduler defect in all
+  three smooth physical-wheel viewport cells. Across three repetitions per
+  cell, Monaco committed every animated state in its coordinating callback
+  (`37-38` same-callback state/rail transitions), while the local Viewer
+  recorded `36-39` state-only callbacks followed by the same number of
+  rail-only callbacks in the next native frame.
+- The steady immediate-trackpad baseline recorded `18` attribute writes and no
+  `innerHTML` write per local repetition. The physical-wheel control crossed
+  retained row windows and therefore retained its existing recycler evidence;
+  the implementation must not increase either baseline.
+- The existing mobile smoke passed for consumed drag, post-release inertia,
+  outer-page stability, public scroll delivery, visible-line advance, and
+  scrollbar fade.
+- Pinned-source review confirmed queue selection, per-item cancellation,
+  stable descending-priority execution, and one pending native request. An
+  all-canceled queue still consumes its already-requested native frame, and
+  recursive current-frame registration is not intrinsically bounded; the
+  acceptance text above now matches those Monaco semantics.
+- Gate A also confirmed that the final generated-interface review must contain
+  the intended `base/browser` scheduler additions and the internal testing
+  observation seam. Root `viewer`, controller, view-model, and view-layout
+  interfaces and all `moon.pkg` dependency edges must remain unchanged.
+- `internal/viewer/browser/controller/drag_scrolling.mbt` retains its separate
+  selection-drag rAF owner and is N-A for this selected render/smooth/touch
+  contract.
+
 ### Milestone A: Shared scheduler and algorithm tests
 
 - Implement the realm-global coordinator in `base/browser`.
@@ -576,5 +616,6 @@ remove this active plan.
 - [ ] Structural mutation and public scroll behavior regressions remain covered.
 - [ ] Required MoonBit and browser suites pass.
 - [ ] Generated interface review shows only the intended `base/browser`
-      additions.
+      additions and internal testing observation seam; the public Viewer and
+      other touched consumer interfaces remain unchanged.
 - [ ] Documentation and execution-plan history are updated.

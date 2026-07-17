@@ -10,7 +10,7 @@ browser-suite authoring contracts.
 support/    Playwright fixtures, app helpers, logging, reporter
 smoke/      user workflows against the workbench or embedded viewer
 component/  loaders/assertions for direct MoonBit Viewer pages
-perf/       structured, currently non-budgeted timing evidence
+perf/       correctness traces plus structured non-budgeted timing evidence
 moonbit/    js-target MoonBit scenario packages
 ```
 
@@ -29,10 +29,21 @@ moonbit/    js-target MoonBit scenario packages
   also mounts test-only normal and overflowing `ContentWidgets` in a real
   same-origin iframe whose scroll and viewport deliberately differ from the
   top window, covering owner-window width/scroll and exact 15px/22px edges.
-- Perf tests attach structured evidence but do not fail on a timing budget
-  unless one is explicitly documented.
-- Monaco parity belongs in ported MoonBit unit/reference tests, not browser DOM
-  snapshot comparison.
+- Perf tests may enforce deterministic correctness contracts while attaching
+  structured timing evidence. `scroll_frame_parity.spec.js` wraps rAF before
+  either implementation loads, preserves raw state/render/mutation records,
+  groups callbacks by native timestamp, and correlates real
+  `.lines-content` `top`/`left` commits for local Viewer and pinned Monaco.
+  The local phases come from the internal Viewer-id seam, not the public API;
+  raw duplicates remain in the report and unmatched/coalesced states or
+  unmatched commits fail. Fixtures stay below Monaco's big-number translation
+  regime, so effective rail positions are `-top`/`-left`.
+  Cadence and dropped-frame summaries do not fail on a timing budget unless
+  one is explicitly documented.
+- Monaco parity normally belongs in ported MoonBit unit/reference tests, not
+  browser DOM snapshot comparison. The selected scroll commit-frame contract
+  is the narrow exception: it compares one real rail write source-relatively,
+  not general DOM structure or pixels.
 
 ## Stable selectors and observability
 

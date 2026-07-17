@@ -13,7 +13,7 @@ just build                   # check + browser assets + native server
 just test-browser            # all Playwright suites
 just test-browser-smoke      # reference app and user workflows
 just test-browser-component  # direct Viewer component pages
-just test-browser-perf       # non-budgeted performance evidence
+just test-browser-perf       # commit-frame conformance + non-budgeted timing
 just dev ROOT=. PORT=5173    # build and run the reference app
 ```
 
@@ -61,7 +61,7 @@ layout, focus, pointer input, and native animation-frame behavior.
 tests/browser/
   smoke/       real workbench/embed workflows and real pointer input
   component/   direct public-Viewer scenarios reported as compact JSON
-  perf/        timing evidence; non-failing unless a budget is documented
+  perf/        correctness traces plus non-budgeted timing evidence
   moonbit/     js-target scenario packages
   support/     Playwright fixtures, logging, and reporters
 ```
@@ -83,6 +83,12 @@ scenario bundles, then assembles owner-adjacent CSS and codicons under
   on browser DOM snapshots against Monaco. Source-shaped control flow is
   required only for algorithm-fidelity slices where ordering or arithmetic is
   part of the contract.
+- A targeted real-commit comparison may observe the same concrete DOM effect
+  in both implementations when that effect is the selected behavior. The
+  scroll-frame oracle records accepted state and local render phases, then
+  observes `.lines-content` `top`/`left` mutations. It groups callbacks by the
+  native rAF timestamp; getter samples alone remain state/cadence evidence, and
+  ambient cadence remains diagnostic rather than a budget.
 - The MoonBit reporter only emits data; Playwright validates the report and
   owns pass/fail.
 

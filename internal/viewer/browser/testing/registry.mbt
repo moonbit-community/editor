@@ -9,6 +9,7 @@ priv struct ViewerTestingEntry {
   did_build_view_model : @base_common.Emitter[ViewModelBuiltObservation]
   did_render_model : @base_common.Emitter[ModelRenderedObservation]
   did_resolve_hover : @base_common.Emitter[HoverResolvedObservation]
+  did_observe_scroll_frame : @base_common.Emitter[ScrollFrameObservation]
 }
 
 ///|
@@ -22,6 +23,7 @@ fn ViewerTestingEntry::dispose(self : ViewerTestingEntry) -> Unit {
   self.did_build_view_model.dispose()
   self.did_render_model.dispose()
   self.did_resolve_hover.dispose()
+  self.did_observe_scroll_frame.dispose()
 }
 
 ///|
@@ -55,6 +57,7 @@ pub fn register_viewer(
     did_build_view_model: Emitter(),
     did_render_model: Emitter(),
     did_resolve_hover: Emitter(),
+    did_observe_scroll_frame: Emitter(),
   }
   @base_common.Disposable::from(() => {
     unregister_if_current(viewer_id, registration_id)
@@ -142,6 +145,19 @@ pub fn on_did_resolve_hover(
 }
 
 ///|
+/// Subscribes to ordered scroll state/render observations for one registered
+/// viewer. Missing or unregistered ids return an inert disposable.
+pub fn on_did_observe_scroll_frame(
+  viewer_id : String,
+  listener : (ScrollFrameObservation) -> Unit,
+) -> @base_common.Disposable {
+  match viewer_entries.get(viewer_id) {
+    Some(entry) => entry.did_observe_scroll_frame.event(listener)
+    None => @base_common.Disposable::from(() => ())
+  }
+}
+
+///|
 /// Publishes one view-model-build observation to the matching live viewer.
 pub fn publish_view_model_built(
   viewer_id : String,
@@ -174,5 +190,26 @@ pub fn publish_hover_resolved(
   match viewer_entries.get(viewer_id) {
     Some(entry) => entry.did_resolve_hover.fire(observation)
     None => ()
+  }
+}
+
+///|
+/// Publishes one scroll phase to the matching live viewer. The observation
+/// record is deliberately constructed only when that viewer has a listener.
+pub fn publish_scroll_frame(
+  viewer_id : String,
+  phase : ScrollFramePhase,
+  scroll_top : Double,
+  scroll_left : Double,
+) -> Unit {
+  match viewer_entries.get(viewer_id) {
+    Some(entry) if entry.did_observe_scroll_frame.has_listeners() =>
+      entry.did_observe_scroll_frame.fire({
+        viewer_id,
+        phase,
+        scroll_top,
+        scroll_left,
+      })
+    _ => ()
   }
 }

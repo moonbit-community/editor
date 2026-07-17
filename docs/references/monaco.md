@@ -12,6 +12,42 @@ Use these as design references only. Do not import from them in product code.
 When Monaco and current local docs disagree, treat current local docs as the
 product boundary and Monaco as the source to research before changing it.
 
+## Animation-frame scheduling and scroll commits
+
+The unified scheduling behavior was audited against pinned VS Code revision
+`b18492a288de038fbc7643aae6de8247029d11bd`:
+
+- `src/vs/base/browser/dom.ts:396-498` defines cancellable current/next queues,
+  descending priority, FIFO ties, one native request, same-drain append, and
+  re-sorting after callbacks. These map to
+  `base/browser/animation_frame.mbt`.
+- `src/vs/editor/browser/view.ts:849-930` gives editor rendering priority
+  `100`; root mounted rendering uses that priority. Monaco's cross-editor
+  prepare/render phase coordinator remains `N-A`: the local selected contract
+  is shared scheduling and commit-frame behavior, not a full coordinator port.
+- `src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts:1764-1771`
+  passes strict-next scheduling to the ViewModel, while
+  `src/vs/base/common/scrollable.ts:246-251,293-383,475-480` owns smooth-loop
+  registration, replacement, and disposal.
+- `src/vs/base/browser/touch.ts:69-98,143-158,309-374` and
+  `src/vs/editor/browser/controller/pointerHandler.ts:110-136` define touch
+  sampling, friction, strict-next inertia, sign, and immediate layout change.
+  Local zero-duration rejection, stopped-zero suppression, `touchcancel`, and
+  per-View cancellation are recorded safety/lifecycle extensions.
+- `src/vs/editor/browser/viewParts/viewLines/viewLines.ts:613-677` and
+  `src/vs/base/browser/fastDomNode.ts:73-89` identify cached
+  `.lines-content` `top`/`left` writes as the real rail commit. The browser
+  oracle stays below Monaco's big-number translation regime, preserves raw
+  style mutations, and deduplicates only the final top/left pair per observer
+  batch.
+
+Conformance uses scheduler reference tests plus a browser trace: local accepted
+state and render phases come through the internal Viewer-id registry; both
+local and Monaco commits come from `MutationObserver`. A page-owned rAF wrapper
+installed before either editor groups callbacks and mutation microtasks by the
+native timestamp, so callback registration order cannot invent a frame of
+lag.
+
 ## Text model and tokenization
 
 The upstream `common/model` tree, including its `model/tokens` subdirectory,

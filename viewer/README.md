@@ -52,11 +52,11 @@ ownership and lifecycle rules that are not obvious from signatures.
   browser resources are released at the later root cleanup slot before the map
   is cleared. `on_did_dispose` fires after model detach and owner-decoration
   cleanup but before those contribution and Viewer-lifetime phases, while every
-  central entry is still reachable. Disposal cancels pending render work,
-  removes Viewer/View listeners and owned DOM, and never disposes the caller's
-  model, host, or explicitly supplied services. An internally created service
-  bundle is released afterward in marker-decoration, marker, then feedback
-  order.
+  central entry is still reachable. Disposal cancels pending render work and
+  pending per-model smooth-scroll registrations, removes Viewer/View listeners
+  and owned DOM, and never disposes the caller's model, host, or explicitly
+  supplied services. An internally created service bundle is released
+  afterward in marker-decoration, marker, then feedback order.
 - Each attached model stores one marker-decoration acquisition lease and one
   exact attached-view handle in its `ModelData`. Multiple Viewers sharing a
   service and model share the identity owner until the final lease and maintain
@@ -105,9 +105,10 @@ runtime-partial argument shapes return before mutation when required
 position/selection data is absent; the readonly model has no undo stack, so
 Monaco's cursor-command `pushStackElement` calls have no local state to update.
 Alternate platform bindings, editable commands, multi-cursor, and column
-selection are outside the readonly surface. Build/render/hover telemetry is not
-part of the public Viewer API; the internal workbench and browser scenarios use
-the Viewer-id-keyed `internal/viewer/browser/testing` seam.
+selection are outside the readonly surface. Build/render/hover telemetry and
+the disabled-by-default scroll state/render-phase trace are not part of the
+public Viewer API; the internal workbench and browser scenarios use the
+Viewer-id-keyed `internal/viewer/browser/testing` seam.
 
 Cursor payload versions are `TextModel.get_version_id()`, never the caller's
 host metadata version. `set_position`/`set_selection` accept an optional
@@ -152,8 +153,18 @@ TextModel (caller-owned)
   -> TokenizationTextModelPart
   -> ViewModel + ViewLayout + cursor outgoing dispatcher (per model)
   -> typed ViewEvent FIFO -> View + ViewParts (per model, browser only)
-  -> requestAnimationFrame read/measure then DOM write
+  -> shared animation-frame queue -> read/measure then DOM write
 ```
+
+`base/browser` owns the one realm-global frame coordinator. ViewModel smooth
+scroll and controller touch inertia use its strict-next queue; a mounted Viewer
+uses current-or-next priority `100` for its coalesced render. Therefore an
+animation tick can commit state and append that Viewer render to the same
+native frame, while strict-next animation state still advances only once per
+frame. Multiple Viewers share the native request and priority queue but retain
+independent dirty flags, callbacks, trace ids, and cancellation lifetimes. This
+is private composition and leaves `viewer/pkg.generated.mbti` unchanged; it is
+not Monaco's cross-editor phased `EditorRenderingCoordinator` port.
 
 The root package owns every `Viewer::` method and the cross-package glue for
 input, reveal, widgets, folding, hover, quick diff, feedback, and

@@ -7,8 +7,9 @@
 fn run_scroll_perf_test() -> Unit {
   let visible_lines = scroll_perf_int_param("lines", 10)
   let smooth = scroll_perf_bool_param("smooth")
+  let wide = scroll_perf_bool_param("wide")
   guard scroll_perf_mount_host(visible_lines) is Some(host) else { return }
-  let source = scroll_perf_source_text()
+  let source = scroll_perf_source_text(wide)
   let uri = try! @base_common.Uri::from(
     scheme="inmemory",
     authority="model",
@@ -16,6 +17,15 @@ fn run_scroll_perf_test() -> Unit {
   )
   let model = @model.TextModel(
     uri, "scroll-perf.txt", "plaintext", 1, "scroll-perf-rev-1", source,
+  )
+  let replacement_uri = try! @base_common.Uri::from(
+    scheme="inmemory",
+    authority="model",
+    path="/scroll-perf-replacement.txt",
+  )
+  let replacement = @model.TextModel(
+    replacement_uri, "scroll-perf-replacement.txt", "plaintext", 1, "scroll-perf-rev-2",
+    source,
   )
   let decorations : Array[@model.ModelDeltaDecoration] = []
   for line in 1..<=3000 {
@@ -41,12 +51,33 @@ fn run_scroll_perf_test() -> Unit {
       font_size=13.0,
     ),
   )
+  let public_scroll_events = Ref(0)
+  viewer.on_did_scroll_change(event => {
+    if event.scroll_top_changed || event.scroll_left_changed {
+      public_scroll_events.val += 1
+    }
+  })
+  |> ignore
   @viewer_testing.on_did_render_model(viewer.get_id(), event => {
     if event.fresh {
       host.set_attribute("data-scroll-ready", "true")
       host.set_attribute("data-visible-lines", visible_lines.to_string())
       host.set_attribute("data-smooth", smooth.to_string())
     }
+  })
+  |> ignore
+  @viewer_testing.on_did_observe_scroll_frame(viewer.get_id(), event => {
+    let phase = match event.phase {
+      StateCommitted => "state-committed"
+      RenderStarted => "render-started"
+      RenderFinished => "render-finished"
+    }
+    forward_scroll_perf_phase(
+      event.viewer_id,
+      phase,
+      event.scroll_top,
+      event.scroll_left,
+    )
   })
   |> ignore
   let zone = @rdom.document().create_element("div")
@@ -56,8 +87,15 @@ fn run_scroll_perf_test() -> Unit {
     accessor.add_zone(@viewer.view_zone(5, zone, height_in_px=18.0)) |> ignore
   })
   install_scroll_perf_controls(
-    scroll_top => viewer.set_scroll_top(scroll_top),
+    (scroll_top, scroll_left) => {
+      viewer.set_scroll_position(scroll_top~, scroll_left~)
+    },
     () => viewer.get_scroll_top(),
+    () => viewer.get_scroll_left(),
+    () => public_scroll_events.val,
+    () => viewer.set_model(Some(replacement)),
+    () => viewer.set_model(None),
+    () => viewer.dispose(),
     line => {
       viewer.set_selection(
         @core.Selection::from_positions(Position(line, 1), Position(line, 5)),
@@ -86,14 +124,15 @@ fn scroll_perf_mount_host(visible_lines : Int) -> @rdom.Element? {
 }
 
 ///|
-fn scroll_perf_source_text() -> String {
+fn scroll_perf_source_text(wide : Bool) -> String {
   let builder = StringBuilder()
   for line in 1..<=3000 {
-    builder.write_string(
-      "perf line " +
-      line.to_string() +
-      " alpha beta gamma delta epsilon zeta eta theta\n",
-    )
+    builder.write_string("perf line " + line.to_string() + " ")
+    let repetitions = if wide { 24 } else { 1 }
+    for _ in 0..<repetitions {
+      builder.write_string("alpha beta gamma delta epsilon zeta eta theta ")
+    }
+    builder.write_char('\n')
   }
   builder.to_string()
 }
@@ -111,15 +150,52 @@ extern "js" fn scroll_perf_bool_param(name : String) -> Bool =
 
 ///|
 extern "js" fn install_scroll_perf_controls(
-  set_scroll_top : (Double) -> Unit,
+  set_scroll_position : (Double, Double) -> Unit,
   get_scroll_top : () -> Double,
+  get_scroll_left : () -> Double,
+  get_public_scroll_events : () -> Int,
+  replace_model : () -> Unit,
+  detach_model : () -> Unit,
+  dispose_viewer : () -> Unit,
   set_selection : (Int) -> Unit,
 ) -> Unit =
-  #| (setScrollTop, getScrollTop, setSelection) => {
+  #| (
+  #|   setScrollPosition,
+  #|   getScrollTop,
+  #|   getScrollLeft,
+  #|   getPublicScrollEvents,
+  #|   replaceModel,
+  #|   detachModel,
+  #|   disposeViewer,
+  #|   setSelection,
+  #| ) => {
   #|   globalThis.__scrollPerfControls = {
-  #|     reset: () => setScrollTop(0),
-  #|     setScrollTop,
+  #|     reset: () => setScrollPosition(0, 0),
+  #|     setScrollPosition,
+  #|     setScrollTop: (top) => setScrollPosition(top, getScrollLeft()),
+  #|     setScrollLeft: (left) => setScrollPosition(getScrollTop(), left),
   #|     getScrollTop,
+  #|     getScrollLeft,
+  #|     getPublicScrollEvents,
+  #|     replaceModel,
+  #|     detachModel,
+  #|     dispose: disposeViewer,
   #|     setSelection,
   #|   };
+  #| }
+
+///|
+extern "js" fn forward_scroll_perf_phase(
+  viewer_id : String,
+  phase : String,
+  scroll_top : Double,
+  scroll_left : Double,
+) -> Unit =
+  #| (viewerId, phase, scrollTop, scrollLeft) => {
+  #|   globalThis.__scrollProbe?.recordLocalPhase({
+  #|     viewerId,
+  #|     phase,
+  #|     scrollTop,
+  #|     scrollLeft,
+  #|   });
   #| }

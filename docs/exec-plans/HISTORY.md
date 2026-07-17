@@ -12,7 +12,7 @@ Current behavior and ownership live in `docs/architecture.md`, `docs/harness.md`
 `docs/quality.md`, package READMEs, generated interfaces, source, and tests.
 Historical plans are evidence of how a change landed, not current contracts.
 
-As of 2026-07-16 there are no active checked-in execution plans.
+As of 2026-07-17 there are no active checked-in execution plans.
 
 ## Completed Work
 
@@ -82,6 +82,29 @@ Former artifacts: `monaco-faithful-selection-hit-testing.md`,
 `monaco-marker-render-port.md`, `monaco-view-cursors-current-line-port.md`,
 `monaco-decoration-system-port.md`,
 `monaco-scroll-render-and-animation-parity.md`.
+
+### Unified frame scheduling and real scroll commits
+
+Browser animation work now shares one `base/browser` realm coordinator with
+strict-next/current-or-next queues, stable priority ordering, cancellation, and
+Viewer render priority `100`. Smooth scrolling and touch inertia use the shared
+strict-next queue, while animation-driven state can append the coalesced Viewer
+render to the same native frame. A disabled Viewer-id trace plus a
+native-timestamp classifier and real `.lines-content` mutation observer prove
+state/render/commit ordering in vertical, horizontal, diagonal, boundary, and
+mid-document wheel/touch cells against pinned Monaco. Lifecycle coverage proves
+model replacement, detach, and disposal leave no retired animation, render,
+public scroll event, or rail mutation. Native cadence remains diagnostic;
+state-to-real-commit lag and structural/public behavior are the gates. The
+supported owner is one JavaScript realm; Monaco's per-window mapping and
+cross-editor phased rendering remain outside the local contract.
+
+Final validation passed 1,452 JS tests, 1,011 native tests, the 10 scheduler,
+220 Viewer, 11 controller, and 4 internal trace focused tests, all 8 browser
+performance/conformance tests, all 23 browser smoke tests, all 88 Playwright
+tests, generated-interface review, repository checks, and the production build.
+
+Former artifact: `monaco-unified-frame-scheduling-and-commit-parity.md`.
 
 ### Public editor and base APIs
 

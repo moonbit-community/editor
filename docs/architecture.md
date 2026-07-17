@@ -57,7 +57,10 @@ widgets, language-feature presentation, and editor events.
 
 - `base/common`: URI/path, positions/ranges, events, and disposables.
 - `base/browser`: canonical browser runtime and DOM primitives, mouse events,
-  and global pointer-move monitoring.
+  global pointer-move monitoring, and the one realm-global animation-frame
+  coordinator. Its strict-next and current-or-next queues share one native rAF,
+  sort by descending priority with stable FIFO ties, and return independently
+  cancellable registrations.
 - `language`: backend-neutral diagnostic, hover, location, and symbol provider
   contracts.
 - `syntax` and `syntax/lang_*`: stateful line-tokenization contracts and
@@ -93,6 +96,12 @@ widgets, language-feature presentation, and editor events.
 
 Common code never imports browser or contribution packages.
 
+The animation-frame coordinator is one process value for the supported
+single-JavaScript-realm product. Monaco's explicit per-window maps and its
+cross-editor phased prepare/render batching are not local contracts. Common
+ViewModel/layout code stays browser-free and receives scheduling only through
+root injection; `base/browser` never imports upward into Viewer packages.
+
 ### Viewer browser tier
 
 The root `viewer` facade and public `viewer/browser` contract package are
@@ -109,11 +118,14 @@ js-only. Concrete browser runtime packages live below the module-private
   the opaque unmanaged overlay-widget handle.
 - `internal/viewer/browser/testing` is a JS-only Viewer-id-keyed
   workbench/browser-test registry. Root publishes callback-backed
-  build/render/hover facts downward; the package never imports root Viewer and
-  is not an external API.
+  build/render/hover facts downward plus a disabled-by-default scroll
+  state/render-phase trace. Observation records are constructed only while the
+  matching Viewer has a listener; the package never imports root Viewer and is
+  not an external API.
 - `internal/viewer/browser/config` measures fonts and browser geometry.
 - `internal/viewer/browser/controller` owns hit testing, mouse selection, drag
-  scrolling, and scrollbar input.
+  scrolling, and scrollbar input. Touch inertia uses the shared strict-next
+  frame coordinator; its disposable remains owned by the per-model handler.
 - `internal/viewer/browser/view` is one package owning the DOM tree,
   render/event ordering, recycler, content/overlay widgets, current-line and
   model decorations, margin, selections, cursor, virtualized lines, zones,

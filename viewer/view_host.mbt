@@ -84,6 +84,12 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   let window = browser.sync_rendered_window(view_model)
   let view_context = self.build_view_context(view)
   let configuration = self.configuration.snapshot()
+  let position = view_model.view_layout.position()
+  self.emit_scroll_frame_phase(
+    RenderStarted,
+    position.scroll_top,
+    position.scroll_left,
+  )
   view.render(view_context, {
     window,
     view_model,
@@ -103,6 +109,12 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
     show_unused: configuration.options.show_unused,
     show_deprecated: configuration.options.show_deprecated,
   })
+  let position = view_model.view_layout.position()
+  self.emit_scroll_frame_phase(
+    RenderFinished,
+    position.scroll_top,
+    position.scroll_left,
+  )
   // The lines are now in the DOM: a deferred horizontal reveal can measure its
   // target line's client rects and apply the horizontal scroll.
   browser.flush_horizontal_reveal(view_model)

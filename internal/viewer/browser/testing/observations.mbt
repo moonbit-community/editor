@@ -28,3 +28,23 @@ pub(all) struct HoverResolvedObservation {
   ok : Bool
   revision : String
 } derive(Debug, Eq)
+
+///|
+/// Internal phases used to correlate an accepted scroll position with its
+/// Viewer render and the page-observed `.lines-content` style commit.
+pub(all) enum ScrollFramePhase {
+  StateCommitted
+  RenderStarted
+  RenderFinished
+} derive(Debug, Eq)
+
+///|
+/// Viewer-scoped scroll/render telemetry. The registry constructs this record
+/// only while a listener is installed, so ordinary product execution does not
+/// allocate trace observations.
+pub(all) struct ScrollFrameObservation {
+  viewer_id : String
+  phase : ScrollFramePhase
+  scroll_top : Double
+  scroll_left : Double
+} derive(Debug, Eq)

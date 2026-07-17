@@ -216,6 +216,38 @@ test "two mounted Viewers share one request and isolate cancellation" {
   guard second.mount is Mounted(second_mounted) else {
     fail("second Viewer did not publish Mounted state")
   }
+  let first_model = test_model(long_document(100))
+  let second_model = test_model(long_document(100))
+  first.set_model(Some(first_model))
+  second.set_model(Some(second_model))
+  first.test_set_viewport(width=800.0, height=180.0)
+  second.test_set_viewport(width=800.0, height=180.0)
+  first.configuration.clear_measure_request()
+  second.configuration.clear_measure_request()
+  first.cancel_render_frame()
+  second.cancel_render_frame()
+  let first_trace : Array[@viewer_testing.ScrollFrameObservation] = []
+  let second_trace : Array[@viewer_testing.ScrollFrameObservation] = []
+  let first_trace_subscription = @viewer_testing.on_did_observe_scroll_frame(
+    first.get_id(),
+    observation => first_trace.push(observation),
+  )
+  let second_trace_subscription = @viewer_testing.on_did_observe_scroll_frame(
+    second.get_id(),
+    observation => second_trace.push(observation),
+  )
+  first.set_scroll_top(18.0)
+  second.set_scroll_top(36.0)
+  assert_eq(first_trace.length(), 1)
+  assert_eq(second_trace.length(), 1)
+  assert_eq(first_trace[0].viewer_id, first.get_id())
+  assert_eq(first_trace[0].scroll_top, 18.0)
+  assert_eq(second_trace[0].viewer_id, second.get_id())
+  assert_eq(second_trace[0].scroll_top, 36.0)
+  first.cancel_render_frame()
+  second.cancel_render_frame()
+  first_trace_subscription.dispose()
+  second_trace_subscription.dispose()
   let events : Array[String] = []
   first_mounted.schedule_render(() => events.push("first"))
   second_mounted.schedule_render(() => events.push("second"))
@@ -232,6 +264,39 @@ test "two mounted Viewers share one request and isolate cancellation" {
   assert_true(events == ["live-second"])
   assert_false(first_mounted.has_pending_render())
   assert_false(second_mounted.has_pending_render())
+  second.dispose()
+  first_model.dispose()
+  second_model.dispose()
+}
+
+///|
+test "mounted scroll trace publishes committed axis state by viewer id" {
+  install_mounted_test_browser()
+  defer restore_mounted_test_browser()
+  let viewer = Viewer::Viewer()
+  defer viewer.dispose()
+  let model = test_model(long_document(100))
+  defer model.dispose()
+  viewer.attach(@rdom.document().create_element("div"))
+  viewer.set_model(Some(model))
+  viewer.test_set_viewport(width=800.0, height=180.0)
+  viewer.configuration.clear_measure_request()
+  viewer.cancel_render_frame()
+
+  let observations : Array[@viewer_testing.ScrollFrameObservation] = []
+  let subscription = @viewer_testing.on_did_observe_scroll_frame(
+    viewer.get_id(),
+    observation => observations.push(observation),
+  )
+  defer subscription.dispose()
+  viewer.set_scroll_top(18.0)
+  assert_eq(observations.length(), 1)
+  assert_eq(observations[0].phase, StateCommitted)
+  assert_eq(observations[0].scroll_top, 18.0)
+  assert_eq(mounted_test_frame_count(), 1)
+  assert_eq(observations[0].viewer_id, viewer.get_id())
+  assert_eq(observations[0].scroll_left, 0.0)
+  viewer.cancel_render_frame()
 }
 
 ///|
@@ -258,6 +323,12 @@ fn assert_pending_smooth_exit_cancels(exit : PendingSmoothExit) -> Unit raise {
   guard viewer.get_view_model() is Some(old_view_model) else {
     fail("mounted Viewer did not install its ViewModel")
   }
+  let observations : Array[@viewer_testing.ScrollFrameObservation] = []
+  let subscription = @viewer_testing.on_did_observe_scroll_frame(
+    viewer.get_id(),
+    observation => observations.push(observation),
+  )
+  defer subscription.dispose()
   old_view_model.view_layout.scroll_to_smooth(scroll_top=90.0)
   assert_true(old_view_model.view_layout.has_pending_scroll_animation())
   assert_eq(mounted_test_frame_count(), 1)
@@ -273,6 +344,7 @@ fn assert_pending_smooth_exit_cancels(exit : PendingSmoothExit) -> Unit raise {
   assert_false(old_view_model.view_layout.has_pending_scroll_animation())
   run_one_mounted_test_frame()
   assert_eq(old_view_model.view_layout.position().scroll_top, 0.0)
+  assert_true(observations.is_empty())
   viewer.dispose()
   first.dispose()
   replacement.dispose()

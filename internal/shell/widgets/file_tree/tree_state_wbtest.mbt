@@ -186,6 +186,9 @@ impl @workspace.WorkspaceTreeProvider for MemoryTreeProvider with fn resolve(
 }
 
 ///|
+extend MemoryTreeProvider with @workspace.WorkspaceTreeProvider::{root, resolve}
+
+///|
 async test "in-memory provider resolves one level per request" {
   let directories : Map[String, Array[@workspace.WorkspaceStat]] = Map([])
   directories[root_raw] = [

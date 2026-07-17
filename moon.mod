@@ -16,6 +16,10 @@ supported_targets = "+js+native"
 
 preferred_target = "js"
 
+options(
+  exclude: [ "codemirror", "vscode" ],
+)
+
 import {
   "moonbit-community/cmark@0.4.4",
   "moonbitlang/async@0.19.1",

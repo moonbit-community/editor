@@ -4,13 +4,16 @@ Backend-neutral contracts for readonly language features.
 
 ## Surface and behavior
 
-- Result DTOs: `Hover`/`HoverContent`, `Diagnostic`, `Location`, and
-  `DocumentSymbol`. Their `Position` and `Range` values use the
-  repository's 1-based UTF-16 convention.
+- Result DTOs: `Hover`/`HoverContent`, `Diagnostic`, `Location`,
+  `DocumentSymbol`, and `MarkdownCommentBlock`. Their `Position`, `Range`, and
+  half-open `LineRange` values use the repository's 1-based UTF-16 convention.
 - Async provider traits: `HoverProvider`, `DefinitionProvider`,
   `ReferencesProvider`, and `DocumentSymbolProvider`.
   Providers receive a readonly `TextModel` and a cooperative
   `CancellationToken`.
+- `MarkdownCommentProvider` is the synchronous open registration contract for
+  whole-line Markdown comment blocks. Detection and result normalization remain
+  viewer-contribution responsibilities.
 - `CancellationTokenSource` owns cancellation. Repeated token reads are
   identity-stable; cancellation notifies listeners once in registration order,
   parent cancellation propagates, and `dispose(cancel=...)` separates listener

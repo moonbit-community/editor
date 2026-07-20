@@ -14,6 +14,14 @@ pub(all) struct Hover {
 } derive(Debug)
 
 ///|
+/// One whole-line Markdown source-comment block. `line_range` uses the
+/// repository's 1-based half-open line convention.
+pub(all) struct MarkdownCommentBlock {
+  line_range : @base_common.LineRange
+  markdown : String
+} derive(Eq, Debug)
+
+///|
 /// Diagnostic severity levels accepted from semantic providers. `Hint`
 /// matches Monaco's `MarkerSeverity.Hint`.
 pub(all) enum DiagnosticSeverity {
@@ -100,6 +108,15 @@ pub(open) trait DocumentSymbolProvider {
   async fn provide_document_symbols(Self, @model.TextModel, CancellationToken) -> Array[
     DocumentSymbol,
   ]
+}
+
+///|
+/// Synchronous provider for whole-line Markdown source comments. The caller
+/// normalizes ranges and content before rendering.
+pub(open) trait MarkdownCommentProvider {
+  fn provide_markdown_comments(Self, @model.TextModel) -> Array[
+    MarkdownCommentBlock,
+  ] raise
 }
 
 ///|

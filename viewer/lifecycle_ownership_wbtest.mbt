@@ -275,6 +275,7 @@ test "Decorations leaves every caller handle live after bundle disposal" {
     quick_diff_handle.get_original_content(model.uri) == Some("baseline"),
   )
   backings.languages.set_language_configuration("root-test", {
+    comments: None,
     folding_rules: Some({ off_side: true, markers: None }),
   })
   guard language_handle.get_language_configuration("root-test").folding_rules

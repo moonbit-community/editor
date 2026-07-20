@@ -60,7 +60,7 @@ fn[T] LanguageFeatureRegistry::snapshot_matching(
 }
 
 ///|
-/// Public language registry for tokenization and semantic language providers.
+/// Public language registry for tokenization and language-feature providers.
 /// Hosts normally use the process-wide `@languages.languages` value; tests and
 /// embedded viewers that need isolation can create a fresh registry and pass it
 /// through `ViewerServices(languages~)`.
@@ -69,7 +69,10 @@ pub struct Languages {
   priv document_symbol_provider : LanguageFeatureRegistry[
     &@language.DocumentSymbolProvider,
   ]
-  /// Per-language configuration (folding rules) — the viewer's stand-in for
+  priv markdown_comment_provider : LanguageFeatureRegistry[
+    &@language.MarkdownCommentProvider,
+  ]
+  /// Per-language comment/folding configuration — the viewer's stand-in for
   /// Monaco's `ILanguageConfigurationService` registrations.
   priv language_configurations : Map[String, LanguageConfiguration]
 }
@@ -80,6 +83,9 @@ pub struct Languages {
 /// recover either the mutable registry or its concrete LogService.
 pub struct LanguageHandle {
   priv get_language_configuration_callback : (String) -> LanguageConfiguration
+  priv markdown_comment_provider_result_callback : (@model.TextModel) -> Array[
+    @language.MarkdownCommentBlock,
+  ]?
   priv hover_at_callback : async (
     @model.TextModel,
     Int,
@@ -94,14 +100,15 @@ pub fn Languages::Languages() -> Languages {
   {
     hover_provider: LanguageFeatureRegistry::new(),
     document_symbol_provider: LanguageFeatureRegistry::new(),
+    markdown_comment_provider: LanguageFeatureRegistry::new(),
     language_configurations: Map([]),
   }
 }
 
 ///|
-/// Derives the minimal language capability used by folding and hover. The
-/// handle owns no registry or logging state; its callbacks retain the selected
-/// backings for as long as the host retains the handle.
+/// Derives the minimal language capability used by folding, Markdown comments,
+/// and hover. The handle owns no registry or logging state; its callbacks retain
+/// the selected backings for as long as the host retains the handle.
 pub fn Languages::language_handle(
   self : Languages,
   log_service : @log.LogHandle,
@@ -110,10 +117,24 @@ pub fn Languages::language_handle(
     get_language_configuration_callback: language_id => {
       self.get_language_configuration(language_id)
     },
+    markdown_comment_provider_result_callback: model => {
+      self.markdown_comment_provider_result_with_log_handle(model, log_service)
+    },
     hover_at_callback: (model, offset, token) => {
       self.hover_at_with_log_handle(model, offset, log_service, token~)
     },
   }
+}
+
+///|
+/// Returns the first matching Markdown-comment provider's raw result. `None`
+/// means that no provider matched; `Some([])` is an authoritative empty result
+/// and must not be confused with absence.
+pub fn LanguageHandle::markdown_comment_provider_result(
+  self : LanguageHandle,
+  model : @model.TextModel,
+) -> Array[@language.MarkdownCommentBlock]? {
+  (self.markdown_comment_provider_result_callback)(model)
 }
 
 ///|
@@ -176,6 +197,55 @@ pub fn Languages::register_document_symbol_provider(
   provider : &@language.DocumentSymbolProvider,
 ) -> @base_common.Disposable {
   self.document_symbol_provider.register(selector, provider)
+}
+
+///|
+/// Registers an ordered whole-line Markdown-comment provider.
+pub fn Languages::register_markdown_comment_provider(
+  self : Languages,
+  selector : @language.LanguageSelector,
+  provider : &@language.MarkdownCommentProvider,
+) -> @base_common.Disposable {
+  self.markdown_comment_provider.register(selector, provider)
+}
+
+///|
+/// Returns the first matching Markdown-comment provider's raw result. Provider
+/// failure is logged and remains authoritative as `Some([])`.
+pub fn Languages::markdown_comment_provider_result(
+  self : Languages,
+  model : @model.TextModel,
+  log_service : @log.LogService,
+) -> Array[@language.MarkdownCommentBlock]? {
+  self.markdown_comment_provider_result_with_log_handle(
+    model,
+    log_service.log_handle(),
+  )
+}
+
+///|
+fn Languages::markdown_comment_provider_result_with_log_handle(
+  self : Languages,
+  model : @model.TextModel,
+  log_service : @log.LogHandle,
+) -> Array[@language.MarkdownCommentBlock]? {
+  let providers = self.markdown_comment_provider.snapshot_matching(model)
+  if providers.length() == 0 {
+    return None
+  }
+  let captured = providers[0]
+  let result = captured.entry.provider.provide_markdown_comments(model) catch {
+    _ => {
+      log_provider_failure(
+        log_service,
+        "language.markdownComments",
+        model,
+        captured.provider_index,
+      )
+      []
+    }
+  }
+  Some(result)
 }
 
 ///|

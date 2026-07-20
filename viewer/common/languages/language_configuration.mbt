@@ -1,11 +1,42 @@
-// The folding-rules slice of Monaco's language configuration
+// The comment and folding-rules slices of Monaco's language configuration
 // (`vs/editor/common/languages/languageConfiguration.ts` +
 // `languageConfigurationRegistry.ts`, checked-in vscode submodule): `FoldingMarkers`,
 // `FoldingRules`, and a per-language registration on `Languages` standing in
 // for `ILanguageConfigurationService.getLanguageConfiguration(languageId)`.
-// Only the folding rules are in scope — brackets, comments, auto-closing
-// pairs and the rest of `LanguageConfiguration` have no consumer in the
-// readonly viewer.
+// Brackets, auto-closing pairs, indentation rules, and the rest of
+// `LanguageConfiguration` remain outside the readonly viewer's surface.
+
+///|
+/// Normalized line-comment configuration. `no_indent` corresponds to Monaco's
+/// optional `LineCommentConfig.noIndent` and defaults to false.
+pub(all) struct LineCommentRule {
+  comment : String
+  no_indent : Bool
+} derive(Eq, Debug)
+
+///|
+/// Convenience construction corresponding to Monaco's string line-comment
+/// form, with the object form's `noIndent` flag available when needed.
+pub fn LineCommentRule::LineCommentRule(
+  comment : String,
+  no_indent? : Bool = false,
+) -> LineCommentRule {
+  { comment, no_indent }
+}
+
+///|
+/// Opening and closing delimiters for one block-comment form.
+pub(all) struct CharacterPair {
+  open : String
+  close : String
+} derive(Eq, Debug)
+
+///|
+/// Normalized comment rules for one language.
+pub(all) struct CommentRule {
+  line_comment : LineCommentRule?
+  block_comment : CharacterPair?
+} derive(Eq, Debug)
 
 ///|
 /// Describes start/end markers of language-specific folding regions (e.g.
@@ -28,19 +59,43 @@ pub(all) struct FoldingRules {
 }
 
 ///|
-/// The folding-rules subset of Monaco's `LanguageConfiguration`.
+/// The comments and folding-rules subset of Monaco's `LanguageConfiguration`.
 pub(all) struct LanguageConfiguration {
+  comments : CommentRule?
   folding_rules : FoldingRules?
 }
 
 ///|
 /// Registers or replaces `language_id`'s configuration — Monaco's
-/// `languages.setLanguageConfiguration` reduced to the folding rules.
+/// `languages.setLanguageConfiguration` reduced to comment and folding rules.
 pub fn Languages::set_language_configuration(
   self : Languages,
   language_id : String,
   configuration : LanguageConfiguration,
 ) -> Unit {
+  match configuration.comments {
+    Some(comments) => {
+      match comments.line_comment {
+        Some(rule) =>
+          if rule.comment == "" {
+            abort("line comment delimiter must not be empty")
+          }
+        None => ()
+      }
+      match comments.block_comment {
+        Some(pair) => {
+          if pair.open == "" {
+            abort("block comment opening delimiter must not be empty")
+          }
+          if pair.close == "" {
+            abort("block comment closing delimiter must not be empty")
+          }
+        }
+        None => ()
+      }
+    }
+    None => ()
+  }
   self.language_configurations[language_id] = configuration
 }
 
@@ -54,5 +109,5 @@ pub fn Languages::get_language_configuration(
 ) -> LanguageConfiguration {
   self.language_configurations
   .get(language_id)
-  .unwrap_or({ folding_rules: None })
+  .unwrap_or({ comments: None, folding_rules: None })
 }

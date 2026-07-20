@@ -8,6 +8,15 @@ test "public languages facade registers hover providers" {
 }
 
 ///|
+test "public languages facade registers markdown comment providers" {
+  let disposable = @languages.languages.register_markdown_comment_provider(
+    LanguageId("moonbit"),
+    PublicMarkdownCommentProvider::{  },
+  )
+  disposable.dispose()
+}
+
+///|
 priv struct PublicHoverProvider {}
 
 ///|
@@ -18,4 +27,15 @@ impl @language.HoverProvider for PublicHoverProvider with fn provide_hover(
   _token,
 ) {
   None
+}
+
+///|
+priv struct PublicMarkdownCommentProvider {}
+
+///|
+impl @language.MarkdownCommentProvider for PublicMarkdownCommentProvider with fn provide_markdown_comments(
+  _self,
+  _document,
+) {
+  []
 }

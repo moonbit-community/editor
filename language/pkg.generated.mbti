@@ -88,6 +88,11 @@ pub(all) struct Location {
   range : @common.Range
 } derive(@debug.Debug)
 
+pub(all) struct MarkdownCommentBlock {
+  line_range : @common.LineRange
+  markdown : String
+} derive(Eq, @debug.Debug)
+
 // Type aliases
 
 // Traits
@@ -101,6 +106,10 @@ pub(open) trait DocumentSymbolProvider {
 
 pub(open) trait HoverProvider {
   async fn provide_hover(Self, @model.TextModel, @common.Position, CancellationToken) -> Hover?
+}
+
+pub(open) trait MarkdownCommentProvider {
+  fn provide_markdown_comments(Self, @model.TextModel) -> Array[MarkdownCommentBlock] raise
 }
 
 pub(open) trait ReferencesProvider {

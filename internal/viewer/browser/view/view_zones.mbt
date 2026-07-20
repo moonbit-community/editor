@@ -260,6 +260,18 @@ fn ViewZones::on_line_mapping_changed(self : ViewZones) -> Bool {
 }
 
 ///|
+/// Re-evaluates only the retained zones' source-aware visibility after a raw
+/// hidden-area source changed without changing the merged model/view
+/// projection. The ordinary line-mapping event already reaches the same
+/// recomputation when the union changes; this explicit seam closes the case
+/// where one source is wholly covered by another source's ranges.
+pub fn ViewZones::refresh_hidden_area_source_visibility(
+  self : ViewZones,
+) -> Bool {
+  self.recompute_whitespace_props()
+}
+
+///|
 fn ViewZones::on_scroll_changed(
   _self : ViewZones,
   scroll_top_changed : Bool,
@@ -437,8 +449,18 @@ fn ViewZones::compute_whitespace_props(
     affinity=zone.after_column_affinity.unwrap_or(None),
     allow_zero_line_number=true,
   )
-  let is_visible = zone.show_in_hidden_areas.unwrap_or(false) ||
-    context.view_model.model_position_is_visible(zone_before_model_position)
+  let is_visible = if zone.show_in_hidden_areas.unwrap_or(false) {
+    true
+  } else {
+    match zone.ignore_hidden_area_source {
+      Some(source) =>
+        !context.view_model.model_position_is_hidden_except_source(
+          zone_after_model_position, source,
+        )
+      None =>
+        context.view_model.model_position_is_visible(zone_before_model_position)
+    }
+  }
   {
     is_in_hidden_area: !is_visible,
     after_view_line_number: view_position.line_number,

@@ -37,6 +37,29 @@ fn HiddenAreasModel::set_hidden_areas(
 }
 
 ///|
+/// Tests raw per-source membership while omitting one owner. Unlike
+/// `get_merged_ranges`, this read neither consumes `should_recompute` nor
+/// rebuilds/replaces the cached merged union.
+fn HiddenAreasModel::position_is_hidden_except_source(
+  self : HiddenAreasModel,
+  position : @base_common.Position,
+  ignored_source : String,
+) -> Bool {
+  for source, ranges in self.hidden_areas {
+    if source == ignored_source {
+      continue
+    }
+    for range in ranges {
+      if range.start_line_number <= position.line_number &&
+        position.line_number <= range.end_line_number {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
 /// The union of every source's ranges, merged into disjoint line ranges —
 /// `HiddenAreasModel.getMergedRanges`. Returns the previous array when the
 /// merge result is unchanged so the caller's equality check short-circuits.
@@ -96,6 +119,21 @@ fn merge_line_range_array(
     j += 1
   }
   result
+}
+
+///|
+/// Whether a validated ViewZone anchor is hidden by any source other than the
+/// named owner. This is intentionally narrower than the merged coordinate
+/// converter: it reads the raw source lists without mutating their cached
+/// union or the projected line collection.
+pub fn ViewModel::model_position_is_hidden_except_source(
+  self : ViewModel,
+  position : @base_common.Position,
+  ignored_source : String,
+) -> Bool {
+  self.hidden_areas_model.position_is_hidden_except_source(
+    position, ignored_source,
+  )
 }
 
 ///|

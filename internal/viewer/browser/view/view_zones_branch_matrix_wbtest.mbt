@@ -428,6 +428,175 @@ test "ViewZones hidden-area omitted false and true toggle exact heights" {
 }
 
 ///|
+test "ViewZones hidden-source precedence uses declared anchors and covers EOF" {
+  install_view_lifecycle_test_browser()
+  defer restore_view_lifecycle_test_browser()
+
+  // At a non-EOF anchor, the default Monaco branch probes the position after
+  // the zone (line 3), while either source-excluding branch probes the
+  // declared anchor side itself (line 2).
+  let middle = view_zones_branch_fixture(
+    "/view-zones-hidden-source-middle.txt",
+    "first\nmarkdown\nfolded\nfourth\nfifth",
+    @view_model.ViewModelOptions::no_wrap(),
+    20,
+  )
+  assert_true(
+    middle.view_model.set_hidden_areas([Range(2, 1, 2, 1)], source="markdown"),
+  )
+  assert_true(
+    middle.view_model.set_hidden_areas([Range(3, 1, 3, 1)], source="folding"),
+  )
+  let middle_default = middle.add_zone(
+    ViewZone(2, @rdom.document().create_element("div"), height_in_px=17.0),
+  )
+  let middle_show_all = middle.add_zone(
+    ViewZone(
+      2,
+      @rdom.document().create_element("div"),
+      show_in_hidden_areas=true,
+      height_in_px=17.0,
+    ),
+  )
+  let middle_ignore_own = middle.add_zone(
+    ViewZone(
+      2,
+      @rdom.document().create_element("div"),
+      ignore_hidden_area_source="markdown",
+      height_in_px=17.0,
+    ),
+  )
+  let middle_ignore_other = middle.add_zone(
+    ViewZone(
+      2,
+      @rdom.document().create_element("div"),
+      ignore_hidden_area_source="folding",
+      height_in_px=17.0,
+    ),
+  )
+  assert_eq(middle.whitespace(middle_default).height, 0)
+  assert_eq(middle.whitespace(middle_show_all).height, 17)
+  assert_eq(middle.whitespace(middle_ignore_own).height, 17)
+  assert_eq(middle.whitespace(middle_ignore_other).height, 0)
+  middle.dispose()
+
+  // At EOF, the default after-zone position validates back onto the hidden
+  // final line. Ignoring the owning source restores the replacement zone;
+  // another source on that same line still suppresses it.
+  let eof_own = view_zones_branch_fixture(
+    "/view-zones-hidden-source-eof-own.txt",
+    "first\nsecond\nthird\nmarkdown",
+    @view_model.ViewModelOptions::no_wrap(),
+    20,
+  )
+  assert_true(
+    eof_own.view_model.set_hidden_areas([Range(4, 1, 4, 1)], source="markdown"),
+  )
+  let eof_default = eof_own.add_zone(
+    ViewZone(4, @rdom.document().create_element("div"), height_in_px=23.0),
+  )
+  let eof_show_all = eof_own.add_zone(
+    ViewZone(
+      4,
+      @rdom.document().create_element("div"),
+      show_in_hidden_areas=true,
+      height_in_px=23.0,
+    ),
+  )
+  let eof_ignore_own = eof_own.add_zone(
+    ViewZone(
+      4,
+      @rdom.document().create_element("div"),
+      ignore_hidden_area_source="markdown",
+      height_in_px=23.0,
+    ),
+  )
+  let eof_ignore_other_zone = @editor_browser.ViewZone::ViewZone(
+    4,
+    @rdom.document().create_element("div"),
+    ignore_hidden_area_source="folding",
+    height_in_px=23.0,
+  )
+  let eof_ignore_other = eof_own.add_zone(eof_ignore_other_zone)
+  assert_eq(eof_own.whitespace(eof_default).height, 0)
+  assert_eq(eof_own.whitespace(eof_show_all).height, 23)
+  assert_eq(eof_own.whitespace(eof_ignore_own).height, 23)
+  assert_eq(eof_own.whitespace(eof_ignore_other).height, 0)
+  eof_ignore_other_zone.ignore_hidden_area_source = Some("markdown")
+  eof_own.view.change_view_zones(accessor => {
+    accessor.layout_zone(eof_ignore_other)
+  })
+  assert_eq(eof_own.whitespace(eof_ignore_other).height, 23)
+  eof_own.dispose()
+
+  let eof_other = view_zones_branch_fixture(
+    "/view-zones-hidden-source-eof-other.txt",
+    "first\nsecond\nthird\nmarkdown",
+    @view_model.ViewModelOptions::no_wrap(),
+    20,
+  )
+  assert_true(
+    eof_other.view_model.set_hidden_areas(
+      [Range(4, 1, 4, 1)],
+      source="markdown",
+    ),
+  )
+  // This overlapping source does not change the merged projection, but it is
+  // present in the raw source map before the zone is computed.
+  assert_false(
+    eof_other.view_model.set_hidden_areas([Range(4, 1, 4, 1)], source="folding"),
+  )
+  let eof_ignore_own_with_other = eof_other.add_zone(
+    ViewZone(
+      4,
+      @rdom.document().create_element("div"),
+      ignore_hidden_area_source="markdown",
+      height_in_px=23.0,
+    ),
+  )
+  assert_eq(eof_other.whitespace(eof_ignore_own_with_other).height, 0)
+  eof_other.dispose()
+}
+
+///|
+test "ViewZones refresh source-aware visibility when merged projection is unchanged" {
+  install_view_lifecycle_test_browser()
+  defer restore_view_lifecycle_test_browser()
+  let fixture = view_zones_branch_fixture(
+    "/view-zones-hidden-source-live-overlap.txt",
+    "first\nmarkdown\nthird",
+    @view_model.ViewModelOptions::no_wrap(),
+    20,
+  )
+  assert_true(
+    fixture.view_model.set_hidden_areas([Range(2, 1, 2, 1)], source="markdown"),
+  )
+  let zone_id = fixture.add_zone(
+    ViewZone(
+      2,
+      @rdom.document().create_element("div"),
+      ignore_hidden_area_source="markdown",
+      height_in_px=19.0,
+    ),
+  )
+  assert_eq(fixture.whitespace(zone_id).height, 19)
+
+  // Folding is wholly contained by the Markdown source, so the merged
+  // projection does not change. The raw-source refresh must still suppress
+  // the zone, then restore it when folding releases the line.
+  assert_false(
+    fixture.view_model.set_hidden_areas([Range(2, 1, 2, 1)], source="folding"),
+  )
+  assert_true(fixture.view.view_zones.refresh_hidden_area_source_visibility())
+  assert_eq(fixture.whitespace(zone_id).height, 0)
+  assert_false(fixture.view_model.set_hidden_areas([], source="folding"))
+  assert_true(fixture.view.view_zones.refresh_hidden_area_source_visibility())
+  assert_eq(fixture.whitespace(zone_id).height, 19)
+  assert_false(fixture.view.view_zones.refresh_hidden_area_source_visibility())
+  fixture.dispose()
+}
+
+///|
 test "ViewZones preserves raw height callbacks through retained ToInt32" {
   install_view_lifecycle_test_browser()
   defer restore_view_lifecycle_test_browser()

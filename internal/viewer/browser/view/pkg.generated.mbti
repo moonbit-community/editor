@@ -290,6 +290,7 @@ pub struct ViewZones {
   // private fields
 }
 pub fn ViewZones::did_render(Self) -> Unit
+pub fn ViewZones::refresh_hidden_area_source_visibility(Self) -> Bool
 pub fn ViewZones::should_render(Self) -> Bool
 
 // Type aliases

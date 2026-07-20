@@ -7,6 +7,10 @@ pub(all) struct ViewZone {
   mut after_column : Int?
   mut after_column_affinity : @model.PositionAffinity?
   mut show_in_hidden_areas : Bool?
+  /// When present, hidden-area visibility is tested at the declared anchor
+  /// against every hidden-area source except this one. This local extension
+  /// leaves Monaco's merged/default visibility behavior unchanged when absent.
+  mut ignore_hidden_area_source : String?
   mut ordinal : Int?
   mut suppress_mouse_down : Bool?
   mut height_in_lines : Double?
@@ -27,6 +31,7 @@ pub fn ViewZone::ViewZone(
   after_column? : Int,
   after_column_affinity? : @model.PositionAffinity,
   show_in_hidden_areas? : Bool,
+  ignore_hidden_area_source? : String,
   ordinal? : Int,
   suppress_mouse_down? : Bool,
   height_in_lines? : Double,
@@ -41,6 +46,7 @@ pub fn ViewZone::ViewZone(
     after_column,
     after_column_affinity,
     show_in_hidden_areas,
+    ignore_hidden_area_source,
     ordinal,
     suppress_mouse_down,
     height_in_lines,

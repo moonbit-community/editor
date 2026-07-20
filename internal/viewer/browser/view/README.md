@@ -270,6 +270,12 @@ nodes without replacing their class/style/content, reports host callback
 failures safely, and renders id-bearing viewport whitespace with Monaco's
 visibility, offscreen, and width rules.
 
+Hidden-area precedence is explicit: `show_in_hidden_areas=true` always wins;
+otherwise `ignore_hidden_area_source=Some(source)` tests the declared anchor
+against every other source; omission keeps the Monaco-compatible merged
+position-after-zone test. The source-excluding read never mutates the merged
+hidden-area projection.
+
 The `.margin-view-zones` child sits below the retained `.margin` clipping
 container and receives the `bigNumbersDelta - scrollTop` parent offset.
 Individual margin-zone nodes receive the same top, height, and display writes

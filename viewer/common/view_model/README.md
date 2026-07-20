@@ -92,6 +92,9 @@ model line + grammar tokens + injected-text decorations
   are already complete. Equal inputs and force-updates whose mapping is still
   equal do not emit. Headless callers omit both continuations but retain the
   same changed-only outgoing event.
+- `model_position_is_hidden_except_source` is the narrow ViewZones policy read:
+  it tests the raw per-source ranges without rebuilding the cached union or
+  changing the projected line collection.
 - A ViewModel may borrow the exact attached-view handle owned by its root
   `ModelData`. Vertical scroll and content remapping publish current model
   visible ranges as unstable; initial setup and explicit view-state restore

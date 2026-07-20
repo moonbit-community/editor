@@ -9,7 +9,10 @@ without a direct browser-package import.
   records are canonical public editor-DOM event values. Raw DOM input uses the
   distinct `EditorDomMouseEvent` name.
 - `ViewZone` is the mutable public descriptor. The runtime retains it by
-  identity and rereads its live fields during layout.
+  identity and rereads its live fields during layout. Its optional
+  `ignore_hidden_area_source` extension tests the declared anchor against all
+  hidden-area owners except one, while omission preserves Monaco's merged
+  visibility policy.
   `ViewZoneChangeAccessor` is an opaque callback handle; mutable ids, cached
   measurements, render data, and DOM attachment state stay private in
   `internal/viewer/browser/view`.

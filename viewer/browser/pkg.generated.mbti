@@ -178,6 +178,7 @@ pub(all) struct ViewZone {
   mut after_column : Int?
   mut after_column_affinity : @model.PositionAffinity?
   mut show_in_hidden_areas : Bool?
+  mut ignore_hidden_area_source : String?
   mut ordinal : Int?
   mut suppress_mouse_down : Bool?
   mut height_in_lines : Double?
@@ -188,7 +189,7 @@ pub(all) struct ViewZone {
   mut on_dom_node_top : ((Double) -> Unit raise)?
   mut on_computed_height : ((Double) -> Unit raise)?
 }
-pub fn ViewZone::ViewZone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
+pub fn ViewZone::ViewZone(Int, @dom.Element, after_column? : Int, after_column_affinity? : @model.PositionAffinity, show_in_hidden_areas? : Bool, ignore_hidden_area_source? : String, ordinal? : Int, suppress_mouse_down? : Bool, height_in_lines? : Double, height_in_px? : Double, min_width_in_px? : Double, margin_dom_node? : @dom.Element, on_dom_node_top? : (Double) -> Unit raise, on_computed_height? : (Double) -> Unit raise) -> Self
 
 pub struct ViewZoneChangeAccessor {
   // private fields

@@ -271,6 +271,7 @@ pub fn ViewModel::language_id(Self) -> String
 pub fn ViewModel::line_count(Self) -> Int
 pub fn ViewModel::lines(Self) -> ViewModelLinesFromProjectedModel
 pub fn ViewModel::model_line_max_column(Self, Int) -> Int
+pub fn ViewModel::model_position_is_hidden_except_source(Self, @common.Position, String) -> Bool
 pub fn ViewModel::model_position_is_visible(Self, @common.Position) -> Bool
 pub fn ViewModel::model_position_to_view_position(Self, @common.Position, affinity? : @model.PositionAffinity, allow_zero_line_number? : Bool) -> @common.Position
 pub fn ViewModel::move_cursor(Self, SimpleMoveDirection, Bool, value? : Int, unit? : CursorMoveUnit, source? : String, reason? : @editor_api.CursorChangeReason) -> Bool

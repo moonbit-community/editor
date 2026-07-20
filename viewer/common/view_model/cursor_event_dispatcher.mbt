@@ -4,6 +4,7 @@
 /// numeric ABI for these variants.
 pub(all) enum OutgoingViewModelEventKind {
   ViewZonesChanged
+  HiddenAreasChanged
   CursorStateChanged
   ModelTokensChanged
 } derive(Eq, Debug)
@@ -94,6 +95,29 @@ pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
 }
 
 ///|
+/// Payload-free outgoing hidden-area change event. It is published only after
+/// the line mapping, cursor/decorations, layout, and stable viewport have been
+/// updated by `ViewModel::set_hidden_areas`.
+pub struct HiddenAreasChangedOutgoingEvent {
+  kind : OutgoingViewModelEventKind
+} derive(Debug)
+
+///|
+/// Creates one source-shaped hidden-area change event.
+#alias(new, deprecated)
+pub fn HiddenAreasChangedOutgoingEvent::HiddenAreasChangedOutgoingEvent() -> HiddenAreasChangedOutgoingEvent {
+  { kind: HiddenAreasChanged }
+}
+
+///|
+/// A changed hidden-area mapping is always observable.
+pub fn HiddenAreasChangedOutgoingEvent::is_no_op(
+  _self : HiddenAreasChangedOutgoingEvent,
+) -> Bool {
+  false
+}
+
+///|
 /// Source-shaped outgoing wrapper for one original model-token event
 /// (`viewModelEventDispatcher.ts:545-551`). The wrapper deliberately retains
 /// the exact event object; view-coordinate conversion belongs to the earlier
@@ -127,6 +151,7 @@ pub fn ModelTokensChangedOutgoingEvent::is_no_op(
 priv enum PendingOutgoingEvent {
   CursorEvent(CursorStateChangedEvent)
   ViewZonesEvent(ViewZonesChangedEvent)
+  HiddenAreasEvent(HiddenAreasChangedOutgoingEvent)
   ModelTokensEvent(ModelTokensChangedOutgoingEvent)
 }
 
@@ -139,6 +164,7 @@ fn CursorStateChangedEvent::attempt_to_merge(
 ) -> CursorStateChangedEvent? {
   match other {
     ViewZonesEvent(_) => None
+    HiddenAreasEvent(_) => None
     ModelTokensEvent(_) => None
     CursorEvent(other) =>
       Some({
@@ -163,14 +189,27 @@ fn ViewZonesChangedEvent::attempt_to_merge(
 ) -> ViewZonesChangedEvent? {
   match other {
     CursorEvent(_) => None
+    HiddenAreasEvent(_) => None
     ModelTokensEvent(_) => None
     ViewZonesEvent(_) => Some(self)
   }
 }
 
 ///|
-/// Unlike cursor and ViewZones siblings, the source model-token wrapper never
-/// merges, even with another model-token event
+/// Merges only another hidden-area event and retains the first queued instance.
+fn HiddenAreasChangedOutgoingEvent::attempt_to_merge(
+  self : HiddenAreasChangedOutgoingEvent,
+  other : PendingOutgoingEvent,
+) -> HiddenAreasChangedOutgoingEvent? {
+  match other {
+    CursorEvent(_) | ViewZonesEvent(_) | ModelTokensEvent(_) => None
+    HiddenAreasEvent(_) => Some(self)
+  }
+}
+
+///|
+/// Unlike cursor, ViewZones, and hidden-area siblings, the source model-token
+/// wrapper never merges, even with another model-token event
 /// (`viewModelEventDispatcher.ts:556-559`).
 fn ModelTokensChangedOutgoingEvent::attempt_to_merge(
   _self : ModelTokensChangedOutgoingEvent,
@@ -185,6 +224,7 @@ fn PendingOutgoingEvent::is_no_op(self : PendingOutgoingEvent) -> Bool {
   match self {
     CursorEvent(event) => event.is_no_op()
     ViewZonesEvent(event) => event.is_no_op()
+    HiddenAreasEvent(event) => event.is_no_op()
     ModelTokensEvent(event) => event.is_no_op()
   }
 }
@@ -200,6 +240,8 @@ fn PendingOutgoingEvent::attempt_to_merge(
       event.attempt_to_merge(other).map(merged => CursorEvent(merged))
     ViewZonesEvent(event) =>
       event.attempt_to_merge(other).map(merged => ViewZonesEvent(merged))
+    HiddenAreasEvent(event) =>
+      event.attempt_to_merge(other).map(merged => HiddenAreasEvent(merged))
     ModelTokensEvent(event) =>
       event.attempt_to_merge(other).map(merged => ModelTokensEvent(merged))
   }
@@ -207,9 +249,9 @@ fn PendingOutgoingEvent::attempt_to_merge(
 
 ///|
 /// DOM-free outgoing-only half of Monaco's `ViewModelEventDispatcher`.
-/// Pending cursor/ViewZones events coalesce into their first same-kind slot;
-/// delivery is FIFO, discards no-ops, and remains safe when listeners emit
-/// reentrantly.
+/// Pending cursor/ViewZones/hidden-area events coalesce into their first
+/// same-kind slot; delivery is FIFO, discards no-ops, and remains safe when
+/// listeners emit reentrantly.
 struct CursorEventDispatcher {
   event_listeners : Array[OutgoingEventListenerCell]
   outgoing_events : Array[PendingOutgoingEvent]
@@ -303,6 +345,7 @@ fn CursorEventDispatcher::on_event(
     match event {
       CursorEvent(event) => listener(event)
       ViewZonesEvent(_) => ()
+      HiddenAreasEvent(_) => ()
       ModelTokensEvent(_) => ()
     }
   })
@@ -318,7 +361,22 @@ fn CursorEventDispatcher::on_view_zones_changed(
     match event {
       CursorEvent(_) => ()
       ViewZonesEvent(event) => listener(event)
+      HiddenAreasEvent(_) => ()
       ModelTokensEvent(_) => ()
+    }
+  })
+}
+
+///|
+/// Exposes the dispatcher's hidden-area event through a typed listener alias.
+fn CursorEventDispatcher::on_hidden_areas_changed(
+  self : CursorEventDispatcher,
+  listener : (HiddenAreasChangedOutgoingEvent) -> Unit,
+) -> @base_common.Disposable {
+  self.on_outgoing_event(event => {
+    match event {
+      HiddenAreasEvent(event) => listener(event)
+      CursorEvent(_) | ViewZonesEvent(_) | ModelTokensEvent(_) => ()
     }
   })
 }
@@ -331,7 +389,7 @@ fn CursorEventDispatcher::on_model_tokens_changed(
 ) -> @base_common.Disposable {
   self.on_outgoing_event(event => {
     match event {
-      CursorEvent(_) | ViewZonesEvent(_) => ()
+      CursorEvent(_) | ViewZonesEvent(_) | HiddenAreasEvent(_) => ()
       ModelTokensEvent(event) => listener(event)
     }
   })
@@ -360,6 +418,19 @@ fn CursorEventDispatcher::emit_view_zones_changed(
     return
   }
   self.add_outgoing_event(ViewZonesEvent(event))
+  self.emit_outgoing_events()
+}
+
+///|
+/// Adds a hidden-area fact to the shared heterogeneous queue and drains it.
+fn CursorEventDispatcher::emit_hidden_areas_changed(
+  self : CursorEventDispatcher,
+  event : HiddenAreasChangedOutgoingEvent,
+) -> Unit {
+  if self.disposed {
+    return
+  }
+  self.add_outgoing_event(HiddenAreasEvent(event))
   self.emit_outgoing_events()
 }
 

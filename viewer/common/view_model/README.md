@@ -59,17 +59,20 @@ model line + grammar tokens + injected-text decorations
   branches.
 - `CursorEventDispatcher` is the outgoing-only half of Monaco's
   `ViewModelEventDispatcher`: its heterogeneous queue carries cursor-state,
-  ViewZones-changed, and model-token facts. Cursor selection/version no-ops are
-  filtered and queued cursor events can coalesce; model-token wrappers retain
-  the identical source event, are never no-ops, and never merge. The dispatcher
-  recursively drains reentrant outgoing facts and
+  ViewZones-changed, hidden-area-changed, and model-token facts. Cursor
+  selection/version no-ops are filtered and queued cursor events can coalesce;
+  the two payload-free change facts are always observable and merge only with
+  their own kind, while model-token wrappers retain the identical source event,
+  are never no-ops, and never merge. The dispatcher recursively drains
+  reentrant outgoing facts and
   uses separate source-shaped listener-delivery state so a nested fire first
   finishes the remaining listeners for the current value. The nested value is
   then delivered before the initiating callback resumes. The root Viewer FIFO
   separately keeps public event pairs adjacent. It exposes
-  `on_cursor_state_changed`, `on_view_zones_changed`, and
-  `on_model_tokens_changed`; `ViewModel::dispose` disposes all emitters and
-  clears pending outgoing facts and listener-
+  `on_cursor_state_changed`, `on_view_zones_changed`,
+  `on_hidden_areas_changed`, and `on_model_tokens_changed`;
+  `ViewModel::dispose` disposes all emitters and clears pending outgoing facts
+  and listener-
   delivery state. Generic browser View handlers, mixed view/outgoing
   collectors, and the editor-wide cross-event delivery queue remain outside
   this reduced common owner.
@@ -83,7 +86,12 @@ model line + grammar tokens + injected-text decorations
   runs before `with_event_batch`; on a changed mapping,
   `on_line_mapping_changed` wraps the cursor continuation so the root appends
   Flushed/Mapping/Decorations, cursor, layout, and recovery-scroll facts in
-  source order. Headless callers omit both continuations.
+  source order. The payload-free hidden-area outgoing event is emitted only
+  when the projected line collection reports a real mapping change, and only
+  after `with_event_batch` has returned, so layout and stable-viewport recovery
+  are already complete. Equal inputs and force-updates whose mapping is still
+  equal do not emit. Headless callers omit both continuations but retain the
+  same changed-only outgoing event.
 - A ViewModel may borrow the exact attached-view handle owned by its root
   `ModelData`. Vertical scroll and content remapping publish current model
   visible ranges as unstable; initial setup and explicit view-state restore

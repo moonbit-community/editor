@@ -221,8 +221,17 @@ pub fn ViewModel::set_hidden_areas(
     }
     line_mapping_changed
   }
-  match with_event_batch {
+  let line_mapping_changed = match with_event_batch {
     Some(run) => run(apply_hidden_areas)
     None => apply_hidden_areas()
   }
+  // Monaco publishes the outgoing fact only after the generic ViewEvent batch
+  // has ended. For the root Viewer, returning from `run` also completes its
+  // deferred collector flush, including layout and stable-viewport Scroll.
+  if line_mapping_changed {
+    self.cursor_event_dispatcher.emit_hidden_areas_changed(
+      HiddenAreasChangedOutgoingEvent(),
+    )
+  }
+  line_mapping_changed
 }

@@ -76,7 +76,7 @@ The API is a readonly subset of Monaco's editor API:
 - position, selection, scroll, reveal, geometry, and read queries;
 - model decorations and `EditorDecorationsCollection`;
 - view zones and null-position overlay widgets;
-- model, cursor, scroll, mouse, and disposal events.
+- model, cursor, scroll, ViewZone, hidden-area, mouse, and disposal events.
 
 Canonical public event values and editor-option enums are owned by
 `viewer/common/editor_api`; the root facade consumes those types directly and
@@ -126,6 +126,17 @@ queue, active drain gate, exact content-barrier depth, and completed versions.
 A model reset clears queued model facts and versions but never clears an active
 outer drain gate; active-model checks and public event effects remain at the
 root Viewer boundary.
+
+`on_did_change_hidden_areas` is the public, payload-free notification for the
+current model's changed view-line mapping. The root subscribes to the
+ViewModel's heterogeneous outgoing dispatcher through the model-scoped
+generation gate, so a detached model, a missing model, and callbacks retired by
+replacement or disposal cannot reach the Viewer emitter. The event fires once
+after the hidden-area transaction has delivered its internal mapping,
+cursor/decorations, layout, and stable-viewport recovery facts. Equal ranges
+and a forced update that leaves the mapping equal do not fire. Applying hidden
+areas remains package-private root/contribution behavior rather than a public
+Viewer mutation API.
 
 Cursor-command reveals keep the committed view coordinate. Keyboard commands
 request non-minimal Smooth reveal; pointer MoveTo/Word/Line commands use the

@@ -91,6 +91,13 @@ pub struct DecorationToRender {
   z_index : Int
 } derive(Eq, @debug.Debug)
 
+pub struct HiddenAreasChangedOutgoingEvent {
+  kind : OutgoingViewModelEventKind
+} derive(@debug.Debug)
+#alias(new, deprecated)
+pub fn HiddenAreasChangedOutgoingEvent::HiddenAreasChangedOutgoingEvent() -> Self
+pub fn HiddenAreasChangedOutgoingEvent::is_no_op(Self) -> Bool
+
 pub struct InjectedText {
   position : @common.Position
   text : String
@@ -163,6 +170,7 @@ pub fn MonospaceLineBreaksComputerFactory::create_line_breaks_computer(Self, fon
 
 pub(all) enum OutgoingViewModelEventKind {
   ViewZonesChanged
+  HiddenAreasChanged
   CursorStateChanged
   ModelTokensChanged
 } derive(Eq, @debug.Debug)
@@ -280,6 +288,7 @@ pub fn ViewModel::normalize_position(Self, @common.Position, @model.PositionAffi
 pub fn ViewModel::on_configuration_changed(Self, ViewModelOptions) -> Bool
 pub fn ViewModel::on_cursor_state_changed(Self, (CursorStateChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_did_change_content_or_injected_text(Self, e? : @model.InternalModelContentChangeEvent) -> Unit
+pub fn ViewModel::on_hidden_areas_changed(Self, (HiddenAreasChangedOutgoingEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_model_tokens_changed(Self, (ModelTokensChangedOutgoingEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::on_view_zones_changed(Self, (ViewZonesChangedEvent) -> Unit) -> @common.Disposable
 pub fn ViewModel::set_cursor_state(Self, @cursor.PartialCursorState?, String, @editor_api.CursorChangeReason) -> Bool

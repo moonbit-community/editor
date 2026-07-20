@@ -152,6 +152,16 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
       }
     }),
   )
+  // Hidden-area changes use the same model-scoped outgoing relay. The
+  // ViewModel publishes only after mapping, cursor/decorations, layout, stable
+  // viewport recovery, and the root ViewEvent batch have completed.
+  listeners_to_remove.push(
+    view_model.on_hidden_areas_changed(_event => {
+      if self.is_current_model_data_generation(model_data_generation) {
+        self.did_change_hidden_areas.fire(())
+      }
+    }),
+  )
   // `viewModelImpl.ts:522` reaches the root only after the ViewModel's
   // browser callback has synchronously delivered `ViewTokensChanged`. This
   // replaces the old direct TextModel listener and never invokes the lexer.

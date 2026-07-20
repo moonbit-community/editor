@@ -78,6 +78,7 @@ pub fn Viewer::has_widget_focus(Self) -> Bool
 pub fn Viewer::layout(Self) -> Unit
 pub fn Viewer::on_did_change_cursor_position(Self, (@editor_api.CursorPositionChangedEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_cursor_selection(Self, (@editor_api.CursorSelectionChangedEvent) -> Unit) -> @common.Disposable
+pub fn Viewer::on_did_change_hidden_areas(Self, () -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_model(Self, (@editor_api.ModelChangedEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_model_content(Self, (@model.ModelContentChangedEvent) -> Unit) -> @common.Disposable
 pub fn Viewer::on_did_change_view_zones(Self, () -> Unit) -> @common.Disposable

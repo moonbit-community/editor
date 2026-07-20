@@ -54,6 +54,9 @@ pub struct Viewer {
   /// CEW-001 deferral, while this dedicated emitter preserves the event's own
   /// listener semantics.
   priv did_change_view_zones : @base_common.Emitter[Unit]
+  /// Public `onDidChangeHiddenAreas`, relayed from the current model's outgoing
+  /// ViewModel dispatcher only after its complete mapping transaction.
+  priv did_change_hidden_areas : @base_common.Emitter[Unit]
   priv did_dispose : @base_common.Emitter[Unit]
   /// Public mouse events (`onMouseDown`/`onMouseUp`/`onMouseMove`/
   /// `onMouseLeave`, see `mouse_events.mbt`), fired from the controller's
@@ -152,6 +155,7 @@ fn Viewer::Viewer(
     did_build_view_model: Emitter(),
     did_scroll: Emitter(),
     did_change_view_zones: Emitter(),
+    did_change_hidden_areas: Emitter(),
     did_dispose: Emitter(),
     did_mouse_down: Emitter(),
     did_mouse_up: Emitter(),
@@ -339,6 +343,16 @@ pub fn Viewer::on_did_change_view_zones(
   listener : () -> Unit,
 ) -> @base_common.Disposable {
   self.did_change_view_zones.event(_ => listener())
+}
+
+///|
+/// Fires after a changed hidden-area mapping has completed its internal view
+/// events, cursor/decorations reprojection, layout, and viewport recovery.
+pub fn Viewer::on_did_change_hidden_areas(
+  self : Viewer,
+  listener : () -> Unit,
+) -> @base_common.Disposable {
+  self.did_change_hidden_areas.event(_ => listener())
 }
 
 ///|
@@ -786,6 +800,7 @@ pub fn Viewer::dispose(self : Viewer) -> Unit {
   self.did_build_view_model.dispose()
   self.did_scroll.dispose()
   self.did_change_view_zones.dispose()
+  self.did_change_hidden_areas.dispose()
   self.did_dispose.dispose()
   self.did_mouse_down.dispose()
   self.did_mouse_up.dispose()

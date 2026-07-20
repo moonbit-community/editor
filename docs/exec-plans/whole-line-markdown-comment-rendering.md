@@ -1,6 +1,6 @@
 # Whole-Line Markdown Comment Rendering and Prerequisite Cleanup
 
-Status: proposed
+Status: in progress
 Date: 2026-07-20
 Oracle: the `vscode` gitlink recorded by the commit carrying this plan
 
@@ -121,9 +121,9 @@ feature.
 - `viewer/input.mbt` attaches `copy` and `keydown` to the entire root. A native
   ViewZone selection can therefore be replaced by an old model selection, and
   a focused ViewZone link can bubble into editor keybindings.
-- `docs/notes/view-zone-afterlinenumber-divergence.md` describes deleted
-  `anchor_line`/view-addressed behavior even though current ViewZones already
-  perform the model-to-view conversion.
+- A now-deleted divergence note described an obsolete view-addressed ViewZone
+  API even though current ViewZones already perform the model-to-view
+  conversion.
 
 ## Target Architecture
 
@@ -478,10 +478,10 @@ Each zone owns this stable shape:
 
 - Re-read the current local files and the checked-in vscode sources named in
   this plan; record any changed package or public boundary before editing.
-- Delete `docs/notes/view-zone-afterlinenumber-divergence.md` rather than
-  rewriting resolved history as a current contract.
-- Confirm no live documentation or code still references `anchor_line` or the
-  deleted note.
+- Delete the resolved ViewZone divergence note rather than rewriting resolved
+  history as a current contract.
+- Confirm no live documentation or code still references the obsolete
+  view-addressed ViewZone API or the deleted note.
 - Commit the documentation cleanup independently.
 
 Evidence:
@@ -674,12 +674,47 @@ git diff --check
 
 ### Gate A — before product edits
 
-- [ ] refresh every named local and source path against the current gitlinks;
-- [ ] confirm the port mode and exclusions still match current consumers;
-- [ ] review public API additions in planned record/trait/handle form;
-- [ ] review new package edges against `docs/architecture.md`;
-- [ ] confirm the worktree contains no unrelated changes that overlap planned
+- [x] refresh every named local and source path against the current gitlinks;
+- [x] confirm the port mode and exclusions still match current consumers;
+- [x] review public API additions in planned record/trait/handle form;
+- [x] review new package edges against `docs/architecture.md`;
+- [x] confirm the worktree contains no unrelated changes that overlap planned
   files.
+
+Gate A record (2026-07-20): the clean worktree was at `398f973f` and the
+checked-out `vscode` tree matched gitlink
+`b18492a288de038fbc7643aae6de8247029d11bd`. The selected behavior and
+algorithm-fidelity modes, exclusions, and evidence layers still match the
+current consumers. Review resolved these representation seams before product
+edits:
+
+- `LanguageHandle` exposes the first matching provider's raw tri-state result
+  (`None` means no match; `Some`, including an empty array, is authoritative),
+  while the DOM-free contribution remains the sole owner of configuration
+  fallback and normalization. This preserves the rule that common packages do
+  not import internal contributions.
+- the source-exclusion ViewZone branch tests the declared anchor-side model
+  position; the default branch retains the existing Monaco-style
+  before-position visibility check. This lets the Markdown source ignore
+  itself at EOF while folding over the replaced lines still suppresses it.
+- shared renderer code-block overrides use a MoonBit-owned value rather than
+  exposing cmark types. Browser rendering takes an explicit reusable target and
+  owns per-target listener disposal.
+- Markdown contribution state is cleared during model detach before the old
+  View is destroyed. A headless Viewer does not hide Markdown source because it
+  has no replacement DOM. Size observation reads integer `offsetHeight`,
+  coalesces through the shared frame scheduler, and invalidates callbacks by
+  generation.
+- relative media may resolve through `base_uri`, but browser media is allowed
+  only when the resulting URI is sanitized `http` or `https` and
+  `allow_remote_images=true`; local, file, data, command, and unknown schemes
+  remain disabled. Native links retain only sanitized `http`, `https`, and
+  `mailto` targets.
+
+The public review surfaces additionally include
+`viewer/common/view_model/pkg.generated.mbti` for the excluding-source query
+and the generated interface of any generic browser DOM probe package. No
+unresolved scope, public-API, or behavior choice remains.
 
 This is an internal execution checkpoint. Record the result and continue unless
 the current source exposes a material unresolved public API or behavior choice.

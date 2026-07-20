@@ -43,6 +43,7 @@ pub struct AgentFeedbackEditorWidget {
   mut expanded : Bool
   mut disposed : Bool
   mut start_line : Int
+  // private fields
 }
 #alias(new, deprecated)
 pub fn AgentFeedbackEditorWidget::AgentFeedbackEditorWidget(AgentFeedbackEditorWidgetHost, String, Array[@agent_feedback.SessionEditorComment], Map[String, String], focused_reply? : String) -> Self

@@ -75,10 +75,12 @@ pub struct ContentHoverWidget {
   host : ContentHoverWidgetHost
   mut rendered_hover : RenderedContentHover?
   mut position_preference : @view.ContentWidgetPositionPreference?
+  // private fields
 }
 #alias(new, deprecated)
 pub fn ContentHoverWidget::ContentHoverWidget(ContentHoverWidgetHost) -> Self
 pub fn ContentHoverWidget::content_widget_handle(Self) -> @view.ContentWidgetHandle
+pub fn ContentHoverWidget::dispose(Self) -> Unit
 pub fn ContentHoverWidget::go_to_bottom(Self) -> Unit
 pub fn ContentHoverWidget::go_to_top(Self) -> Unit
 pub fn ContentHoverWidget::handle_contents_changed(Self) -> Unit
@@ -123,7 +125,8 @@ pub(all) enum EditorEvent {
 pub(all) struct RenderedContentHover {
   show_at_position : @common.Position
   show_at_secondary_position : @common.Position
-  rows : Array[String]
+  parts : Array[@hover.HoverPart]
+  language_id : String
 }
 
 // Type aliases

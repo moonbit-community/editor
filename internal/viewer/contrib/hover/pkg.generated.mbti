@@ -3,6 +3,7 @@ package "moonbit-community/editor/internal/viewer/contrib/hover"
 
 import {
   "moonbit-community/editor/base/common",
+  "moonbit-community/editor/internal/viewer/markdown",
   "moonbit-community/editor/language",
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
@@ -56,7 +57,7 @@ pub fn mouse_within_element(Double, Double, Double, Double, Double, Double) -> B
 
 pub fn register_default_hover_participants(HoverParticipantRegistry) -> Unit
 
-pub fn render_hover_parts(Array[HoverPart], String) -> Array[String]
+pub fn render_hover_code_block(@markdown.MarkdownCodeBlock, String?) -> String
 
 pub fn should_keep_current_hover(Bool, Bool, Bool) -> Bool
 

@@ -28,8 +28,10 @@ timing, and rendering can be tested on JS and native targets.
   caller token/freshness predicate guard both sides of each await, and an
   injected task runner lets the browser merge participant results in completion
   order without a multi-target runtime dependency.
-- `render_hover_parts` turns parts into safe row HTML, including tokenized
-  fenced code blocks. This package produces strings, never DOM nodes.
+- `render_hover_code_block` is hover's synchronous fenced-code override for the
+  shared Markdown renderer. It accepts the shared MoonBit-owned code-block DTO,
+  selects the fenced or active model language, and emits existing tokenized
+  source HTML. This package neither imports cmark types nor creates DOM nodes.
 
 ## Browser and Viewer ownership
 
@@ -54,8 +56,8 @@ framework. Exact APIs are in `pkg.generated.mbti`; browser-only APIs are in
 ## Boundary
 
 This package is multi-target and imports no Rabbita or browser/view package.
-It may depend on base/language/log/syntax and DOM-free viewer common packages,
-but never on the root Viewer or shell.
+It may depend on base/language/log/syntax, the DOM-free shared Markdown core,
+and DOM-free viewer common packages, but never on the root Viewer or shell.
 
 Run the focused suite on both supported targets with:
 

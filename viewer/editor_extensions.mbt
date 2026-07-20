@@ -96,7 +96,7 @@ fn ContentHoverContributionState::dispose_retained_browser_resources(
   self : ContentHoverContributionState,
 ) -> Unit {
   match self.widget {
-    Some(widget) => widget.scrollable.dispose()
+    Some(widget) => widget.dispose()
     None => ()
   }
   self.widget = None

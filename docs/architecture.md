@@ -122,6 +122,12 @@ js-only. Concrete browser runtime packages live below the module-private
   state/render-phase trace. Observation records are constructed only while the
   matching Viewer has a listener; the package never imports root Viewer and is
   not an external API.
+- `internal/viewer/markdown` is the multi-target safe-cmark boundary. It owns
+  plaintext fallback, a cmark-independent code-block value, and conversion
+  facts; `internal/viewer/browser/markdown` adds JS-only DOM retention,
+  URI/media policy, activation listeners, size notification, and per-target
+  disposal. Browser contributions consume these packages instead of owning
+  private Markdown-to-`innerHTML` pipelines.
 - `internal/viewer/browser/config` measures fonts and browser geometry.
 - `internal/viewer/browser/controller` owns hit testing, mouse selection, drag
   scrolling, and scrollbar input. Touch inertia uses the shared strict-next

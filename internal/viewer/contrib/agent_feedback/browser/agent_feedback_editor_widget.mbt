@@ -59,6 +59,9 @@ pub struct AgentFeedbackEditorWidget {
   body : @rdom.Element
   item_nodes : Map[String, @rdom.Element]
   reply_textareas : Map[String, @rdom.Element]
+  /// The shared Markdown renderer lifetime for each retained comment/reply
+  /// target. Keys distinguish the comment body from each indexed reply.
+  priv markdown_disposables : Map[String, @base_common.Disposable]
   mut expanded : Bool
   mut disposed : Bool
   mut start_line : Int
@@ -115,6 +118,7 @@ pub fn AgentFeedbackEditorWidget::AgentFeedbackEditorWidget(
     body,
     item_nodes: Map([]),
     reply_textareas: Map([]),
+    markdown_disposables: Map([]),
     expanded: false,
     disposed: false,
     start_line: 1,
@@ -160,7 +164,11 @@ pub fn AgentFeedbackEditorWidget::set_anchor_line(
 pub fn AgentFeedbackEditorWidget::mark_disposed(
   self : AgentFeedbackEditorWidget,
 ) -> Unit {
+  if self.disposed {
+    return
+  }
   self.disposed = true
+  self.dispose_all_markdown_targets()
 }
 
 // --- header ----------------------------------------------------------------------
@@ -224,6 +232,7 @@ fn AgentFeedbackEditorWidget::build_items(
   self : AgentFeedbackEditorWidget,
   focused_reply? : String,
 ) -> Unit {
+  self.dispose_all_markdown_targets()
   self.body.set_inner_html("")
   self.item_nodes.clear()
   self.reply_textareas.clear()
@@ -286,7 +295,11 @@ fn AgentFeedbackEditorWidget::build_item(
   actions.set_attribute("class", "agent-feedback-widget-item-actions")
   let text = document.create_element("div")
   text.set_attribute("class", "agent-feedback-widget-text")
-  text.set_inner_html(feedback_markdown_html(comment.text))
+  self.render_markdown_target(
+    feedback_comment_target_key(comment.id),
+    text,
+    comment.text,
+  )
   let reply_action = widget_icon_button(
     "reply",
     "Add to Comment",
@@ -351,12 +364,16 @@ fn AgentFeedbackEditorWidget::build_replies(
   let document = @rdom.document()
   let replies = document.create_element("div")
   replies.set_attribute("class", "agent-feedback-widget-replies")
-  for reply in comment.replies {
+  for reply_index, reply in comment.replies {
     let node = document.create_element("div")
     node.set_attribute("class", "agent-feedback-widget-reply")
     let text = document.create_element("div")
     text.set_attribute("class", "agent-feedback-widget-reply-text")
-    text.set_inner_html(feedback_markdown_html(reply))
+    self.render_markdown_target(
+      feedback_reply_target_key(comment.id, reply_index),
+      text,
+      reply,
+    )
     node.append_child(text.as_node())
     replies.append_child(node.as_node())
   }
@@ -409,6 +426,8 @@ fn AgentFeedbackEditorWidget::start_editing(
   text_container : @rdom.Element,
 ) -> Unit {
   let document = @rdom.document()
+  let target_key = feedback_comment_target_key(comment.id)
+  self.dispose_markdown_target(target_key)
   text_container.set_inner_html("")
   text_container.set_attribute("class", "agent-feedback-widget-text editing")
   let textarea = document.create_element("textarea")
@@ -427,9 +446,14 @@ fn AgentFeedbackEditorWidget::start_editing(
   }
   auto_size()
   textarea.add_event_listener("input", _ => auto_size())
+  let editing = Ref(true)
   let stop = () => {
+    if !editing.val || self.disposed {
+      return
+    }
+    editing.val = false
     text_container.set_attribute("class", "agent-feedback-widget-text")
-    text_container.set_inner_html(feedback_markdown_html(comment.text))
+    self.render_markdown_target(target_key, text_container, comment.text)
     (self.host.on_layout)(self.id)
   }
   textarea.add_event_listener("keydown", event => {
@@ -708,13 +732,59 @@ pub fn AgentFeedbackEditorWidget::measured_header_height(
 // --- helpers / FFI ----------------------------------------------------------------
 
 ///|
-/// Feedback bodies render through the same safe cmark pipeline the comment
-/// widget used.
-fn feedback_markdown_html(markdown : String) -> String {
-  let doc = @cmark.Doc::from_string(markdown, strict=false)
-  @cmark_html.renderer(safe=true).doc_to_string(doc) catch {
-    _ => "<p>" + widget_escape_html(markdown) + "</p>"
+/// Replaces one retained Markdown target while leaving sibling comment and
+/// reply targets alive. Agent feedback has no command/link callback, so the
+/// shared renderer keeps only its safe native-link behavior.
+fn AgentFeedbackEditorWidget::render_markdown_target(
+  self : AgentFeedbackEditorWidget,
+  key : String,
+  target : @rdom.Element,
+  markdown : String,
+) -> Unit {
+  self.dispose_markdown_target(key)
+  if self.disposed {
+    return
   }
+  let rendered = @browser_markdown.render_markdown(markdown, target~)
+  self.markdown_disposables.set(key, rendered.dispose)
+}
+
+///|
+fn AgentFeedbackEditorWidget::dispose_markdown_target(
+  self : AgentFeedbackEditorWidget,
+  key : String,
+) -> Unit {
+  match self.markdown_disposables.get(key) {
+    Some(disposable) => {
+      self.markdown_disposables.remove(key)
+      disposable.dispose()
+    }
+    None => ()
+  }
+}
+
+///|
+fn AgentFeedbackEditorWidget::dispose_all_markdown_targets(
+  self : AgentFeedbackEditorWidget,
+) -> Unit {
+  let pending : Array[@base_common.Disposable] = []
+  for _, disposable in self.markdown_disposables {
+    pending.push(disposable)
+  }
+  self.markdown_disposables.clear()
+  for disposable in pending {
+    disposable.dispose()
+  }
+}
+
+///|
+fn feedback_comment_target_key(comment_id : String) -> String {
+  "comment:" + comment_id
+}
+
+///|
+fn feedback_reply_target_key(comment_id : String, reply_index : Int) -> String {
+  "reply:" + comment_id + ":" + reply_index.to_string()
 }
 
 ///|

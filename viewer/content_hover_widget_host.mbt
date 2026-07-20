@@ -81,7 +81,8 @@ fn Viewer::on_content_hover_widget_mouse_leave(
 /// Monaco `RenderedContentHover`'s constructor work
 /// (`contentHoverRendered.ts`): resolve where the widget anchors
 /// (`computeHoverPositions` over the parts, with the anchor view line's
-/// minimum column as the `startColumnBoundary`) and render the part rows.
+/// minimum column as the `startColumnBoundary`) and hand the ordered parts to
+/// the browser widget, which owns their retained DOM rendering.
 fn Viewer::rendered_content_hover(
   self : Viewer,
   view : @hover.HoverWidgetView,
@@ -115,7 +116,8 @@ fn Viewer::rendered_content_hover(
   {
     show_at_position,
     show_at_secondary_position,
-    rows: @hover.render_hover_parts(view.parts, language_id),
+    parts: view.parts,
+    language_id,
   }
 }
 

@@ -70,3 +70,157 @@ test "a tall hover near the page bottom flips above" {
     true,
   )
 }
+
+///|
+test "hover render lifetimes dispose on replacement hide and teardown" {
+  let first_count = Ref(0)
+  let second_count = Ref(0)
+  let third_count = Ref(0)
+  let lifetimes : Array[@base_common.Disposable] = []
+  lifetimes.push(
+    @base_common.Disposable::from(() => first_count.val = first_count.val + 1),
+  )
+  lifetimes.push(
+    @base_common.Disposable::from(() => second_count.val = second_count.val + 1),
+  )
+
+  // `update_content` begins a replacement with the same clear operation.
+  dispose_hover_render_disposables(lifetimes)
+  assert_eq(first_count.val, 1)
+  assert_eq(second_count.val, 1)
+
+  lifetimes.push(
+    @base_common.Disposable::from(() => third_count.val = third_count.val + 1),
+  )
+  // `hide` and retained-widget `dispose` both converge on this operation.
+  dispose_hover_render_disposables(lifetimes)
+  dispose_hover_render_disposables(lifetimes)
+  assert_eq(third_count.val, 1)
+}
+
+///|
+test "only tokenized code-block Markdown lifts the hover contents width cap" {
+  assert_eq(hover_contents_class(false), "hover-contents")
+  assert_eq(hover_contents_class(true), "hover-contents code-hover-contents")
+}
+
+///|
+test "hover DOM keeps one grouped row and one wrapper per Markdown content" {
+  install_hover_row_test_document()
+  let lifetimes : Array[@base_common.Disposable] = []
+  let row = render_markdown_hover_row(
+    lifetimes,
+    [PlainText("<first>"), PlainText("second")],
+    "moonbit",
+  )
+  assert_eq(hover_test_class_count(row, "hover-row"), 1)
+  assert_eq(hover_test_class_count(row, "hover-row-contents"), 1)
+  assert_eq(hover_test_class_count(row, "markdown-hover"), 2)
+  assert_eq(hover_test_class_count(row, "hover-contents"), 2)
+  assert_eq(hover_test_text_content(row), "<first>second")
+  assert_eq(lifetimes.length(), 0)
+  restore_hover_row_test_document()
+}
+
+///|
+test "marker hover keeps its copy affordance without an HTML string path" {
+  install_hover_row_test_document()
+  let row = marker_hover_row("Configured <diagnostic>")
+  assert_eq(hover_test_class_count(row, "hover-row-with-copy"), 1)
+  assert_eq(hover_test_class_count(row, "marker"), 1)
+  assert_eq(hover_test_class_count(row, "hover-copy-button"), 1)
+  assert_eq(hover_test_class_count(row, "status-bar"), 0)
+  assert_eq(hover_test_text_content(row), "Configured <diagnostic>")
+  assert_eq(
+    hover_test_attribute(row, "hover-copy-button", "data-hover-copy"),
+    "Configured <diagnostic>",
+  )
+  restore_hover_row_test_document()
+}
+
+///|
+extern "js" fn install_hover_row_test_document() -> Unit =
+  #| () => {
+  #|   globalThis.__hoverRowPreviousDocument = globalThis.document;
+  #|   const element = (tag) => ({
+  #|     nodeType: 1,
+  #|     tagName: String(tag).toUpperCase(),
+  #|     attributes: Object.create(null),
+  #|     children: [],
+  #|     childNodes: [],
+  #|     setAttribute(name, value) { this.attributes[name] = String(value); },
+  #|     appendChild(child) {
+  #|       child.parentNode = this;
+  #|       this.childNodes.push(child);
+  #|       if (child.nodeType === 1) this.children.push(child);
+  #|       return child;
+  #|     },
+  #|     removeChild(child) {
+  #|       this.childNodes = this.childNodes.filter((item) => item !== child);
+  #|       this.children = this.children.filter((item) => item !== child);
+  #|       child.parentNode = null;
+  #|       return child;
+  #|     },
+  #|   });
+  #|   globalThis.document = {
+  #|     createElement: element,
+  #|     createTextNode(text) {
+  #|       return { nodeType: 3, textContent: String(text), parentNode: null };
+  #|     },
+  #|   };
+  #| }
+
+///|
+extern "js" fn restore_hover_row_test_document() -> Unit =
+  #| () => {
+  #|   const previous = globalThis.__hoverRowPreviousDocument;
+  #|   if (previous === undefined) delete globalThis.document;
+  #|   else globalThis.document = previous;
+  #|   delete globalThis.__hoverRowPreviousDocument;
+  #| }
+
+///|
+extern "js" fn hover_test_class_count(
+  root : @rdom.Element,
+  class_name : String,
+) -> Int =
+  #| (root, className) => {
+  #|   let count = 0;
+  #|   const visit = (node) => {
+  #|     if (node?.nodeType === 1) {
+  #|       const classes = (node.attributes.class || '').split(/\s+/);
+  #|       if (classes.includes(className)) count += 1;
+  #|     }
+  #|     for (const child of node?.childNodes || []) visit(child);
+  #|   };
+  #|   visit(root);
+  #|   return count;
+  #| }
+
+///|
+extern "js" fn hover_test_text_content(root : @rdom.Element) -> String =
+  #| (root) => {
+  #|   const text = (node) => node?.nodeType === 3
+  #|     ? node.textContent
+  #|     : (node?.childNodes || []).map(text).join('');
+  #|   return text(root);
+  #| }
+
+///|
+extern "js" fn hover_test_attribute(
+  root : @rdom.Element,
+  class_name : String,
+  attribute : String,
+) -> String =
+  #| (root, className, attribute) => {
+  #|   const find = (node) => {
+  #|     const classes = (node?.attributes?.class || '').split(/\s+/);
+  #|     if (classes.includes(className)) return node;
+  #|     for (const child of node?.childNodes || []) {
+  #|       const found = find(child);
+  #|       if (found) return found;
+  #|     }
+  #|     return null;
+  #|   };
+  #|   return find(root)?.attributes?.[attribute] || '';
+  #| }

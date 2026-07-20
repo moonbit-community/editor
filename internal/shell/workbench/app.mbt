@@ -196,6 +196,7 @@ pub fn start_app() -> Unit {
   install_host_capabilities()
   let services = workbench_services()
   register_remote_language_providers(services)
+  install_moonbit_markdown_comment_provider(services.languages)
   install_language_tokenizers(services)
   install_feedback_persistence(services)
   mount_app()

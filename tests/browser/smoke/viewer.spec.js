@@ -48,6 +48,25 @@ test('renders fixture workspace through the native protocol', async ({ page }) =
   expect(await events.some('dom:mounted')).toBeTruthy();
 });
 
+test('renders MoonBit documentation comments through the real workbench', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openMainFixture(page);
+
+  const markdown = page.locator(
+    '.moonbit-viewer-markdown-comment[data-start-line="1"][data-end-line="5"]',
+  );
+  await expect(markdown).toBeVisible();
+  await expect(markdown.locator('h1')).toHaveText('Fixture entry point');
+  await expect(markdown.locator('strong')).toHaveText('native shell');
+  await expect(markdown).not.toContainText('|');
+  await expect(page.locator('.view-lines')).not.toContainText('Fixture entry point');
+  expect(await page.evaluate(() => globalThis.__readonlyEditorSource)).toContain(
+    '///|\n/// # Fixture entry point',
+  );
+});
+
 test('shows hover through pointer interaction', async ({ page }) => {
   await page.goto('/');
   await openMainFixture(page);

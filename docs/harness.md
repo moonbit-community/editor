@@ -79,6 +79,12 @@ then exposes compact evidence for projected source replacement,
 tokenized Markdown DOM, measured/offscreen ViewZone geometry, native
 link/selection input, resize/image updates, model flush/swap, and disposal.
 
+The corresponding real-shell proof is
+`tests/browser/smoke/viewer.spec.js`: it opens the fixture through the native
+remote protocol and verifies that the workbench-installed MoonBit provider
+renders the anchored documentation while the underlying model retains the raw
+`///|` and `///` source.
+
 The folding-versus-own-hidden-source branch stays in the focused mounted
 Viewer/ViewZones matrices: it is a source-membership and whitespace-visibility
 contract, not a browser-geometry dependency.

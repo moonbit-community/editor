@@ -8,8 +8,12 @@ reusable `viewer`, file tree, remote transport, and browser-test observability.
 - `start_app` creates and retains concrete language, marker, feedback,
   quick-diff, and logging backings, derives their narrow handles into an opaque
   `ViewerServices`, installs MoonBit/JSON/JavaScript tokenizers (TypeScript
-  reuses JavaScript), remote hover/document-symbol providers, and
-  agent-feedback persistence; then it calls `mount_app`.
+  reuses JavaScript), remote hover/document-symbol providers, the private
+  MoonBit Markdown-comment provider, and agent-feedback persistence; then it
+  calls `mount_app`. The MoonBit adapter treats an exact `///|` line as an item
+  anchor, omits that anchor from rendered Markdown, and renders only the
+  immediately following `///` documentation lines. Undocumented anchors remain
+  ordinary source.
 - Rabbita owns topbar/sidebar/status/diagnostics/theme state and renders one
   stable, childless `.viewer-host`. After the first paint `Viewer::create`
   mounts the imperative editor into that element.

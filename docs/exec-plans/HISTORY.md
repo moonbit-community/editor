@@ -12,9 +12,54 @@ Current behavior and ownership live in `docs/architecture.md`, `docs/harness.md`
 `docs/quality.md`, package READMEs, generated interfaces, source, and tests.
 Historical plans are evidence of how a change landed, not current contracts.
 
-As of 2026-07-17 there are no active checked-in execution plans.
+As of 2026-07-20 there are no active checked-in execution plans.
 
 ## Completed Work
+
+### Whole-line Markdown comment rendering
+
+Mounted Viewers now resolve normalized whole-line comment blocks from the first
+matching language provider or the language comment configuration, remove only
+those source lines from the view projection, and retain one safe rendered
+Markdown ViewZone per stable half-open range. Model text, coordinates, tokens,
+selection, and code-copy behavior remain source truth; headless Viewers and
+whole-model comment coverage keep the source visible.
+
+The prerequisite slices landed as independent milestones: normalized line and
+block comment configuration plus provider/detector APIs; changed-only public
+hidden-area notification after projection/layout stabilization; one shared safe
+cmark/browser renderer used by hover, agent feedback, and Markdown comments;
+generic native DOM copy/key ownership; and source-excluding ViewZone visibility
+so a replacement ignores its own hidden source but still obeys folding.
+
+The root contribution owns generation-checked provider/reconciliation work,
+one hidden source, model/content subscriptions, retained zone ids and DOM
+targets, and detach-before-View-disposal cleanup. Its JS-only DOM child owns a
+coalesced size observer. The reviewed implementation refined the plan's plain
+`Disposable` sketch into an opaque `MarkdownCommentSizeObserver` with explicit
+`request_measure` plus idempotent `dispose`, allowing renderer/image changes
+and connected offscreen zones to measure at the editor viewport width before
+first reveal while restoring every temporary inline style and avoiding
+ResizeObserver feedback loops. Fenced code uses the shared editor-token
+renderer and existing `mtk*` classes.
+
+The selected behavior ports covered language configuration, hidden-area event
+delivery, safe Markdown lifetime/input behavior, and native DOM ownership;
+algorithm-fidelity review covered hidden-event ordering, normalized block
+reconciliation, and measured-height relayout. Product-specific Markdown
+replacement remained behavior-first. The pinned source oracle was the `vscode`
+gitlink `b18492a288de038fbc7643aae6de8247029d11bd`.
+
+Final validation passed 1,526 JS tests, 1,047 native tests, the 237-test root
+Viewer suite, the JS/native detector and shared-renderer suites, the four-case
+DOM observer suite, all five direct public-Viewer Markdown browser cells, and
+all 94 Playwright tests. `moon info --target all`, `just check`, `just test`,
+`just build`, and `git diff --check` also passed with generated interfaces and
+package edges reviewed. The existing all-lines-visible fallback and
+`aria-hidden=true` ViewZone accessibility behavior remain explicit product
+deferrals.
+
+Former artifact: `whole-line-markdown-comment-rendering.md`.
 
 ### Reference shell, remote protocol, and embedding
 

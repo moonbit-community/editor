@@ -193,7 +193,12 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     const geometry = await page.locator(editor).evaluate((root) => {
       const rect = (node) => {
         const value = node.getBoundingClientRect();
-        return { top: value.top, bottom: value.bottom, height: value.height };
+        return {
+          top: value.top,
+          bottom: value.bottom,
+          left: value.left,
+          height: value.height,
+        };
       };
       const byRange = (start, end) =>
         root.querySelector(
@@ -208,6 +213,16 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
         eof: rect(byRange(10, 16)),
         alpha: rect(lineWith('alpha_code_truth')),
         omega: rect(lineWith('omega_code_truth')),
+        startHeading: rect(byRange(1, 3).querySelector('h1')),
+        eofCode: rect(
+          byRange(10, 16).querySelector('.monaco-tokenized-source'),
+        ),
+        alphaContent: rect(
+          lineWith('alpha_code_truth').querySelector('.view-line-content'),
+        ),
+        omegaContent: rect(
+          lineWith('omega_code_truth').querySelector('.view-line-content'),
+        ),
         visibleLineCount: lines.length,
         visibleSourceText: lines.map((node) => node.textContent).join('\n'),
       };
@@ -216,6 +231,12 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     expect(geometry.alpha.bottom).toBeLessThanOrEqual(geometry.middle.top + 1);
     expect(geometry.middle.bottom).toBeLessThanOrEqual(geometry.omega.top + 1);
     expect(geometry.omega.bottom).toBeLessThanOrEqual(geometry.eof.top + 1);
+    expect(
+      Math.abs(geometry.startHeading.left - geometry.alphaContent.left),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(geometry.eofCode.left - geometry.omegaContent.left),
+    ).toBeLessThanOrEqual(1);
     expect(geometry.visibleLineCount).toBeGreaterThan(3);
     expect(geometry.visibleSourceText).not.toContain('///');
     expect(geometry.visibleSourceText).not.toContain('Start comment');

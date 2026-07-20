@@ -15,12 +15,13 @@
   line-height: 1.5;
 }
 
-/* Horizontal padding belongs to the measured inner target, so offsetHeight
- * includes every content-space contribution used for ViewZone relayout. */
+/* Vertical and trailing padding belong to the measured inner target, so
+ * offsetHeight includes every content-space contribution used for ViewZone
+ * relayout. The leading edge stays flush with the editor's source rail. */
 .moonbit-viewer-markdown-comment-content {
   box-sizing: border-box;
   width: 100%;
-  padding: 6px 12px 8px;
+  padding: 6px 12px 8px 0;
   overflow-wrap: anywhere;
   user-select: text;
   -webkit-user-select: text;

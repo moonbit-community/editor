@@ -103,7 +103,26 @@ pub fn Viewer::set_selections(
 }
 
 ///|
-fn Viewer::handle_copy_event(self : Viewer, event : @rdom.Event) -> Bool {
+/// Browser-owned DOM mounted through these view contracts is not part of the
+/// model selection surface. The marker attributes are written by the browser
+/// View when it mounts each caller node, so descendants can be recognized
+/// without coupling input handling to any contribution registry.
+let caller_owned_editor_dom_selector : String = "[monaco-view-zone], [data-content-widget], [data-overlay-widget-id]"
+
+///|
+fn Viewer::handle_copy_event(
+  self : Viewer,
+  event : @rdom.Event,
+  input_surface : @rdom.Element,
+) -> Bool {
+  if @base_browser.event_target_has_matching_ancestor(
+      event, input_surface, caller_owned_editor_dom_selector,
+    ) ||
+    @base_browser.native_selection_has_endpoint_in_matching_ancestor(
+      input_surface, caller_owned_editor_dom_selector,
+    ) {
+    return false
+  }
   guard event.to_clipboard_event() is Some(clipboard_event) else {
     return false
   }

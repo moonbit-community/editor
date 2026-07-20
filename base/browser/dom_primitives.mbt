@@ -56,3 +56,59 @@ pub extern "js" fn element_contains_active_element(
   #|   const active = element?.ownerDocument?.activeElement;
   #|   return Boolean(active && element.contains(active));
   #| }
+
+///|
+/// Whether this DOM event originated exactly at `element`. This is stricter
+/// than listener placement: a listener on `element` also receives events that
+/// bubble from descendants.
+pub extern "js" fn event_target_is(
+  event : @rdom.Event,
+  element : @rdom.Element,
+) -> Bool =
+  #| (event, element) => event?.target === element
+
+///|
+/// Whether the event target is inside an ancestor matching `selector`, with
+/// that matching ancestor itself contained by `boundary`. Text-node targets
+/// start at their parent element. Invalid selectors and narrow test DOMs are
+/// treated as misses rather than escaping the input boundary.
+pub extern "js" fn event_target_has_matching_ancestor(
+  event : @rdom.Event,
+  boundary : @rdom.Element,
+  selector : String,
+) -> Bool =
+  #| (event, boundary, selector) => {
+  #|   const target = event?.target;
+  #|   const element = target?.nodeType === 1 ? target : target?.parentElement;
+  #|   try {
+  #|     const match = element?.closest?.(selector);
+  #|     return Boolean(match && boundary?.contains?.(match));
+  #|   } catch {
+  #|     return false;
+  #|   }
+  #| }
+
+///|
+/// Whether either endpoint of the owner document's non-collapsed native DOM
+/// selection is inside an ancestor matching `selector`, bounded by
+/// `boundary`. Both endpoints are checked deliberately: a selection crossing
+/// into or out of caller-owned DOM must remain under the browser's copy path.
+pub extern "js" fn native_selection_has_endpoint_in_matching_ancestor(
+  boundary : @rdom.Element,
+  selector : String,
+) -> Bool =
+  #| (boundary, selector) => {
+  #|   const selection = boundary?.ownerDocument?.getSelection?.();
+  #|   if (!selection || selection.isCollapsed) return false;
+  #|   const endpointMatches = (node) => {
+  #|     const element = node?.nodeType === 1 ? node : node?.parentElement;
+  #|     try {
+  #|       const match = element?.closest?.(selector);
+  #|       return Boolean(match && boundary?.contains?.(match));
+  #|     } catch {
+  #|       return false;
+  #|     }
+  #|   };
+  #|   return endpointMatches(selection.anchorNode) ||
+  #|     endpointMatches(selection.focusNode);
+  #| }

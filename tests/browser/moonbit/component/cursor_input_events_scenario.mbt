@@ -185,9 +185,37 @@ fn run_cursor_input_events_test() -> Unit {
   })
   |> ignore
   viewer.set_model(Some(model))
+  // Keep one caller-owned, focusable ViewZone below the fixture's last model
+  // line. It does not perturb the visible cursor scenarios, while real DOM
+  // Selection/copy and bubbling key events can exercise the editor-input
+  // ownership boundary in this same public-Viewer fixture.
+  let zone_node = document.create_element("div")
+  zone_node.set_attribute("class", "cursor-input-view-zone")
+  let zone_text = document.create_element("span")
+  zone_text.set_attribute("class", "cursor-input-view-zone-text")
+  zone_text.set_inner_html("caller-owned zone text")
+  let zone_link = document.create_element("a")
+  zone_link.set_attribute("class", "cursor-input-view-zone-link")
+  zone_link.set_attribute("href", "#cursor-input-zone-target")
+  zone_link.set_inner_html("caller-owned zone link")
+  zone_node.append_child(zone_text.as_node())
+  zone_node.append_child(zone_link.as_node())
+  viewer.change_view_zones(accessor => {
+    accessor.add_zone(
+      @viewer.view_zone(
+        12,
+        zone_node,
+        suppress_mouse_down=false,
+        height_in_px=28.0,
+      ),
+    )
+    |> ignore
+  })
   guard viewer.get_dom_node() is Some(root) else { return }
   install_cursor_input_controls(
     root,
+    zone_text,
+    zone_link,
     () => cursor_input_state_json(viewer, model),
     (line, column) => viewer.set_position(Position(line, column)),
     (anchor_line, anchor_column, active_line, active_column) => {
@@ -203,6 +231,7 @@ fn run_cursor_input_events_test() -> Unit {
       host.set_attribute("style", "height:\{height}px;width:260px;")
       viewer.layout()
     },
+    () => viewer.set_scroll_top(viewer.get_scroll_height()),
     () => viewer.focus(),
   )
 }
@@ -271,19 +300,24 @@ extern "js" fn record_cursor_selection_event(
 ///|
 extern "js" fn install_cursor_input_controls(
   root : @rdom.Element,
+  zone_text : @rdom.Element,
+  zone_link : @rdom.Element,
   state_json : () -> String,
   set_position : (Int, Int) -> Unit,
   set_selection : (Int, Int, Int, Int) -> Unit,
   set_value : (String) -> Unit,
   resize : (Int) -> Unit,
+  show_zone : () -> Unit,
   focus : () -> Unit,
 ) -> Unit =
-  #| (root, stateJson, setPosition, setSelection, setValue, resize, focus) => {
+  #| (root, zoneText, zoneLink, stateJson, setPosition, setSelection, setValue, resize, showZone, focus) => {
   #|   globalThis.__cursorInputEventLog = [];
   #|   const keyLog = [];
   #|   const propagationLog = [];
   #|   const focusLog = [];
   #|   const pointerLog = [];
+  #|   const copyLog = [];
+  #|   let zoneLinkActivations = 0;
   #|   let originalRequestAnimationFrame = null;
   #|   let animationFrameCount = 0;
   #|   root.addEventListener('keydown', (event) => {
@@ -321,6 +355,14 @@ extern "js" fn install_cursor_input_controls(
   #|       });
   #|     });
   #|   }
+  #|   root.addEventListener('copy', (event) => {
+  #|     copyLog.push({
+  #|       defaultPrevented: event.defaultPrevented,
+  #|       targetClass: event.target?.className ?? '',
+  #|       nativeSelection: document.getSelection()?.toString() ?? '',
+  #|     });
+  #|   });
+  #|   zoneLink.addEventListener('click', () => { zoneLinkActivations += 1; });
   #|   globalThis.__cursorInputControls = {
   #|     state: () => JSON.parse(stateJson()),
   #|     events: () => [...globalThis.__cursorInputEventLog],
@@ -328,6 +370,34 @@ extern "js" fn install_cursor_input_controls(
   #|     propagation: () => [...propagationLog],
   #|     focus_events: () => [...focusLog],
   #|     pointers: () => [...pointerLog],
+  #|     copies: () => [...copyLog],
+  #|     copied_payload: () => ({
+  #|       plain: globalThis.__readonlyEditorCopiedText ?? '',
+  #|       html: globalThis.__readonlyEditorCopiedHtml ?? '',
+  #|     }),
+  #|     reset_copy: () => {
+  #|       copyLog.length = 0;
+  #|       delete globalThis.__readonlyEditorCopiedText;
+  #|       delete globalThis.__readonlyEditorCopiedHtml;
+  #|     },
+  #|     select_zone_text: () => {
+  #|       focus();
+  #|       const selection = document.getSelection();
+  #|       const range = document.createRange();
+  #|       range.selectNodeContents(zoneText);
+  #|       selection.removeAllRanges();
+  #|       selection.addRange(range);
+  #|       return {
+  #|         text: selection.toString(),
+  #|         activeIsRoot: document.activeElement === root,
+  #|       };
+  #|     },
+  #|     clear_native_selection: () => document.getSelection()?.removeAllRanges(),
+  #|     focus_zone_link: () => {
+  #|       zoneLink.focus();
+  #|       return document.activeElement === zoneLink;
+  #|     },
+  #|     zone_link_activations: () => zoneLinkActivations,
   #|     start_raf_probe: () => {
   #|       if (!originalRequestAnimationFrame) {
   #|         originalRequestAnimationFrame = window.requestAnimationFrame.bind(window);
@@ -352,11 +422,13 @@ extern "js" fn install_cursor_input_controls(
   #|       propagationLog.length = 0;
   #|       focusLog.length = 0;
   #|       pointerLog.length = 0;
+  #|       copyLog.length = 0;
   #|     },
   #|     set_position: setPosition,
   #|     set_selection: setSelection,
   #|     set_value: setValue,
   #|     resize,
+  #|     show_zone: showZone,
   #|     focus,
   #|     focus_hover: () => {
   #|       const wrapper = document.querySelector('.monaco-resizable-hover');

@@ -19,11 +19,17 @@ pub fn element_offset_height(@dom.Element) -> Double
 
 pub fn element_offset_width(@dom.Element) -> Double
 
+pub fn event_target_has_matching_ancestor(@dom.Event, @dom.Element, String) -> Bool
+
+pub fn event_target_is(@dom.Event, @dom.Element) -> Bool
+
 pub fn focus_prevent_scroll(@dom.Element) -> Unit
 
 pub fn monotonic_now_ms() -> Double
 
 pub fn mouse_event_pointer_id(@dom.MouseEvent) -> Int
+
+pub fn native_selection_has_endpoint_in_matching_ancestor(@dom.Element, String) -> Bool
 
 pub fn queue_microtask(() -> Unit) -> Unit
 

@@ -40,7 +40,7 @@ fn Viewer::hook_view_input(
     }
   })
   add_view_event_listener(view, view.root, "copy", event => {
-    if self.handle_copy_event(event) {
+    if self.handle_copy_event(event, view.root) {
       event.prevent_default()
       event.stop_propagation()
     }
@@ -49,6 +49,10 @@ fn Viewer::hook_view_input(
   // textarea / edit context into editor commands); the focusable root receives
   // keys once the mousedown handler focuses it.
   add_view_event_listener(view, view.root, "keydown", event => {
+    // A root listener also observes bubbling input from caller ViewZones and
+    // widgets. Only the root itself is this readonly viewer's input surface;
+    // focusable descendants retain their native keyboard semantics.
+    guard @base_browser.event_target_is(event, view.root) else { return }
     match event.to_keyboard_event() {
       Some(keyboard) =>
         if self.handle_editor_key_down(

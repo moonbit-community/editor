@@ -64,6 +64,16 @@ async function pointers(page) {
   return page.evaluate(() => globalThis.__cursorInputControls.pointers());
 }
 
+async function copies(page) {
+  return page.evaluate(() => globalThis.__cursorInputControls.copies());
+}
+
+async function copiedPayload(page) {
+  return page.evaluate(() =>
+    globalThis.__cursorInputControls.copied_payload(),
+  );
+}
+
 async function clear(page) {
   await page.evaluate(() => globalThis.__cursorInputControls.clear());
 }
@@ -294,6 +304,125 @@ test('all 16 primary real keys prevent defaults retain focus and converge events
     ).toEqual([]);
     await expectFocused(page);
   }
+});
+
+test('model copy stays editor-owned while ViewZone selection and keys stay native', async ({
+  page,
+}) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await mountCursorFixture(page);
+
+  // The ordinary model path still writes both clipboard representations and
+  // prevents the browser's default copy.
+  await page.evaluate(() => {
+    const controls = globalThis.__cursorInputControls;
+    controls.set_selection(1, 1, 1, 6);
+    controls.focus();
+    controls.reset_copy();
+  });
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await copiedPayload(page)).toMatchObject({ plain: 'alpha' });
+  expect((await copiedPayload(page)).html).toContain('alpha');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    'alpha',
+  );
+  expect((await copies(page)).at(-1)).toMatchObject({
+    defaultPrevented: true,
+    nativeSelection: '',
+  });
+
+  // An empty model selection keeps the browser default, as before.
+  await page.evaluate(() => {
+    const controls = globalThis.__cursorInputControls;
+    controls.set_position(1, 1);
+    controls.focus();
+    controls.clear_native_selection();
+    controls.reset_copy();
+  });
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await copiedPayload(page)).toEqual({ plain: '', html: '' });
+  expect((await copies(page)).at(-1)).toMatchObject({
+    defaultPrevented: false,
+    nativeSelection: '',
+  });
+
+  // Even with a non-empty model selection, either endpoint inside the
+  // caller-owned ViewZone leaves its real native DOM selection untouched.
+  await page.evaluate(() => globalThis.__cursorInputControls.show_zone());
+  await settle(page);
+  await expect(
+    page.locator(`${editorSelector} .cursor-input-view-zone`),
+  ).toBeVisible();
+  const zoneSelection = await page.evaluate(() => {
+    const controls = globalThis.__cursorInputControls;
+    controls.set_selection(1, 1, 1, 6);
+    const selected = controls.select_zone_text();
+    controls.reset_copy();
+    return selected;
+  });
+  expect(zoneSelection).toEqual({
+    text: 'caller-owned zone text',
+    activeIsRoot: true,
+  });
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await copiedPayload(page)).toEqual({ plain: '', html: '' });
+  expect((await copies(page)).at(-1)).toMatchObject({
+    defaultPrevented: false,
+    nativeSelection: 'caller-owned zone text',
+  });
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    'caller-owned zone text',
+  );
+
+  // Event origin is an independent gate: a copy dispatched from a focusable
+  // ViewZone descendant remains native even with no DOM text selection.
+  expect(
+    await page.evaluate(() => {
+      const controls = globalThis.__cursorInputControls;
+      controls.clear_native_selection();
+      controls.reset_copy();
+      return controls.focus_zone_link();
+    }),
+  ).toBe(true);
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await copiedPayload(page)).toEqual({ plain: '', html: '' });
+  expect((await copies(page)).at(-1)).toMatchObject({
+    defaultPrevented: false,
+    nativeSelection: '',
+    targetClass: 'cursor-input-view-zone-link',
+  });
+
+  // Focused caller DOM owns every bubbled key. Navigation cannot mutate the
+  // model cursor; Enter/Space preserve the link's native keyboard path.
+  const beforeKeys = await state(page);
+  const activationBefore = await page.evaluate(
+    () => globalThis.__cursorInputControls.zone_link_activations(),
+  );
+  for (const key of ['ArrowLeft', 'Home', 'PageDown', 'Enter', 'Space']) {
+    await page.evaluate(() => {
+      const controls = globalThis.__cursorInputControls;
+      controls.clear();
+      controls.focus_zone_link();
+    });
+    await page.keyboard.press(key);
+    await settle(page);
+    expect((await keys(page)).at(-1)).toMatchObject({
+      key: key === 'Space' ? ' ' : key,
+      defaultPrevented: false,
+      activeIsRoot: false,
+    });
+    expect(await state(page)).toEqual(beforeKeys);
+    expect(await events(page)).toEqual([]);
+    expect((await propagation(page)).at(-1)).toMatchObject({
+      key: key === 'Space' ? ' ' : key,
+      defaultPrevented: false,
+    });
+  }
+  expect(
+    await page.evaluate(
+      () => globalThis.__cursorInputControls.zone_link_activations(),
+    ),
+  ).toBe(activationBefore + 1);
 });
 
 test('real horizontal keys select, suppress browser defaults, and retain focus', async ({

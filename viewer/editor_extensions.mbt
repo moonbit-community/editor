@@ -33,15 +33,12 @@ priv enum EditorContributionInstantiation {
 
 ///|
 /// Retain the complete upstream policy vocabulary even though this readonly
-/// viewer currently registers no contribution in these two modes.
-let _unused_contribution_modes : Array[EditorContributionInstantiation] = [
-  AfterFirstRender,
-  Lazy,
-]
+/// viewer currently registers no contribution in the lazy mode.
+let _unused_contribution_modes : Array[EditorContributionInstantiation] = [Lazy]
 
 ///|
 /// The concrete live contribution state stored in the per-Viewer registry.
-/// The product registry is closed and statically populated, so adding a sixth
+/// The product registry is closed and statically populated, so adding another
 /// contribution deliberately requires exhaustive construction, typed-access,
 /// and disposal updates here.
 priv enum EditorContributionInstance {
@@ -54,6 +51,7 @@ priv enum EditorContributionInstance {
     @agent_feedback_browser.AgentFeedbackEditorWidgetContribution
   )
   QuickDiff(QuickDiffContributionState)
+  MarkdownComments(MarkdownCommentContributionState)
 }
 
 ///|
@@ -133,8 +131,8 @@ priv enum EditorContributionLifecycle {
 ///|
 /// One live row in Monaco `CodeEditorContributions._instances`. `listeners`
 /// owns the root-package subscriptions for folding and agent feedback; hover
-/// owns its cancellable work directly and quick diff owns its subscriptions in
-/// `QuickDiffContributionState`.
+/// owns its cancellable work directly, while quick diff and Markdown comments
+/// own subscriptions in their concrete contribution states.
 priv struct EditorContributionEntry {
   instance : EditorContributionInstance
   listeners : Array[@base_common.Disposable]
@@ -196,6 +194,7 @@ fn EditorContributionEntry::dispose(
       }
       state.listeners.clear()
     }
+    MarkdownComments(state) => state.dispose(viewer)
   }
   self.lifecycle = ContributionDisposed
 }
@@ -610,12 +609,13 @@ let editor_registry_holder : EditorRegistryHolder = { registry: None }
 
 ///|
 /// The singleton (`EditorContributionRegistry.INSTANCE`), populated once.
-/// Registration order preserves the construction order the hand-wiring had
-/// (comments was the only constructor-time wiring; the hover
-/// registration follows its Monaco contribution file). Cursor navigation
-/// commands register last: this is the approved local substitute for Monaco's
-/// keybinding weights/context expressions, so a focused hover's matching
-/// EditorContrib rule resolves before the EditorCore cursor rule.
+/// Registration preserves the existing agent-feedback/folding order. Markdown
+/// comments follow folding so a model/content event commits the folding source
+/// before comment zones reconcile against it; hover keeps its Monaco-shaped
+/// contribution position. Cursor navigation commands register last: this is
+/// the approved local substitute for Monaco's keybinding weights/context
+/// expressions, so a focused hover's matching EditorContrib rule resolves
+/// before the EditorCore cursor rule.
 fn editor_registry() -> EditorContributionRegistry {
   match editor_registry_holder.registry {
     Some(registry) => registry
@@ -627,6 +627,7 @@ fn editor_registry() -> EditorContributionRegistry {
       }
       register_agent_feedback_contribution(registry)
       register_folding_contribution(registry)
+      register_markdown_comment_contribution(registry)
       register_hover_contribution(registry)
       register_quick_diff_contribution(registry)
       register_cursor_navigation_commands(registry)

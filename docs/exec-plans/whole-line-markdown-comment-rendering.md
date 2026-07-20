@@ -155,7 +155,8 @@ Ownership follows the existing tiers:
 - `viewer/common/languages` owns language configuration, provider
   registration, lookup, and a narrow `LanguageHandle` capability;
 - a new DOM-free `internal/viewer/markdown` package owns safe cmark parsing,
-  plaintext fallback, and code-block override composition;
+  plaintext fallback, code-block override composition, and the reusable
+  editor-token HTML override;
 - a new JS-only `internal/viewer/browser/markdown` package owns rendered DOM,
   link/media rewriting, listeners, size notifications, and disposal;
 - a new `internal/viewer/contrib/markdown_comments` package owns block
@@ -279,8 +280,10 @@ Required security behavior:
 - non-checkbox inputs are removed and task-list checkboxes, if retained, are
   disabled.
 
-Hover supplies its existing tokenized fenced-code renderer. Agent feedback and
-Markdown comments use the same renderer without reimplementing cmark parsing.
+The DOM-free shared package supplies the existing tokenized fenced-code
+renderer; hover keeps its compatibility entry point and Markdown comments use
+the same override. Agent feedback uses the same safe renderer without
+reimplementing cmark parsing.
 
 ### Hidden-area outgoing event
 
@@ -721,25 +724,42 @@ the current source exposes a material unresolved public API or behavior choice.
 
 ### Gate B — after prerequisite cleanup
 
-- [ ] stale ViewZone documentation removed;
-- [ ] comment configuration and provider surface focused tests green;
-- [ ] hidden-area outgoing event ordering green;
-- [ ] hover and agent feedback use the shared renderer with no private cmark
+- [x] stale ViewZone documentation removed;
+- [x] comment configuration and provider surface focused tests green;
+- [x] hidden-area outgoing event ordering green;
+- [x] hover and agent feedback use the shared renderer with no private cmark
   conversion left;
-- [ ] native ViewZone copy and keyboard behavior green;
-- [ ] focused package checks and `just check` green.
+- [x] native ViewZone copy and keyboard behavior green;
+- [x] focused package checks and `just check` green.
+
+Gate B record (2026-07-20): Milestones 0–5 are committed. The focused
+detector/provider, hidden-area event, shared-renderer consumer, native input,
+and source-aware ViewZone suites are green, and the integrated `just check`
+passed.
 
 Do not begin the Markdown-comment contribution until Gate B passes.
 
 ### Gate C — after feature implementation
 
-- [ ] normalized blocks, hidden ranges, registered zones, rendered DOM, and
+- [x] normalized blocks, hidden ranges, registered zones, rendered DOM, and
   observers have one owner each;
-- [ ] folding, EOF, flush, model swap, and disposal matrices are green;
-- [ ] browser-measured height converges without repeated unchanged layout;
-- [ ] model text/coordinates/copy truth remains unchanged;
-- [ ] no frame exposes duplicate source-plus-Markdown content;
-- [ ] focused package, mounted Viewer, and browser component evidence is green.
+- [x] folding, EOF, flush, model swap, and disposal matrices are green;
+- [x] browser-measured height converges without repeated unchanged layout;
+- [x] model text/coordinates/copy truth remains unchanged;
+- [x] no frame exposes duplicate source-plus-Markdown content;
+- [x] focused package, mounted Viewer, and browser component evidence is green.
+
+Gate C record (2026-07-20): the root Viewer suite passes 237 JS tests,
+including nine Markdown contribution/reentrancy cases; the JS-only DOM owner
+passes four size/lifetime cases; the detector remains green on JS and native.
+The direct public-Viewer Playwright scenario passes five cells covering
+start/middle/EOF rendering, tokenized fenced code and allowed image load,
+same-key identity, add/remove/move, width reflow, folding, offscreen pre-reveal
+measurement, model/native copy truth, atomic transition frames, model swaps,
+and disposal. Review additionally pinned generation/model freshness around
+open-provider and outgoing-ViewZone reentrancy, and put interactive Markdown
+zones above the local full-height text plane while keeping them below editor
+cursors/widgets.
 
 ### Exit Gate
 

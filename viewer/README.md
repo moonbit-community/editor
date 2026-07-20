@@ -40,13 +40,15 @@ ownership and lifecycle rules that are not obvious from signatures.
 - Contributions are created once per `Viewer` and disposed with it.
   `Viewer.contributions` is the `EditorContributions` owner, and its `instances`
   map is the only per-Viewer instance store. Each central entry owns one
-  concrete hover, folding, feedback-input, feedback-widget, or quick-diff state
-  value plus its root listeners; feature packages keep no editor-id-keyed
-  instance table. The content-hover payload additionally owns its controller,
-  lazy widget and logical widget view, and timeout/async launch policy across
-  model swaps. Construction rejects duplicate ids before side effects, inserts
-  the bare typed entry before synchronous initialization, and then installs
-  listeners. All modes currently instantiate eagerly.
+  concrete hover, folding, feedback-input, feedback-widget, quick-diff, or
+  Markdown-comment state value plus its root listeners; feature packages keep
+  no editor-id-keyed instance table. The content-hover payload additionally
+  owns its controller, lazy widget and logical widget view, and timeout/async
+  launch policy across model swaps. The Markdown-comment payload owns its
+  model/content subscriptions and the current model's stable-key rendered-zone
+  map. Construction rejects duplicate ids before side effects, inserts the bare
+  typed entry before synchronous initialization, and then installs listeners.
+  All modes currently instantiate eagerly.
 - `dispose` is idempotent. The complete contribution map remains installed for
   ordered behavior teardown, then becomes non-lookuppable; retained hover
   browser resources are released at the later root cleanup slot before the map
@@ -138,6 +140,23 @@ and a forced update that leaves the mapping equal do not fire. Applying hidden
 areas remains package-private root/contribution behavior rather than a public
 Viewer mutation API.
 
+On a mounted Viewer, the Markdown-comment contribution resolves whole-line
+blocks from the first matching provider or the language's comment
+configuration, then replaces those lines only in the view projection with
+measured ViewZones. The model value, coordinates, tokens, selection, and code
+copy remain source truth. Each stable range key retains one DOM target while a
+body-only change replaces its shared safe-renderer lifetime; same-model content
+flushes force the hidden-source projection refresh even when the normalized
+ranges stay equal. Model detach disposes renderers and size observers, removes
+zones, and clears the feature's one hidden source before the outgoing browser
+`View` is destroyed. A headless Viewer never hides these source lines because
+it has no replacement DOM. Offscreen zones measure invisibly at the editor
+content width, so scroll geometry converges before first reveal and responds to
+width/image changes without exposing hidden content. The feature enables only
+sanitized HTTP(S) images and routes sanitized links through its external action
+handler; raw HTML and unsafe schemes stay inert under the shared renderer
+policy.
+
 Cursor-command reveals keep the committed view coordinate. Keyboard commands
 request non-minimal Smooth reveal; pointer MoveTo/Word/Line commands use the
 same Smooth request with `minimalReveal=true` after their `None` gate, so a
@@ -178,8 +197,9 @@ is private composition and leaves `viewer/pkg.generated.mbti` unchanged; it is
 not Monaco's cross-editor phased `EditorRenderingCoordinator` port.
 
 The root package owns every `Viewer::` method and the cross-package glue for
-input, reveal, widgets, folding, hover, quick diff, feedback, and
-decorations. Public values remain in `viewer/common/**` and `viewer/browser`;
+input, reveal, widgets, folding, hover, Markdown comments, quick diff,
+feedback, and decorations. Public values remain in `viewer/common/**` and
+`viewer/browser`;
 concrete browser and contribution mechanisms live in
 `internal/viewer/browser/**` and `internal/viewer/contrib/**`. Those
 lower-level packages do not import the root facade, so Viewer-facing

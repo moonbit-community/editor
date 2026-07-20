@@ -588,6 +588,10 @@ fn Viewer::detach_model(self : Viewer) -> @model.TextModel? {
     None => ()
   }
   self.clear_agent_feedback_widgets() |> ignore
+  // Markdown ViewZones retain caller DOM below the outgoing View. Release the
+  // shared renderer/observer lifetimes and remove their hidden source before
+  // `ModelData::dispose` tears that View down.
+  self.clear_markdown_comment_model_state()
   model_data.dispose()
   self.model_slot.clear_current_after_dispose()
   self.configuration.reset_model_line_counts()

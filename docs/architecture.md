@@ -123,11 +123,12 @@ js-only. Concrete browser runtime packages live below the module-private
   matching Viewer has a listener; the package never imports root Viewer and is
   not an external API.
 - `internal/viewer/markdown` is the multi-target safe-cmark boundary. It owns
-  plaintext fallback, a cmark-independent code-block value, and conversion
-  facts; `internal/viewer/browser/markdown` adds JS-only DOM retention,
-  URI/media policy, activation listeners, size notification, and per-target
-  disposal. Browser contributions consume these packages instead of owning
-  private Markdown-to-`innerHTML` pipelines.
+  plaintext fallback, a cmark-independent code-block value, conversion facts,
+  and the shared editor-token HTML override;
+  `internal/viewer/browser/markdown` adds JS-only DOM retention, URI/media
+  policy, activation listeners, size notification, and per-target disposal.
+  Browser contributions consume these packages instead of owning private
+  Markdown-to-`innerHTML` pipelines.
 - `internal/viewer/browser/config` measures fonts and browser geometry.
 - `internal/viewer/browser/controller` owns hit testing, mouse selection, drag
   scrolling, and scrollbar input. Touch inertia uses the shared strict-next
@@ -177,12 +178,19 @@ editor common/browser layers; editor common never depends on them.
   js-only folding implementation, including ranges, hidden areas, decorations,
   and controller. Its emitted stylesheet remains at
   `viewer/contrib/folding/browser/folding.css`.
+- `internal/viewer/contrib/markdown_comments` owns multi-target whole-line
+  comment detection, provider/configuration resolution, and normalized block
+  ranges. Its browser sibling owns the stable ViewZone DOM pair and coalesced
+  visible/offscreen size observer; the root `viewer` contribution owns
+  reconciliation, renderer lifetimes, zone ids, and the one hidden-area source.
+  Its emitted stylesheet remains at
+  `viewer/contrib/markdown_comments/browser/markdown_comments.css`.
 
 The root editor registry has two distinct ownership layers. Its process-wide
 contribution-description table contains constructors only; the adjacent command
 and keybinding tables likewise contain no per-Viewer state.
 `Viewer.contributions` is an `EditorContributions` owner whose `instances` map
-is the sole lookup table for that Viewer's five concrete contribution entries;
+is the sole lookup table for that Viewer's six concrete contribution entries;
 feature packages do not keep second maps keyed by editor id. Root `Viewer::`
 helpers recover typed controllers by matching both the fixed id and central
 entry variant, mirroring Monaco's typed view over
@@ -198,6 +206,15 @@ the owner then becomes non-lookuppable, and retained hover browser resources
 are released at their later root cleanup slot before the map is cleared.
 Declared instantiation modes are retained for source parity, but all modes
 currently instantiate eagerly.
+
+The Markdown-comment entry owns Viewer-lifetime model/content subscriptions and
+a model-scoped stable-key map. A mounted Viewer replaces normalized comment
+lines only in the view projection; headless Viewers keep source visible because
+they have no replacement DOM. Model detach disposes renderers and size
+observers, removes zones, and clears the contribution's hidden source before
+the outgoing browser `View` is destroyed. Same-model flushes rebuild that
+source with `force_update=true` because the projected line collection was
+recreated even when normalized ranges did not change.
 
 This central ownership rule supersedes the feature-local instance tables from
 the earlier ownership-divergence work. The completed migration is summarized in

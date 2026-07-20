@@ -28,10 +28,10 @@ timing, and rendering can be tested on JS and native targets.
   caller token/freshness predicate guard both sides of each await, and an
   injected task runner lets the browser merge participant results in completion
   order without a multi-target runtime dependency.
-- `render_hover_code_block` is hover's synchronous fenced-code override for the
-  shared Markdown renderer. It accepts the shared MoonBit-owned code-block DTO,
-  selects the fenced or active model language, and emits existing tokenized
-  source HTML. This package neither imports cmark types nor creates DOM nodes.
+- `render_hover_code_block` preserves hover's synchronous compatibility
+  surface while delegating fenced/active-language selection and editor-token
+  HTML to `internal/viewer/markdown`'s shared override. This package neither
+  imports cmark types nor creates DOM nodes.
 
 ## Browser and Viewer ownership
 

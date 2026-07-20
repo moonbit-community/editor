@@ -70,6 +70,19 @@ tests/browser/
 scenario bundles, then assembles owner-adjacent CSS and codicons under
 `web/dist`.
 
+The whole-line Markdown proof is the direct public-Viewer component scenario
+`tests/browser/moonbit/component/markdown_comments_scenario.mbt`, loaded by
+`component.html?markdownComments=1` and asserted by
+`tests/browser/component/markdown_comments.spec.js`. It does not route through
+the reference shell. The scenario owns its language configuration and models,
+then exposes compact evidence for projected source replacement,
+tokenized Markdown DOM, measured/offscreen ViewZone geometry, native
+link/selection input, resize/image updates, model flush/swap, and disposal.
+
+The folding-versus-own-hidden-source branch stays in the focused mounted
+Viewer/ViewZones matrices: it is a source-membership and whitespace-visibility
+contract, not a browser-geometry dependency.
+
 ## Browser Rules
 
 - Smoke tests use the sidebar and remote protocol when testing the workbench;

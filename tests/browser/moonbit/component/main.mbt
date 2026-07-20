@@ -1,6 +1,8 @@
 ///|
 fn main {
-  if view_zones_requested() {
+  if markdown_comments_requested() {
+    run_markdown_comments_test()
+  } else if view_zones_requested() {
     run_view_zones_test()
   } else if browser_geometry_requested() {
     run_browser_geometry_test()
@@ -16,6 +18,10 @@ fn main {
     run_viewer_api_test()
   }
 }
+
+///|
+extern "js" fn markdown_comments_requested() -> Bool =
+  #| () => new URLSearchParams(location.search).has('markdownComments')
 
 ///|
 extern "js" fn view_zones_requested() -> Bool =

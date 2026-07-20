@@ -9,6 +9,7 @@ test "contributions instantiate centrally in the reviewed order and expose every
     "agentFeedback.editorInputContribution",
     "agentFeedback.editorWidgetContribution",
     @folding_browser.FOLDING_CONTROLLER_ID,
+    markdown_comment_contribution_id,
     "editor.contrib.contentHover",
     "quickDiff.decorator",
   ]
@@ -19,6 +20,7 @@ test "contributions instantiate centrally in the reviewed order and expose every
       ("agentFeedback.editorInputContribution", AgentFeedbackInput(_)) => ()
       ("agentFeedback.editorWidgetContribution", AgentFeedbackWidget(_)) => ()
       (@folding_browser.FOLDING_CONTROLLER_ID, Folding(_)) => ()
+      ("editor.contrib.markdownComments", MarkdownComments(_)) => ()
       ("editor.contrib.contentHover", ContentHover(_)) => ()
       ("quickDiff.decorator", QuickDiff(_)) => ()
       _ => fail("contribution id and concrete variant diverged: " + id)
@@ -34,6 +36,7 @@ test "contributions instantiate centrally in the reviewed order and expose every
   assert_true(viewer.agent_feedback_input_contribution() is Some(_))
   assert_true(viewer.agent_feedback_widget_contribution() is Some(_))
   assert_true(viewer.folding_controller() is Some(_))
+  assert_true(viewer.markdown_comment_contribution() is Some(_))
   assert_true(viewer.content_hover_controller() is Some(_))
   assert_true(viewer.quick_diff_contribution() is Some(_))
 
@@ -147,12 +150,13 @@ test "direct entry disposal retires typed lookup without removing the row early"
 }
 
 ///|
-test "viewer disposes all five real rows once in order while the map stays installed" {
+test "viewer disposes all six real rows once in order while the map stays installed" {
   let viewer = Viewer::Viewer()
   let expected_ids = [
     "agentFeedback.editorInputContribution",
     "agentFeedback.editorWidgetContribution",
     @folding_browser.FOLDING_CONTROLLER_ID,
+    "editor.contrib.markdownComments",
     "editor.contrib.contentHover",
     "quickDiff.decorator",
   ]
@@ -178,6 +182,7 @@ test "viewer disposes all five real rows once in order while the map stays insta
         "input" => viewer.agent_feedback_input_contribution() is Some(_)
         "widget" => viewer.agent_feedback_widget_contribution() is Some(_)
         "folding" => viewer.folding_controller() is Some(_)
+        "markdown" => viewer.markdown_comment_contribution() is Some(_)
         "hover" => viewer.content_hover_controller() is Some(_)
         "quickDiff" => viewer.quick_diff_contribution() is Some(_)
         _ => false
@@ -196,11 +201,16 @@ test "viewer disposes all five real rows once in order while the map stays insta
   viewer.contributions.instances[@folding_browser.FOLDING_CONTROLLER_ID].listeners.push(
     track("folding"),
   )
+  viewer.markdown_comment_contribution().unwrap().listeners.push(
+    track("markdown"),
+  )
   viewer.content_hover_controller().unwrap().install_react_timer(track("hover"))
   viewer.quick_diff_contribution().unwrap().listeners.push(track("quickDiff"))
   viewer.dispose()
   viewer.dispose()
-  assert_eq(order, ["input", "widget", "folding", "hover", "quickDiff"])
+  assert_eq(order, [
+    "input", "widget", "folding", "markdown", "hover", "quickDiff",
+  ])
   assert_true(map_stayed_installed.val)
   assert_true(typed_row_stayed_available.val)
   assert_true(wrapper_stayed_live.val)
@@ -214,7 +224,7 @@ test "contribution wrapper retires lookup between behavior and retained-resource
   let hover_state = viewer.content_hover_contribution().unwrap()
   viewer.contributions.dispose_behavior(viewer)
   assert_true(viewer.contributions.lifecycle == ContributionsDisposing)
-  assert_eq(viewer.contributions.instances.length(), 5)
+  assert_eq(viewer.contributions.instances.length(), 6)
   assert_true(viewer.content_hover_contribution() is None)
   assert_true(
     viewer.contributions.lookup("editor.contrib.contentHover") is None,
@@ -245,6 +255,8 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   let second_widgets = second.agent_feedback_widget_contribution().unwrap()
   let first_folding = first.folding_controller().unwrap()
   let second_folding = second.folding_controller().unwrap()
+  let first_markdown = first.markdown_comment_contribution().unwrap()
+  let second_markdown = second.markdown_comment_contribution().unwrap()
   let first_hover = first.content_hover_controller().unwrap()
   let second_hover = second.content_hover_controller().unwrap()
   let first_quick_diff = first.quick_diff_contribution().unwrap()
@@ -252,6 +264,7 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   assert_false(physical_equal(first_input, second_input))
   assert_false(physical_equal(first_widgets, second_widgets))
   assert_false(physical_equal(first_folding, second_folding))
+  assert_false(physical_equal(first_markdown, second_markdown))
   assert_false(physical_equal(first_hover, second_hover))
   assert_false(physical_equal(first_quick_diff, second_quick_diff))
 
@@ -266,6 +279,8 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   first_widgets.reply_drafts["first"] = "first draft"
   second_widgets.widget_id_pool = 202
   second_widgets.reply_drafts["second"] = "second draft"
+  first_markdown.generation = 101
+  second_markdown.generation = 202
   first_hover.hover_keep_open = true
   first_hover.hover_notified_token = 11
   second_hover.hover_ignore_mouse_events = true
@@ -291,6 +306,12 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   second_folding.local_to_dispose.push(
     @base_common.Disposable::from(() => second_disposals.push("folding")),
   )
+  first_markdown.listeners.push(
+    @base_common.Disposable::from(() => first_disposals.push("markdown")),
+  )
+  second_markdown.listeners.push(
+    @base_common.Disposable::from(() => second_disposals.push("markdown")),
+  )
   first_hover.install_react_timer(
     @base_common.Disposable::from(() => first_disposals.push("hover")),
   )
@@ -304,6 +325,7 @@ test "two viewers isolate mutable contribution state and disposal owners" {
     @base_common.Disposable::from(() => second_disposals.push("quickDiff")),
   )
   let second_folding_listener_count = second_folding.local_to_dispose.length()
+  let second_markdown_listener_count = second_markdown.listeners.length()
   let second_quick_diff_listener_count = second_quick_diff.listeners.length()
 
   assert_eq(first_input.hover_line_number, 11)
@@ -312,6 +334,8 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   assert_eq(second_widgets.widget_id_pool, 202)
   assert_eq(first_widgets.reply_drafts.get("second"), None)
   assert_eq(second_widgets.reply_drafts.get("first"), None)
+  assert_eq(first_markdown.generation, 101)
+  assert_eq(second_markdown.generation, 202)
   assert_true(first_hover.hover_keep_open)
   assert_false(second_hover.hover_keep_open)
   assert_false(first_hover.hover_ignore_mouse_events)
@@ -322,12 +346,15 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   // First's cleanup drains only First-owned stores. Second keeps the exact
   // same typed instances, mutable sentinels, and pending disposal handles.
   assert_eq(first_disposals, [
-    "input", "widget", "folding", "hover", "quickDiff",
+    "input", "widget", "folding", "markdown", "hover", "quickDiff",
   ])
   assert_eq(second_disposals, [])
+  // Markdown teardown advances only First's stale-callback generation.
+  assert_eq(first_markdown.generation, 102)
   assert_true(first.agent_feedback_input_contribution() is None)
   assert_true(first.agent_feedback_widget_contribution() is None)
   assert_true(first.folding_controller() is None)
+  assert_true(first.markdown_comment_contribution() is None)
   assert_true(first.content_hover_controller() is None)
   assert_true(first.quick_diff_contribution() is None)
   assert_true(
@@ -346,6 +373,12 @@ test "two viewers isolate mutable contribution state and disposal owners" {
     physical_equal(second_folding, second.folding_controller().unwrap()),
   )
   assert_true(
+    physical_equal(
+      second_markdown,
+      second.markdown_comment_contribution().unwrap(),
+    ),
+  )
+  assert_true(
     physical_equal(second_hover, second.content_hover_controller().unwrap()),
   )
   assert_true(
@@ -359,6 +392,8 @@ test "two viewers isolate mutable contribution state and disposal owners" {
     second_folding.local_to_dispose.length(),
     second_folding_listener_count,
   )
+  assert_eq(second_markdown.generation, 202)
+  assert_eq(second_markdown.listeners.length(), second_markdown_listener_count)
   assert_eq(second_hover.hover_notified_token, 22)
   assert_eq(
     second_quick_diff.listeners.length(),
@@ -370,18 +405,20 @@ test "two viewers isolate mutable contribution state and disposal owners" {
   second_input.hover_line_number = 23
   second_widgets.widget_id_pool = 203
   second_widgets.reply_drafts["second"] = "updated second draft"
+  second_markdown.generation = 203
   second_hover.hover_notified_token = 23
   assert_eq(first_input.hover_line_number, 11)
   assert_eq(first_widgets.widget_id_pool, 101)
   assert_eq(first_widgets.reply_drafts.get("first"), Some("first draft"))
+  assert_eq(first_markdown.generation, 102)
   assert_eq(first_hover.hover_notified_token, 11)
 
   second.dispose()
   assert_eq(second_disposals, [
-    "input", "widget", "folding", "hover", "quickDiff",
+    "input", "widget", "folding", "markdown", "hover", "quickDiff",
   ])
   assert_eq(first_disposals, [
-    "input", "widget", "folding", "hover", "quickDiff",
+    "input", "widget", "folding", "markdown", "hover", "quickDiff",
   ])
 }
 
@@ -391,8 +428,14 @@ test "model removal and reattach preserve central contribution identities" {
   let input = viewer.agent_feedback_input_contribution().unwrap()
   let widgets = viewer.agent_feedback_widget_contribution().unwrap()
   let folding = viewer.folding_controller().unwrap()
+  let markdown = viewer.markdown_comment_contribution().unwrap()
   let hover = viewer.content_hover_controller().unwrap()
   let quick_diff = viewer.quick_diff_contribution().unwrap()
+  let markdown_listener_disposed = Ref(false)
+  markdown.listeners.push(
+    @base_common.Disposable::from(() => markdown_listener_disposed.val = true),
+  )
+  let markdown_listener_count = markdown.listeners.length()
   let model = test_model("alpha\nbeta")
   viewer.set_model(Some(model))
   viewer.set_model(Some(model))
@@ -408,11 +451,17 @@ test "model removal and reattach preserve central contribution identities" {
     ),
   )
   assert_true(physical_equal(folding, viewer.folding_controller().unwrap()))
+  assert_true(
+    physical_equal(markdown, viewer.markdown_comment_contribution().unwrap()),
+  )
+  assert_eq(markdown.listeners.length(), markdown_listener_count)
+  assert_false(markdown_listener_disposed.val)
   assert_true(physical_equal(hover, viewer.content_hover_controller().unwrap()))
   assert_true(
     physical_equal(quick_diff, viewer.quick_diff_contribution().unwrap()),
   )
   viewer.dispose()
+  assert_true(markdown_listener_disposed.val)
   model.dispose()
 }
 

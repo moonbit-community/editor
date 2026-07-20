@@ -207,12 +207,12 @@ fn agent_feedback_test_comment(
 ) -> @agent_feedback.SessionEditorComment {
   let feedback : @agent_feedback_api.AgentFeedback = {
     id,
-    kind: @agent_feedback_api.AgentReview,
+    kind: AgentReview,
     resource: @base_common.Uri::file("/feedback/" + id + ".mbt"),
-    range: @base_common.Range(line, 1, line, 2),
+    range: Range(line, 1, line, 2),
     text,
     replies,
-    state: @agent_feedback_api.Accepted,
+    state: Accepted,
   }
   @agent_feedback.get_session_editor_comments([feedback])[0]
 }

@@ -148,6 +148,17 @@
   font-family: var(--monaco-monospace-font);
 }
 
+.monaco-hover .markdown-hover .hover-contents .moonbit-viewer-markdown-diagram {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.monaco-hover .markdown-hover .hover-contents .moonbit-viewer-markdown-diagram > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 /* No box styling (background/padding/radius): the editor hover renders
  * tokenized code directly on the widget background; `textCodeBlock-background`
  * applies only to inline `code` above. The font-family stands in for Monaco's

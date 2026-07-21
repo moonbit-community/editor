@@ -412,6 +412,19 @@
   background: color-mix(in srgb, var(--vscode-editorWidget-border, var(--vscode-widget-border)) 25%, transparent);
 }
 
+.agent-feedback-widget .agent-feedback-widget-text .moonbit-viewer-markdown-diagram,
+.agent-feedback-widget .agent-feedback-widget-reply-text .moonbit-viewer-markdown-diagram {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.agent-feedback-widget .agent-feedback-widget-text .moonbit-viewer-markdown-diagram > svg,
+.agent-feedback-widget .agent-feedback-widget-reply-text .moonbit-viewer-markdown-diagram > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Gutter decoration for the hovered item's range indicator */
 .agent-feedback-widget-range-glyph {
   margin-left: 8px;

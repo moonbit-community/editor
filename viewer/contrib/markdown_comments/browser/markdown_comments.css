@@ -113,6 +113,17 @@
   height: auto;
 }
 
+.moonbit-viewer-markdown-comment-content .moonbit-viewer-markdown-diagram {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.moonbit-viewer-markdown-comment-content .moonbit-viewer-markdown-diagram > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 .moonbit-viewer-markdown-comment-content code,
 .moonbit-viewer-markdown-comment-content pre,
 .moonbit-viewer-markdown-comment-content .monaco-tokenized-source {

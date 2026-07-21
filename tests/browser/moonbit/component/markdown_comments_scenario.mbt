@@ -19,6 +19,10 @@ fn markdown_comments_initial_source() -> String {
     #|/// let fenced_value = 42
     #|/// ```
     #|///
+    #|/// ```diago
+    #|/// viewer -> browser: render SVG
+    #|/// ```
+    #|///
     #|/// ![fixture image](https://images.example.test/markdown-comment.svg)
     #|/// EOF paragraph.
   source
@@ -38,6 +42,10 @@ fn markdown_comments_same_key_source() -> String {
     #|omega_code_truth
     #|/// ```moonbit
     #|/// let fenced_value = 42
+    #|/// ```
+    #|///
+    #|/// ```diago
+    #|/// viewer -> browser: render SVG
     #|/// ```
     #|///
     #|/// ![fixture image](https://images.example.test/markdown-comment.svg)
@@ -248,13 +256,18 @@ fn poll_markdown_comments_ready(
   remaining : Int,
 ) -> Unit {
   let zones = @support.query_count(".moonbit-viewer-markdown-comment")
+  let diagrams = @support.query_count(
+    ".markdown-comments-host .moonbit-viewer-markdown-diagram > svg",
+  )
   let text = @support.query_text(".markdown-comments-host")
   if zones == 3 &&
+    diagrams == 1 &&
     text.contains("Start comment") &&
     text.contains("Middle comment") &&
     text.contains("EOF paragraph") &&
     markdown_comments_controls_installed() {
     ctx.metric_int("initialZones", zones)
+    ctx.metric_int("initialDiagrams", diagrams)
     ctx.metric_int(
       "visibleSourceLines",
       @support.query_count(".markdown-comments-host .view-line"),

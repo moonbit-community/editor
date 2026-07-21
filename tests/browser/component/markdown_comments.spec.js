@@ -8,6 +8,7 @@ const host = '.markdown-comments-host';
 const editor = `${host} > .monaco-editor.readonly-editor`;
 const zone = `${editor} .moonbit-viewer-markdown-comment`;
 const content = '.moonbit-viewer-markdown-comment-content';
+const diagram = '.moonbit-viewer-markdown-diagram';
 const imageUrl = 'https://images.example.test/markdown-comment.svg';
 
 const fixtureSvg = `
@@ -53,6 +54,7 @@ async function mountMarkdownComments(page, testInfo) {
   });
   expectMoonBitReportPassed(report, { suite: 'markdown_comments' });
   expect(report.metrics.initialZones).toBe(3);
+  expect(report.metrics.initialDiagrams).toBe(1);
   await expect(page.locator(zone)).toHaveCount(3);
   await settle(page);
   return reporter;
@@ -172,7 +174,7 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     expect(await zoneRanges(page)).toEqual([
       [1, 3],
       [5, 9],
-      [10, 16],
+      [10, 20],
     ]);
 
     const zones = page.locator(zone);
@@ -187,6 +189,67 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
       'let fenced_value = 42',
     );
     await expect(fencedCode.locator('.mtk3')).not.toHaveCount(0);
+    const diagoDiagram = zones
+      .nth(2)
+      .locator(`${diagram}[data-diagram-language="diago"]`);
+    await expect(diagoDiagram).toHaveCount(1);
+    await expect(diagoDiagram.locator(':scope > svg')).toHaveCount(1);
+    const diagramLayout = await diagoDiagram.evaluate((wrapper) => {
+      const svg = wrapper.querySelector(':scope > svg');
+      const inner = wrapper.closest(
+        '.moonbit-viewer-markdown-comment-content',
+      );
+      const outer = wrapper.closest('.moonbit-viewer-markdown-comment');
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const innerRect = inner.getBoundingClientRect();
+      const outerRect = outer.getBoundingClientRect();
+      return {
+        wrapperHeight: wrapperRect.height,
+        wrapperWidth: wrapperRect.width,
+        wrapperClientWidth: wrapper.clientWidth,
+        svgHeight: svgRect.height,
+        svgWidth: svgRect.width,
+        innerClientWidth: inner.clientWidth,
+        innerHeight: inner.offsetHeight,
+        outerHeight: outerRect.height,
+        outerStyleHeight: Number.parseFloat(outer.style.height),
+        wrapperWithinContent:
+          wrapperRect.left >= innerRect.left - 1 &&
+          wrapperRect.right <= innerRect.right + 1,
+        svgWithinWrapper:
+          svgRect.left >= wrapperRect.left - 1 &&
+          svgRect.right <= wrapperRect.right + 1,
+        diagramWithinMeasuredHeight: wrapperRect.bottom <= innerRect.bottom + 1,
+        overflowX: window.getComputedStyle(wrapper).overflowX,
+        wrapperMaxWidth: window.getComputedStyle(wrapper).maxWidth,
+        svgDisplay: window.getComputedStyle(svg).display,
+        svgMaxWidth: window.getComputedStyle(svg).maxWidth,
+      };
+    });
+    expect(diagramLayout).toMatchObject({
+      wrapperWithinContent: true,
+      svgWithinWrapper: true,
+      diagramWithinMeasuredHeight: true,
+      overflowX: 'auto',
+      wrapperMaxWidth: '100%',
+      svgDisplay: 'block',
+      svgMaxWidth: '100%',
+    });
+    expect(diagramLayout.wrapperHeight).toBeGreaterThan(0);
+    expect(diagramLayout.svgHeight).toBeGreaterThan(0);
+    expect(diagramLayout.wrapperWidth).toBeLessThanOrEqual(
+      diagramLayout.innerClientWidth + 1,
+    );
+    expect(diagramLayout.svgWidth).toBeLessThanOrEqual(
+      diagramLayout.wrapperClientWidth + 1,
+    );
+    expect(
+      Math.abs(diagramLayout.outerHeight - diagramLayout.innerHeight),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(diagramLayout.outerStyleHeight - diagramLayout.innerHeight),
+    ).toBeLessThanOrEqual(1);
     const renderedImage = zones.nth(2).locator('img');
     await expect(renderedImage).toHaveAttribute('src', imageUrl);
     await expect
@@ -256,12 +319,12 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
       return {
         start: rect(byRange(1, 3)),
         middle: rect(byRange(5, 9)),
-        eof: rect(byRange(10, 16)),
+        eof: rect(byRange(10, 20)),
         alpha: rect(lineWith('alpha_code_truth')),
         omega: rect(lineWith('omega_code_truth')),
         startHeading: rect(byRange(1, 3).querySelector('h1')),
         eofCode: rect(
-          byRange(10, 16).querySelector('.monaco-tokenized-source'),
+          byRange(10, 20).querySelector('.monaco-tokenized-source'),
         ),
         alphaContent: rect(
           lineWith('alpha_code_truth').querySelector('.view-line-content'),
@@ -301,6 +364,9 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     });
     expect(initialState.attachedValue).toBe(initialState.primaryValue);
     expect(initialState.primaryValue).toContain('/// # Start comment');
+    expect(initialState.primaryValue).toContain(
+      '/// ```diago\n/// viewer -> browser: render SVG\n/// ```',
+    );
     expect(initialState.primaryValue).toContain(imageUrl);
 
     await control(page, 'set_model_selection');
@@ -453,7 +519,7 @@ test('same-key replacement retains zone identity, reflows, and reconciles add re
     expect(await zoneRanges(page)).toEqual([
       [1, 3],
       [5, 9],
-      [10, 16],
+      [10, 20],
     ]);
 
     const wideHeight = await page

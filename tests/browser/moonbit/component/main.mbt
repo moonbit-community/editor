@@ -1,6 +1,8 @@
 ///|
 fn main {
-  if markdown_comments_requested() {
+  if initial_size_requested() {
+    run_initial_size_test()
+  } else if markdown_comments_requested() {
     run_markdown_comments_test()
   } else if view_zones_requested() {
     run_view_zones_test()
@@ -18,6 +20,10 @@ fn main {
     run_viewer_api_test()
   }
 }
+
+///|
+extern "js" fn initial_size_requested() -> Bool =
+  #| () => new URLSearchParams(location.search).has('initialSize')
 
 ///|
 extern "js" fn markdown_comments_requested() -> Bool =

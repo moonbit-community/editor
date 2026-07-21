@@ -79,6 +79,52 @@ async function zoneRanges(page) {
   );
 }
 
+function relativeLuminance(color) {
+  const channels = color.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrastRatio(left, right) {
+  const first = relativeLuminance(left);
+  const second = relativeLuminance(right);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+async function markdownPalette(page, theme) {
+  await page
+    .locator('.markdown-comments-shell')
+    .evaluate((shell, value) => shell.setAttribute('data-theme', value), theme);
+  return page.locator(editor).evaluate((root) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const resolveColor = (value) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+    };
+    const color = (node, property) =>
+      resolveColor(window.getComputedStyle(node)[property]);
+    const markdown = root.querySelector('.moonbit-viewer-markdown-comment');
+    const fencedCode = root.querySelector(
+      '.moonbit-viewer-markdown-comment .monaco-tokenized-source',
+    );
+    return {
+      editor: color(root, 'backgroundColor'),
+      markdown: color(markdown, 'backgroundColor'),
+      code: color(fencedCode, 'backgroundColor'),
+      foreground: color(markdown, 'color'),
+    };
+  });
+}
+
 async function transitionFrames(page, action) {
   return page.evaluate(async (method) => {
     const controls = globalThis.__markdownCommentsControls;
@@ -343,6 +389,28 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
         targetRole: 'link',
       }),
     ]);
+  } finally {
+    reporter.dispose();
+  }
+});
+
+test('keeps the Markdown surface distinct from source and fenced code in both themes', async ({
+  page,
+}, testInfo) => {
+  const reporter = await mountMarkdownComments(page, testInfo);
+  try {
+    for (const theme of ['dark', 'light']) {
+      const palette = await markdownPalette(page, theme);
+      expect(contrastRatio(palette.editor, palette.markdown)).toBeGreaterThan(
+        1.03,
+      );
+      expect(contrastRatio(palette.markdown, palette.code)).toBeGreaterThan(
+        1.03,
+      );
+      expect(
+        contrastRatio(palette.foreground, palette.markdown),
+      ).toBeGreaterThanOrEqual(4.5);
+    }
   } finally {
     reporter.dispose();
   }

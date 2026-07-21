@@ -9,7 +9,14 @@
    * Markdown input above it, but below editor cursors (4) and widgets (50+). */
   z-index: 2;
   color: var(--vscode-editor-foreground);
+  /* Give documentation its own quiet surface while leaving the stronger
+   * textCodeBlock background available for nested inline and fenced code. */
   background: var(--vscode-editor-background);
+  background: color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 4%,
+    var(--vscode-editor-background)
+  );
   font-family: var(--ui-font-family, var(--editor-font-family));
   font-size: var(--editor-font-size);
   line-height: 1.5;

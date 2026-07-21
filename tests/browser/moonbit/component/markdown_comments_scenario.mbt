@@ -20,7 +20,12 @@ fn markdown_comments_initial_source() -> String {
     #|/// ```
     #|///
     #|/// ```diago
-    #|/// viewer -> browser: render SVG
+    #|/// direction: down
+    #|/// viewer -> markdown: source
+    #|/// markdown -> parser: parse
+    #|/// parser -> layout: layout
+    #|/// layout -> svg: render
+    #|/// svg -> browser: mount
     #|/// ```
     #|///
     #|/// ![fixture image](https://images.example.test/markdown-comment.svg)
@@ -45,7 +50,12 @@ fn markdown_comments_same_key_source() -> String {
     #|/// ```
     #|///
     #|/// ```diago
-    #|/// viewer -> browser: render SVG
+    #|/// direction: down
+    #|/// viewer -> markdown: source
+    #|/// markdown -> parser: parse
+    #|/// parser -> layout: layout
+    #|/// layout -> svg: render
+    #|/// svg -> browser: mount
     #|/// ```
     #|///
     #|/// ![fixture image](https://images.example.test/markdown-comment.svg)
@@ -152,6 +162,7 @@ fn markdown_comments_state_json(
     "replacementAttachedEditors": replacement
     .get_attached_editor_count()
     .to_json(),
+    "scrollTop": viewer.get_scroll_top().to_json(),
     "scrollHeight": viewer.get_scroll_height().to_json(),
   }).stringify()
 }

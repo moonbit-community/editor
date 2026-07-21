@@ -415,6 +415,7 @@
 .agent-feedback-widget .agent-feedback-widget-text .moonbit-viewer-markdown-diagram,
 .agent-feedback-widget .agent-feedback-widget-reply-text .moonbit-viewer-markdown-diagram {
   max-width: 100%;
+  max-height: min(50vh, 480px);
   overflow: auto;
 }
 

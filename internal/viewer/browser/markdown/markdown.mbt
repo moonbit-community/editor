@@ -201,6 +201,36 @@ extern "js" fn install_markdown_dom(
   #|     });
   #|   }
   #|
+  #|   const canScroll = (delta, position, clientSize, scrollSize) => {
+  #|     if (delta < 0) return position > 0;
+  #|     if (delta > 0) return position + clientSize < scrollSize - 1;
+  #|     return false;
+  #|   };
+  #|   for (const diagram of Array.from(content.querySelectorAll("div"))) {
+  #|     const classes = (diagram.getAttribute("class") || "").split(/\s+/);
+  #|     if (!classes.includes("moonbit-viewer-markdown-diagram")) continue;
+  #|     listen(diagram, "wheel", (event) => {
+  #|       if (!active) return;
+  #|       const deltaX = Number(event.deltaX || (event.shiftKey ? event.deltaY : 0));
+  #|       const deltaY = Number(event.shiftKey ? 0 : event.deltaY || 0);
+  #|       const consumesX = canScroll(
+  #|         deltaX,
+  #|         diagram.scrollLeft,
+  #|         diagram.clientWidth,
+  #|         diagram.scrollWidth,
+  #|       );
+  #|       const consumesY = canScroll(
+  #|         deltaY,
+  #|         diagram.scrollTop,
+  #|         diagram.clientHeight,
+  #|         diagram.scrollHeight,
+  #|       );
+  #|       // Preserve the browser's native inner scroll. When neither axis can
+  #|       // consume the delta, let it reach the owning surface's scroller.
+  #|       if (consumesX || consumesY) event.stopPropagation();
+  #|     });
+  #|   }
+  #|
   #|   target.replaceChildren(content);
   #|   const dispose = () => {
   #|     if (!active) return;

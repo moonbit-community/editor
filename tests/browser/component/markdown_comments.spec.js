@@ -174,7 +174,7 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     expect(await zoneRanges(page)).toEqual([
       [1, 3],
       [5, 9],
-      [10, 20],
+      [10, 25],
     ]);
 
     const zones = page.locator(zone);
@@ -204,12 +204,18 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
       const svgRect = svg.getBoundingClientRect();
       const innerRect = inner.getBoundingClientRect();
       const outerRect = outer.getBoundingClientRect();
+      const viewBox = svg.viewBox.baseVal;
       return {
         wrapperHeight: wrapperRect.height,
         wrapperWidth: wrapperRect.width,
+        wrapperClientHeight: wrapper.clientHeight,
         wrapperClientWidth: wrapper.clientWidth,
+        wrapperScrollHeight: wrapper.scrollHeight,
         svgHeight: svgRect.height,
         svgWidth: svgRect.width,
+        svgAspectRatio: svgRect.width / svgRect.height,
+        viewBoxAspectRatio: viewBox.width / viewBox.height,
+        expectedMaxHeight: Math.min(window.innerHeight * 0.5, 480),
         innerClientWidth: inner.clientWidth,
         innerHeight: inner.offsetHeight,
         outerHeight: outerRect.height,
@@ -222,6 +228,7 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
           svgRect.right <= wrapperRect.right + 1,
         diagramWithinMeasuredHeight: wrapperRect.bottom <= innerRect.bottom + 1,
         overflowX: window.getComputedStyle(wrapper).overflowX,
+        overflowY: window.getComputedStyle(wrapper).overflowY,
         wrapperMaxWidth: window.getComputedStyle(wrapper).maxWidth,
         svgDisplay: window.getComputedStyle(svg).display,
         svgMaxWidth: window.getComputedStyle(svg).maxWidth,
@@ -232,12 +239,32 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
       svgWithinWrapper: true,
       diagramWithinMeasuredHeight: true,
       overflowX: 'auto',
+      overflowY: 'auto',
       wrapperMaxWidth: '100%',
       svgDisplay: 'block',
       svgMaxWidth: '100%',
     });
     expect(diagramLayout.wrapperHeight).toBeGreaterThan(0);
     expect(diagramLayout.svgHeight).toBeGreaterThan(0);
+    expect(
+      Math.abs(
+        diagramLayout.wrapperClientHeight - diagramLayout.expectedMaxHeight,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(diagramLayout.wrapperHeight - diagramLayout.wrapperClientHeight),
+    ).toBeLessThanOrEqual(1);
+    expect(diagramLayout.wrapperScrollHeight).toBeGreaterThan(
+      diagramLayout.wrapperClientHeight + 1,
+    );
+    expect(diagramLayout.svgHeight).toBeGreaterThan(
+      diagramLayout.wrapperClientHeight + 1,
+    );
+    expect(
+      Math.abs(
+        diagramLayout.svgAspectRatio - diagramLayout.viewBoxAspectRatio,
+      ),
+    ).toBeLessThan(0.001);
     expect(diagramLayout.wrapperWidth).toBeLessThanOrEqual(
       diagramLayout.innerClientWidth + 1,
     );
@@ -250,6 +277,7 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     expect(
       Math.abs(diagramLayout.outerStyleHeight - diagramLayout.innerHeight),
     ).toBeLessThanOrEqual(1);
+
     const renderedImage = zones.nth(2).locator('img');
     await expect(renderedImage).toHaveAttribute('src', imageUrl);
     await expect
@@ -319,12 +347,12 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
       return {
         start: rect(byRange(1, 3)),
         middle: rect(byRange(5, 9)),
-        eof: rect(byRange(10, 20)),
+        eof: rect(byRange(10, 25)),
         alpha: rect(lineWith('alpha_code_truth')),
         omega: rect(lineWith('omega_code_truth')),
         startHeading: rect(byRange(1, 3).querySelector('h1')),
         eofCode: rect(
-          byRange(10, 20).querySelector('.monaco-tokenized-source'),
+          byRange(10, 25).querySelector('.monaco-tokenized-source'),
         ),
         alphaContent: rect(
           lineWith('alpha_code_truth').querySelector('.view-line-content'),
@@ -365,9 +393,71 @@ test('public Viewer replaces whole-line source with themed Markdown while model 
     expect(initialState.attachedValue).toBe(initialState.primaryValue);
     expect(initialState.primaryValue).toContain('/// # Start comment');
     expect(initialState.primaryValue).toContain(
-      '/// ```diago\n/// viewer -> browser: render SVG\n/// ```',
+      [
+        '/// ```diago',
+        '/// direction: down',
+        '/// viewer -> markdown: source',
+        '/// markdown -> parser: parse',
+        '/// parser -> layout: layout',
+        '/// layout -> svg: render',
+        '/// svg -> browser: mount',
+        '/// ```',
+      ].join('\n'),
     );
     expect(initialState.primaryValue).toContain(imageUrl);
+
+    // The diagram owns wheel input only while it can consume that delta. The
+    // browser keeps native scrolling because the shared listener never calls
+    // preventDefault; the editor's scroll position must stay unchanged.
+    const diagramBox = await diagoDiagram.boundingBox();
+    expect(diagramBox).not.toBeNull();
+    await page.mouse.move(
+      diagramBox.x + diagramBox.width / 2,
+      diagramBox.y + Math.min(100, diagramBox.height / 2),
+    );
+    const diagramScrollBefore = await diagoDiagram.evaluate(
+      (wrapper) => wrapper.scrollTop,
+    );
+    const editorScrollBefore = (await state(page)).scrollTop;
+    await page.mouse.wheel(0, 160);
+    await expect
+      .poll(() => diagoDiagram.evaluate((wrapper) => wrapper.scrollTop))
+      .toBeGreaterThan(diagramScrollBefore);
+    expect(
+      Math.abs((await state(page)).scrollTop - editorScrollBefore),
+    ).toBeLessThanOrEqual(1);
+
+    const boundaryHandoff = await diagoDiagram.evaluate((wrapper) => {
+      const owner = wrapper.closest(
+        '.moonbit-viewer-markdown-comment-content',
+      );
+      wrapper.scrollTop = wrapper.scrollHeight;
+      let bubbled = 0;
+      const observe = (event) => {
+        bubbled += 1;
+        // Observe the handoff before Monaco consumes the synthetic wheel.
+        event.stopPropagation();
+      };
+      owner.addEventListener('wheel', observe);
+      wrapper.dispatchEvent(
+        new WheelEvent('wheel', {
+          bubbles: true,
+          cancelable: true,
+          deltaY: 160,
+        }),
+      );
+      owner.removeEventListener('wheel', observe);
+      return {
+        atBottom:
+          wrapper.scrollTop + wrapper.clientHeight >=
+          wrapper.scrollHeight - 1,
+        bubbled,
+      };
+    });
+    expect(boundaryHandoff).toEqual({ atBottom: true, bubbled: 1 });
+    await diagoDiagram.evaluate((wrapper) => {
+      wrapper.scrollTop = 0;
+    });
 
     await control(page, 'set_model_selection');
     await control(page, 'focus');
@@ -519,7 +609,7 @@ test('same-key replacement retains zone identity, reflows, and reconciles add re
     expect(await zoneRanges(page)).toEqual([
       [1, 3],
       [5, 9],
-      [10, 20],
+      [10, 25],
     ]);
 
     const wideHeight = await page

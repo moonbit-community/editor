@@ -27,12 +27,16 @@ tokenized or cmark code fallback. Unlabelled, indented, differently cased,
 unknown, `uml`, and `plantuml` blocks remain ordinary code, and
 `has_code_block` remains true on success and failure.
 
-Hover, agent-feedback, and whole-line Markdown-comment styles constrain the
-SVG to its content width with scrolling. The direct public-Viewer component
-scenario proves inline SVG, width and overflow, positive geometry, measured
-ViewZone height, source-hidden/model-source truth, flush and swap behavior,
-input, and disposal. No renderer registry, public option or API, asynchronous
-placeholder, worker, SVG security policy, or UML adapter was added.
+Hover constrains diagrams through its existing outer scroller. Agent feedback
+and whole-line Markdown comments additionally cap diagram wrappers at
+`min(50vh, 480px)` while retaining the SVG's intrinsic aspect ratio; the shared
+browser Markdown lifetime keeps native wheel scrolling inside a diagram until
+the current delta reaches its boundary, then hands the event back to the owning
+surface. The direct public-Viewer component scenario proves inline SVG, width
+and overflow, positive geometry, measured ViewZone height,
+source-hidden/model-source truth, flush and swap behavior, input, and disposal.
+No renderer registry, public option or API, asynchronous placeholder, worker,
+SVG security policy, or UML adapter was added.
 
 The selected direct synchronous root facade increased the unminified editor
 bundle from 5,030,179 to 22,704,766 bytes and its gzip size from 552,524 to
@@ -40,11 +44,11 @@ bundle from 5,030,179 to 22,704,766 bytes and its gzip size from 552,524 to
 font payload rather than a duplicate import or build failure; lazy loading and
 bundle splitting remain outside this completed scope.
 
-Final validation passed 11 focused JS and 11 focused native Markdown tests,
-1,536 JS tests, 1,052 native tests, all 64 component browser tests, all 96
-Playwright tests, `moon info --target all`, `just check`, `just test`,
-`just build`, `just test-browser`, and `git diff --check`. The generated
-Markdown interface had no public change.
+Final validation passed 11 shared Markdown tests on JS and native, 6 browser
+Markdown JS tests, 1,537 JS tests, 1,052 native tests, all 64 component browser
+tests, all 96 Playwright tests, `moon info --target all`, `just check`,
+`just test`, `just build`, `just test-browser`, and `git diff --check`. The
+generated Markdown interface had no public change.
 
 Former artifact: `markdown-diagram-code-block-rendering.md`.
 

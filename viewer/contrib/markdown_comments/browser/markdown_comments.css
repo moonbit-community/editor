@@ -115,6 +115,7 @@
 
 .moonbit-viewer-markdown-comment-content .moonbit-viewer-markdown-diagram {
   max-width: 100%;
+  max-height: min(50vh, 480px);
   overflow: auto;
 }
 

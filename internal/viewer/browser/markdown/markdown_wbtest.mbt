@@ -209,6 +209,35 @@ extern "js" fn markdown_test_dispatch_key(
 extern "js" fn markdown_test_dispatch_load(element : @rdom.Element) -> Unit = "(element) => element.dispatchEvent(new Event('load'))"
 
 ///|
+extern "js" fn markdown_test_dispatch_vertical_wheel(
+  element : @rdom.Element,
+  delta_y : Int,
+  scroll_top : Int,
+  client_height : Int,
+  scroll_height : Int,
+) -> Int =
+  #| (element, deltaY, scrollTop, clientHeight, scrollHeight) => {
+  #|   for (const [name, value] of Object.entries({
+  #|     scrollLeft: 0,
+  #|     clientWidth: 100,
+  #|     scrollWidth: 100,
+  #|     scrollTop,
+  #|     clientHeight,
+  #|     scrollHeight,
+  #|   })) {
+  #|     Object.defineProperty(element, name, { configurable: true, value });
+  #|   }
+  #|   const event = new Event("wheel", { bubbles: true, cancelable: true });
+  #|   Object.defineProperties(event, {
+  #|     deltaX: { value: 0 },
+  #|     deltaY: { value: deltaY },
+  #|     shiftKey: { value: false },
+  #|   });
+  #|   element.dispatchEvent(event);
+  #|   return (event.cancelBubble ? 1 : 0) | (event.defaultPrevented ? 2 : 0);
+  #| }
+
+///|
 test "safe DOM and native-link URI policy resolve only allowed schemes" {
   install_markdown_test_dom()
   let target = markdown_test_target()
@@ -328,6 +357,40 @@ test "target reuse replaces children and releases every prior listener" {
   third.dispose.dispose()
   third.dispose.dispose()
   assert_eq(markdown_test_listener_count(third_anchor, "click"), 0)
+}
+
+///|
+test "diagram wheel stays native until the scroll boundary and listener disposal" {
+  install_markdown_test_dom()
+  let target = markdown_test_target()
+  let rendered = render_markdown(
+    "```graph\nsource\n```",
+    options=MarkdownRenderOptions(code_block_renderer=fn(_block, _language) {
+      "<div class=\"moonbit-viewer-markdown-diagram\" data-diagram-language=\"diago\"><svg></svg></div>"
+    }),
+    target~,
+  )
+  let diagram = markdown_test_at(target, "div", 0)
+  assert_eq(markdown_test_listener_count(diagram, "wheel"), 1)
+  // Downward motion inside the available range stays with the diagram and is
+  // not preventDefault-ed, so the browser retains its native scrolling.
+  assert_eq(markdown_test_dispatch_vertical_wheel(diagram, 120, 0, 100, 300), 1)
+  assert_eq(
+    markdown_test_dispatch_vertical_wheel(diagram, -120, 100, 100, 300),
+    1,
+  )
+  // At either boundary the event is handed back to the owning surface.
+  assert_eq(
+    markdown_test_dispatch_vertical_wheel(diagram, -120, 0, 100, 300),
+    0,
+  )
+  assert_eq(
+    markdown_test_dispatch_vertical_wheel(diagram, 120, 200, 100, 300),
+    0,
+  )
+  rendered.dispose.dispose()
+  assert_eq(markdown_test_listener_count(diagram, "wheel"), 0)
+  assert_eq(markdown_test_dispatch_vertical_wheel(diagram, 120, 0, 100, 300), 0)
 }
 
 ///|

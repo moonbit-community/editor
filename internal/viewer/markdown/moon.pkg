@@ -1,4 +1,5 @@
 import {
+  "Milky2018/diago",
   "moonbit-community/cmark/cmark",
   "moonbit-community/cmark/cmark_html",
   "moonbit-community/cmark/cmark_renderer",
@@ -7,3 +8,5 @@ import {
   "moonbit-community/editor/viewer/common/model",
   "moonbit-community/editor/viewer/common/services",
 }
+
+supported_targets = "js+native"

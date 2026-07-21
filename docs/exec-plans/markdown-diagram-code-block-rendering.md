@@ -2,15 +2,14 @@
 
 Status: proposed
 Date: 2026-07-21
-Upstream dependencies: [`moonbit-community/diago`](https://github.com/moonbit-community/diago) and [`moonbit-community/uml`](https://github.com/moonbit-community/uml), at the published versions selected during Gate A
+Upstream dependency: [`moonbit-community/diago`](https://github.com/moonbit-community/diago), at the published version selected during Gate A
 
 ## Outcome
 
-Render three exact lowercase fenced-code language ids as diagrams in every
-consumer of the shared Markdown renderer:
+Render the exact lowercase fenced-code language id `diago` as a diagram in
+every consumer of the shared Markdown renderer:
 
 - `diago` compiles through `Milky2018/diago` and renders SVG;
-- `uml` and `plantuml` dispatch through `kokic/uml/api` and render SVG;
 - every other fenced or indented code block keeps the current cmark or
   editor-token rendering behavior.
 
@@ -37,9 +36,6 @@ cmark CodeBlock
   -> exact fence id is diago
        -> Diago SVG success: emit wrapped SVG and consume the block
        -> failure: continue
-  -> exact fence id is uml or plantuml
-       -> UML SVG success: emit wrapped SVG and consume the block
-       -> failure: continue
   -> caller code-block renderer exists
        -> preserve the current tokenized override
   -> otherwise
@@ -48,8 +44,9 @@ cmark CodeBlock
 
 Only the fenced info-string language id selects diagram rendering. An
 unlabelled or indented code block never becomes a diagram because of the active
-model language. Matching remains case-sensitive and exact: `diago`, `uml`, and
-`plantuml` are supported; spelling or case variants are ordinary code.
+model language. Matching remains case-sensitive and exact: only `diago` is
+supported; spelling or case variants, including `uml` and `plantuml`, are
+ordinary code.
 
 The existing cmark info-string parser already extracts the first token.
 Additional info-string text is ignored; this plan does not introduce
@@ -66,8 +63,7 @@ per-fence layout or theme options.
 - file or network imports from diagram fences;
 - interactive SVG behavior, diagram editing, source maps, or click-to-source;
 - automatic rerendering on theme changes;
-- Mermaid, Graphviz, or diagram languages other than the three selected fence
-  ids;
+- UML, PlantUML, Mermaid, Graphviz, or diagram languages other than `diago`;
 - performance budgets or bundle splitting. Normal build output is still
   reviewed for accidental failure or obviously unreasonable growth.
 
@@ -99,10 +95,9 @@ The reference build already assembles the three owning surface styles:
 
 ## Representation and Dependency Decisions
 
-Add the reviewed published versions of `Milky2018/diago` and `kokic/uml` to the
-root `moon.mod`. Import `Milky2018/diago` and `kokic/uml/api` only from
-`internal/viewer/markdown/moon.pkg`. Do not import either package from browser
-contributions or the public Viewer facade.
+Add the reviewed published version of `Milky2018/diago` to the root `moon.mod`.
+Import `Milky2018/diago` only from `internal/viewer/markdown/moon.pkg`. Do not
+import it from browser contributions or the public Viewer facade.
 
 Add one source unit, `internal/viewer/markdown/diagram_code_block.mbt`, in the
 existing package. It owns private helpers with this effective contract:
@@ -110,7 +105,6 @@ existing package. It owns private helpers with this effective contract:
 ```text
 render_diagram_code_block(MarkdownCodeBlock) -> String?
 render_diago_svg(String) -> String?
-render_uml_svg(String) -> String?
 wrap_diagram_svg(String, String) -> String
 ```
 
@@ -135,23 +129,6 @@ Use default layout, direction, and theme behavior. Do not install an import
 resolver. Catch every `DiagoError` at the helper boundary and return `None` so
 the original code block remains visible through the ordinary fallback.
 
-### UML
-
-For `uml` and `plantuml`, follow the current `kokic/uml/api` facade order:
-
-```text
-if @uml.is_json_source(source)
-  -> @uml.render_json_svg(source)
-else if @uml.is_class_source(source)
-  -> @uml.render_class_svg(source)
-else
-  -> @uml.render_svg(source)       // sequence diagram
-```
-
-Catch the diagram-specific parse error at the helper boundary and return
-`None`. Keep all upstream UML types and dispatch details private to this source
-unit because the upstream facade is still evolving.
-
 ### HTML and fallback
 
 A successful result is emitted as:
@@ -162,8 +139,8 @@ A successful result is emitted as:
 </div>
 ```
 
-The wrapper and `data-diagram-language` value are generated only from the three
-fixed ids. The SVG string is the upstream renderer result and is written
+The wrapper and `data-diagram-language` value are generated only from the fixed
+`diago` id. The SVG string is the upstream renderer result and is written
 directly through the existing cmark render context. Do not add another DOM
 postprocessing phase in this plan.
 
@@ -204,15 +181,14 @@ content and update its ViewZone; no new measurement mechanism is added.
 ### Milestone 0 — dependency and target gate
 
 - Refresh the selected published versions and their generated interfaces.
-- Add the two module dependencies and the two package imports.
+- Add the module dependency and package import.
 - Prove that `internal/viewer/markdown` checks on both JS and native before
   editing the render path.
 - Confirm the Diago facade still exposes synchronous `compile(...)->String`
-  with SVG output and the UML facade still exposes the sequence/class/JSON
-  functions named above.
+  with SVG output.
 - Review the new `moon.pkg` edges against `docs/architecture.md`.
 
-If either dependency cannot compile for JS, do not substitute a subprocess,
+If the dependency cannot compile for JS, do not substitute a subprocess,
 remote service, npm adapter, or async Wasm design under this plan. Record the
 target/API blocker and resolve it in the dependency before continuing.
 
@@ -232,7 +208,7 @@ git diff --check
 - Preserve the old non-diagram and failure branches byte-for-byte where
   practical.
 - Add focused multi-target tests for successful dispatch and fallback.
-- Update `internal/viewer/markdown/README.md` with the three built-in fence ids,
+- Update `internal/viewer/markdown/README.md` with the built-in `diago` fence id,
   direct synchronous ownership, and focused commands.
 - Run `moon info --target all` and review the generated interface.
 - Commit the dependency, core behavior, focused tests, and owning README as one
@@ -241,11 +217,7 @@ git diff --check
 Required focused cases:
 
 - `diago` produces the wrapper and SVG;
-- `uml` sequence syntax produces SVG;
-- `plantuml` class syntax produces SVG;
-- UML JSON source reaches the JSON renderer;
-- malformed Diago and UML source falls back through a supplied tokenized
-  renderer;
+- malformed Diago source falls back through a supplied tokenized renderer;
 - malformed diagram source without a supplied override falls back to cmark
   code HTML;
 - an unknown fence, differently cased fence, unlabelled block, and indented
@@ -266,10 +238,10 @@ git diff --check
 - Add the scoped wrapper/SVG rules to hover, agent-feedback, and
   Markdown-comment CSS.
 - Extend the existing direct public-Viewer Markdown-comments component scenario
-  with one Diago and one PlantUML block. Keep the scenario user-visible and
-  report only compact facts to Playwright.
-- Assert that both fences become inline SVG, remain inside the Markdown content
-  width/overflow boundary, and contribute to measured ViewZone height while the
+  with one Diago block. Keep the scenario user-visible and report only compact
+  facts to Playwright.
+- Assert that the fence becomes inline SVG, remains inside the Markdown content
+  width/overflow boundary, and contributes to measured ViewZone height while the
   underlying model source remains unchanged.
 - Preserve existing link, selection, source-hidden, model-flush, model-swap,
   and disposal evidence.
@@ -285,7 +257,7 @@ git diff --check
 ### Milestone 3 — close contracts and validate
 
 - Update the `internal/viewer/markdown` bullet in `docs/architecture.md` to
-  record ownership of the two built-in diagram adapters.
+  record ownership of the built-in Diago adapter.
 - Update `docs/harness.md` only if the component report or invocation contract
   changes.
 - Review `moon.mod`, every changed `moon.pkg`, generated interfaces, and the
@@ -312,7 +284,6 @@ git diff --check
 |---|---|---|
 | exact fence-id dispatch | `internal/viewer/markdown/diagram_code_block.mbt` | JS/native focused tests |
 | Diago source to SVG | `Milky2018/diago` adapter helper | focused valid/invalid Diago cases |
-| UML sequence/class/JSON dispatch | `kokic/uml/api` adapter helper | focused case for every branch |
 | diagram failure preserves source | existing code-block fallback | tokenized and cmark fallback tests |
 | unknown code behavior unchanged | existing optional override/default renderer | regression cases in shared suite |
 | direct SVG reaches real DOM | shared cmark/browser Markdown path | public-Viewer component test |
@@ -325,7 +296,7 @@ git diff --check
 ### Gate A — before render-path edits
 
 - [ ] selected dependency versions and APIs are current;
-- [ ] both dependencies compile through `internal/viewer/markdown` on JS and
+- [ ] the dependency compiles through `internal/viewer/markdown` on JS and
   native;
 - [ ] the direct hard-coded scope and exact fence ids remain unchanged;
 - [ ] package edges preserve the existing multi-target/browser boundary;
@@ -337,7 +308,7 @@ impossible.
 
 ### Gate B — after core implementation
 
-- [ ] valid Diago and all selected UML branches emit wrapped SVG;
+- [ ] valid Diago input emits wrapped SVG;
 - [ ] invalid diagrams and ordinary code preserve the old fallback paths;
 - [ ] both focused target suites pass;
 - [ ] generated interfaces show no unintended API growth;

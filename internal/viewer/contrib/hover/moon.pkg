@@ -13,3 +13,5 @@ import {
   "moonbit-community/editor/syntax",
   "moonbitlang/async",
 } for "wbtest"
+
+supported_targets = "js+native"

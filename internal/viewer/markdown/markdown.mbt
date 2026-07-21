@@ -30,20 +30,23 @@ pub fn render_markdown(
     match block {
       CodeBlock(node) => {
         saw_code_block.val = true
-        match code_block_renderer {
-          Some(render) => {
-            ctx.string(
-              render(
-                {
-                  code: markdown_code_block_text(node.v),
-                  language_id: markdown_code_block_language(node.v),
-                },
-                language_id,
-              ),
-            )
+        let code_block = {
+          code: markdown_code_block_text(node.v),
+          language_id: markdown_code_block_language(node.v),
+        }
+        match render_diagram_code_block(code_block) {
+          Some(html) => {
+            ctx.string(html)
             true
           }
-          None => false
+          None =>
+            match code_block_renderer {
+              Some(render) => {
+                ctx.string(render(code_block, language_id))
+                true
+              }
+              None => false
+            }
         }
       }
       _ => false

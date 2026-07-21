@@ -85,6 +85,7 @@ fn run_agent_feedback_test() -> Unit {
         options=ViewerOptions(placeholder="Loading feedback fixture..."),
       )
       viewer.set_model(Some(model))
+      viewer.handle_initialized()
       @support.set_timeout(() => poll_rendered(ctx, done, 80), 50)
     }
     None => {

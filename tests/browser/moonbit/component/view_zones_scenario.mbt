@@ -123,6 +123,7 @@ fn run_view_zones_test() -> Unit {
   })
   |> ignore
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
 
   let primary_node = document.create_element("div")
   primary_node.set_attribute("class", "vz-primary host-primary preserved-class")

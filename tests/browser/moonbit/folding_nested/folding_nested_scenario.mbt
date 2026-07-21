@@ -48,6 +48,7 @@ fn run_folding_nested_test() -> Unit {
   app.append_child(shell.as_node())
   let viewer = @viewer.Viewer::create(host)
   viewer.set_model(Some(folding_nested_fixture_model()))
+  viewer.handle_initialized()
   wait_for_text(ctx, "nest_leaf_a", 80)
 }
 

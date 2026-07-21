@@ -42,6 +42,7 @@ fn run_read_api_test() -> Unit {
         ),
       )
       viewer.set_model(Some(model))
+      viewer.handle_initialized()
       // Wait until the first line has rendered and been measured, then run the
       // measurement assertions synchronously (every getter flushes internally).
       @support.set_timeout(() => poll_read_api(ctx, viewer, done, 100), 100)

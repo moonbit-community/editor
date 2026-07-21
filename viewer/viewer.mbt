@@ -132,6 +132,7 @@ pub struct ViewerViewState {
 fn Viewer::Viewer(
   services? : ViewerServices,
   options? : ViewerOptions = ViewerOptions::default(),
+  initial_container? : @rdom.Element,
 ) -> Viewer {
   let (services, owns_services) = match services {
     Some(services) => (services, false)
@@ -140,13 +141,22 @@ fn Viewer::Viewer(
   let font_info = @config.FontInfo::estimated(
     options.bare_font_info(pixel_ratio=@base_browser.device_pixel_ratio()),
   )
+  let (initial_width, initial_height) = match initial_container {
+    Some(container) => read_container_size(container)
+    None => (0.0, 0.0)
+  }
   let viewer : Viewer = {
     services,
     owns_services,
     disposed: false,
     testing_registration: None,
     lifetime_disposables: [],
-    configuration: EditorConfigurationState(options, font_info),
+    configuration: EditorConfigurationState(
+      options,
+      font_info,
+      initial_width~,
+      initial_height~,
+    ),
     did_change_model: Emitter(),
     did_change_model_content: Emitter(),
     did_change_cursor_position: Emitter(),
@@ -275,7 +285,10 @@ pub fn Viewer::create(
   services? : ViewerServices,
   options? : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
-  let viewer = Viewer(services?, options~)
+  // `EditorConfiguration` constructs its `ElementSizeObserver` before model
+  // attachment in Monaco. Seed the same client-box fact before contributions
+  // can observe this Viewer; `attach` rechecks after publishing the mount.
+  let viewer = Viewer(services?, options~, initial_container=host)
   viewer.attach(host)
   viewer
 }
@@ -457,6 +470,11 @@ fn Viewer::attach(self : Viewer, host : @rdom.Element) -> Unit {
   let placeholder = PlaceholderDom(self.configuration.snapshot().options.theme)
   host.append_child(placeholder.root.as_node())
   self.mount = Mounted(MountedViewer(host, placeholder))
+  // Public construction is synchronous: the returned Viewer already reports
+  // the host client box even when it has no model and before any animation
+  // frame. The constructor supplied the same fact before contributions; this
+  // second read also covers the private headless-then-attach test path.
+  self.measure()
   // Untrusted readings re-measure after 5s (`FontMeasurements.onDidChange`,
   // e.g. once a web font finished loading) — Monaco's
   // `_recomputeOptions` subscription in `editorConfiguration.ts`. Viewer-
@@ -549,6 +567,22 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
       detached.remove_all_decorations_with_owner_id(self.editor_id)
     None => ()
   }
+}
+
+///|
+/// Completes model setup after the host has installed the model, restored view
+/// state, and applied synchronous options — Monaco's separate
+/// `ICodeEditor.handleInitialized`. This is intentionally not part of
+/// `set_model`. Every call republishes the current stable visible demand, which
+/// also lets the model cancel a pending unstable-range debounce. A token
+/// listener may synchronously replace the model, but this call retains and
+/// completes only the model that was current when it began.
+pub fn Viewer::handle_initialized(self : Viewer) -> Unit {
+  if self.disposed {
+    return
+  }
+  guard self.model_slot.current is Some(model_data) else { return }
+  model_data.view_model.visible_lines_stabilized()
 }
 
 ///|

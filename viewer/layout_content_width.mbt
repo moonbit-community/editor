@@ -2,12 +2,11 @@
 /// Keeps the measured editor outer width invariant when a changed model-line
 /// digit band moves `layoutInfo.contentLeft`. Monaco's
 /// `EditorConfiguration.setModelLineCount` recomputes layout options before it
-/// publishes the resulting Configuration event. The local Viewer already owns
-/// the last measured content box, so it can derive the new content width
-/// synchronously without another DOM read:
+/// publishes the resulting Configuration event. The local Viewer retains the
+/// last measured outer client width as its source fact, so it can derive the
+/// new content width synchronously without another DOM read:
 ///
-/// `outerWidth = oldContentLeft + oldContentWidth`
-/// `newContentWidth = max(0, outerWidth - newContentLeft)`
+/// `newContentWidth = max(0, measuredOuterWidth - newContentLeft)`
 ///
 /// Returns whether the content-left band changed. The caller emits LayoutInfo
 /// only after this helper, so ContentWidgets' live configuration read observes

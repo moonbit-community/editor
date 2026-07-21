@@ -35,7 +35,13 @@ five concrete owners: `EditorConfigurationState`, `ViewerModelSlot`,
 `ViewerMount`, `EditorContributions`, and `CursorEventDelivery`.
 `ViewerModelSlot.current` is the one nullable `ModelData`; its optional
 `ModelBrowserData` pairs a real `View` with its retained mouse handler and
-view-scoped render/reveal facts.
+view-scoped render/reveal facts. Public construction seeds
+`EditorConfigurationState` synchronously from the host client box before model
+attachment. Each `ModelData` then carries one generation-scoped initialization
+boundary: the host invokes `Viewer::handle_initialized` after model, view-state,
+and option setup, publishing stable visible-token demand outside `attach_model`
+and independently of the animation-frame render loop. Repeated calls
+re-stabilize the current model's demand instead of consuming one-shot state.
 
 Headless means `ViewerMount::Headless`: there is no caller host, placeholder,
 browser `View`, DOM focus state, or root animation frame. A headless Viewer may
@@ -56,8 +62,9 @@ widgets, language-feature presentation, and editor events.
 ### Shared foundations
 
 - `base/common`: URI/path, positions/ranges, events, and disposables.
-- `base/browser`: canonical browser runtime and DOM primitives, mouse events,
-  global pointer-move monitoring, and the one realm-global animation-frame
+- `base/browser`: canonical browser runtime and DOM primitives (including
+  untransformed `clientWidth`/`clientHeight` reads), mouse events, global
+  pointer-move monitoring, and the one realm-global animation-frame
   coordinator. Its strict-next and current-or-next queues share one native rAF,
   sort by descending priority with stable FIFO ties, and return independently
   cancellable registrations.

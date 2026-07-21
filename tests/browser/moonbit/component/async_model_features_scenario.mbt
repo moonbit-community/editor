@@ -313,12 +313,16 @@ fn run_async_model_features_test() -> Unit {
   |> ignore
   let disposed = Ref(false)
   viewer.set_model(Some(async_feature_model(async_feature_source("initial"))))
+  viewer.handle_initialized()
   install_async_feature_controls(
     () => harness.started_json(),
     () => async_feature_state_json(harness, viewer, reports, disposed),
     (call_id, outcome) => harness.release(call_id, outcome),
     value => viewer.set_value(value),
-    value => viewer.set_model(Some(async_feature_model(value))),
+    value => {
+      viewer.set_model(Some(async_feature_model(value)))
+      viewer.handle_initialized()
+    },
     () => {
       match viewer.get_model() {
         Some(model) => model.dispose()

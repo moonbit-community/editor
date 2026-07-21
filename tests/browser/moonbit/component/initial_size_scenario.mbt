@@ -57,12 +57,15 @@ fn run_initial_size_test() -> Unit {
     "initial-size-counting",
     InitialSizeCountingTokenizer::{ calls, },
   )
-  defer registration.dispose()
   let viewer = @viewer.Viewer::create(
     host,
     options=ViewerOptions(soft_wrap=false, font_size=12.0, line_height=18.0),
   )
-  defer viewer.dispose()
+  let rendered_notifications = Ref(0)
+  let rendered_subscription = @viewer_testing.on_did_render_model(
+    viewer.get_id(),
+    _ => rendered_notifications.val += 1,
+  )
   let initial_layout = viewer.get_layout_info()
   ctx.metric_number("initialLayoutWidth", initial_layout.width)
   ctx.metric_number("initialLayoutHeight", initial_layout.height)
@@ -87,7 +90,6 @@ fn run_initial_size_test() -> Unit {
     "initial-size-rev-1",
     initial_size_source(),
   )
-  defer model.dispose()
   ctx.assert_true(
     calls.val == 0,
     "counting tokenizer ran before a visible-range demand",
@@ -109,12 +111,22 @@ fn run_initial_size_test() -> Unit {
     calls.val == 0,
     "set_model published stabilized visible lines during model attach",
   )
+  viewer.handle_initialized()
+  ctx.metric_int("tokenizeCallsAfterInitialized", calls.val)
+  ctx.assert_true(
+    calls.val > 1,
+    "handle_initialized did not publish the measured stabilized token range",
+  )
   initial_size_next_frame(() => {
-    ctx.metric_int("tokenizeCallsAfterInitialized", calls.val)
+    ctx.metric_int("renderedNotifications", rendered_notifications.val)
     ctx.assert_true(
-      calls.val > 1,
-      "the first mounted flush did not publish the measured stabilized token range",
+      rendered_notifications.val > 0,
+      "the first mounted flush did not render the attached model",
     )
+    rendered_subscription.dispose()
+    viewer.dispose()
+    model.dispose()
+    registration.dispose()
     ctx.finish()
   })
 }

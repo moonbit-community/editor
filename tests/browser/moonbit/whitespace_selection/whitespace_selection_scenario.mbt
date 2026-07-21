@@ -43,6 +43,7 @@ fn run_whitespace_selection_test() -> Unit {
         ),
       )
       viewer.set_model(Some(model))
+      viewer.handle_initialized()
       @support.set_timeout(() => poll_selection(ctx, done, 100), 50)
     }
     None => {

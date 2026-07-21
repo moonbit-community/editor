@@ -6,6 +6,10 @@
 priv struct EditorConfigurationState {
   mut options : ViewerOptions
   mut font_info : @config.FontInfo
+  /// The measured container client width. Content width is derived from this
+  /// source fact whenever options, font metrics, or the model digit band move
+  /// the gutter.
+  mut measured_width : Double
   mut measured_content_width : Double
   mut measured_height : Double
   mut model_line_count : Int
@@ -21,6 +25,7 @@ priv struct EditorConfigurationState {
 priv struct EditorConfigurationSnapshot {
   options : ViewerOptions
   font_info : @config.FontInfo
+  width : Double
   content_width : Double
   height : Double
   soft_wrap_column : Int
@@ -31,6 +36,7 @@ priv struct EditorConfigurationSnapshot {
 /// `content_left` loses compensated changes where the line-number band shrinks
 /// as the decorations lane grows.
 priv struct EditorLayoutIdentity {
+  width : Double
   line_numbers_width : Double
   decorations_width : Double
   content_left : Double
@@ -52,10 +58,13 @@ priv struct EditorConfigurationEventSnapshot {
 fn EditorConfigurationState::EditorConfigurationState(
   options : ViewerOptions,
   font_info : @config.FontInfo,
+  initial_width? : Double = 0.0,
+  initial_height? : Double = 0.0,
 ) -> EditorConfigurationState {
-  {
+  let state : EditorConfigurationState = {
     options,
     font_info,
+    measured_width: 0.0,
     measured_content_width: 0.0,
     measured_height: 0.0,
     model_line_count: 0,
@@ -63,6 +72,9 @@ fn EditorConfigurationState::EditorConfigurationState(
     soft_wrap_column: 0,
     measure_requested: false,
   }
+  state.commit_measured_container_size(initial_width, initial_height)
+  state.recompute_soft_wrap_column() |> ignore
+  state
 }
 
 ///|
@@ -72,6 +84,7 @@ fn EditorConfigurationState::snapshot(
   {
     options: self.options,
     font_info: self.font_info,
+    width: self.measured_width,
     content_width: self.measured_content_width,
     height: self.measured_height,
     soft_wrap_column: self.soft_wrap_column,
@@ -103,6 +116,7 @@ fn EditorConfigurationState::replace_options(
   } else {
     let previous = self.options
     self.options = options
+    self.recompute_content_width_from_outer()
     Some(previous)
   }
 }
@@ -118,13 +132,30 @@ fn EditorConfigurationState::commit_font_info(
     false
   } else {
     self.font_info = font_info
+    self.recompute_content_width_from_outer()
     true
   }
 }
 
 ///|
+/// Commits the measured container client box. Monaco retains this outer width
+/// as the source fact and derives the content viewport after the current
+/// line-number/decorations band.
+fn EditorConfigurationState::commit_measured_container_size(
+  self : EditorConfigurationState,
+  width : Double,
+  height : Double,
+) -> Unit {
+  self.measured_width = if width > 0.0 { width } else { 0.0 }
+  self.measured_height = height
+  self.recompute_content_width_from_outer()
+}
+
+///|
 /// Commits the measured content viewport. Width is clamped like the browser
-/// measurement path; height retains the browser-provided value verbatim.
+/// measurement path; height retains the browser-provided value verbatim. This
+/// content-box seam is retained for DOM-free layout tests; browser measurement
+/// commits the outer container size above.
 fn EditorConfigurationState::commit_measured_size(
   self : EditorConfigurationState,
   content_width : Double,
@@ -135,7 +166,25 @@ fn EditorConfigurationState::commit_measured_size(
   } else {
     0.0
   }
+  self.measured_width = self.snapshot().gutter_width(self.model_line_count) +
+    self.measured_content_width
   self.measured_height = height
+}
+
+///|
+/// The content-box setter is a white-box layout seam; retain it in ordinary
+/// library builds even though browser code commits the outer client box.
+let _configuration_content_size_test_seam_anchor : Unit = ignore(
+  EditorConfigurationState::commit_measured_size,
+)
+
+///|
+fn EditorConfigurationState::recompute_content_width_from_outer(
+  self : EditorConfigurationState,
+) -> Unit {
+  let available = self.measured_width -
+    self.snapshot().gutter_width(self.model_line_count)
+  self.measured_content_width = if available > 0.0 { available } else { 0.0 }
 }
 
 ///|
@@ -179,6 +228,7 @@ fn EditorConfigurationState::set_line_counts(
 fn EditorConfigurationState::reset_model_line_counts(
   self : EditorConfigurationState,
 ) -> Unit {
+  self.adjust_content_width_for_model_line_count(0) |> ignore
   self.model_line_count = 0
   self.view_line_count = 0
 }
@@ -200,8 +250,7 @@ fn EditorConfigurationState::adjust_content_width_for_model_line_count(
   if previous_content_left == current_content_left {
     return false
   }
-  let measured_outer_width = previous_content_left + self.measured_content_width
-  let available_content_width = measured_outer_width - current_content_left
+  let available_content_width = self.measured_width - current_content_left
   self.measured_content_width = if available_content_width > 0.0 {
     available_content_width
   } else {
@@ -299,6 +348,7 @@ fn EditorConfigurationSnapshot::layout_identity(
   let line_numbers_width = self.line_numbers_width(model_line_count)
   let decorations_width = self.layout_decorations_width()
   {
+    width: self.width,
     line_numbers_width,
     decorations_width,
     content_left: line_numbers_width + decorations_width,
@@ -380,20 +430,13 @@ fn EditorConfigurationSnapshot::current_line_configuration(
 ///|
 fn EditorConfigurationSnapshot::layout_info(
   self : EditorConfigurationSnapshot,
-  model_line_count : Int?,
+  model_line_count : Int,
 ) -> @config.EditorLayoutInfo {
-  let content_left = match model_line_count {
-    Some(line_count) => self.gutter_width(line_count)
-    None => 0.0
-  }
-  let decorations_width = if content_left > 0.0 {
-    self.layout_decorations_width()
-  } else {
-    0.0
-  }
+  let content_left = self.gutter_width(model_line_count)
+  let decorations_width = self.layout_decorations_width()
   let line_numbers_width = content_left - decorations_width
   {
-    width: content_left + self.content_width,
+    width: self.width,
     height: self.height,
     glyph_margin_left: 0.0,
     glyph_margin_width: 0.0,

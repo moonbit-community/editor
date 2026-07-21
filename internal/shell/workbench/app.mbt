@@ -389,6 +389,9 @@ fn set_workbench_model(
     }
     ResetScroll => viewer.set_model(Some(text_model))
   }
+  // Matches TextFileEditor.setInput: model, restored state/options, then the
+  // separate ICodeEditor.handleInitialized boundary.
+  viewer.handle_initialized()
 }
 
 ///|

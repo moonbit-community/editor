@@ -66,6 +66,12 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   if self.disposed {
     return
   }
+  // Configuration measurement belongs to the mounted editor, not its optional
+  // model/View. Consume it before the no-model branch so `create`/`layout()`
+  // keep layout info current while the placeholder is showing.
+  if self.configuration.consume_measure_request() {
+    self.measure()
+  }
   guard self.model_slot.current is Some(model_data) else {
     // No model → no view; the Viewer-owned placeholder is the whole paint.
     self.render_placeholder()
@@ -74,10 +80,6 @@ fn Viewer::flush_render(self : Viewer) -> Unit {
   guard model_data.browser is Some(browser) else { return }
   let view = browser.view
   let view_model = model_data.view_model
-  // Read phase: measure only when a re-measure was requested.
-  if self.configuration.consume_measure_request() {
-    self.measure(view)
-  }
   // Write phase.
   self.sync_hover_decorations()
   let write_started = @base_browser.monotonic_now_ms()

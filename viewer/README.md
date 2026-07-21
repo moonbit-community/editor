@@ -12,7 +12,13 @@ ownership and lifecycle rules that are not obvious from signatures.
   element must stay mounted and must not receive host-rendered children.
   This is the only public construction path. The package keeps a private
   headless constructor for white-box tests; there is no public two-step mounting
-  API. Headless means no host, placeholder, browser `View`, DOM focus state, or
+  API. Construction synchronously reads the host's `clientWidth`/
+  `clientHeight` (clamped to Monaco's 5px minimum), so options, model attachment,
+  and model-line projection use the measured viewport. The internal ViewLayout
+  is seeded synchronously before it becomes observable or publishes stable
+  visible-token demand. Later `layout()` calls use the same client-box
+  semantics, including while the no-model placeholder is showing. Headless
+  means no host, placeholder, browser `View`, DOM focus state, measurement, or
   root animation frame, although a model and `ViewModel` may still be installed
   with `ModelData.browser=None`; a model installed through the public mounted
   path always has `Some(ModelBrowserData)`.
@@ -73,8 +79,8 @@ ownership and lifecycle rules that are not obvious from signatures.
 
 The API is a readonly subset of Monaco's editor API:
 
-- lifecycle/model/options: `create`, `set_model`, `update_options`, `layout`,
-  `focus`, `dispose`;
+- lifecycle/model/options: `create`, `set_model`, `handle_initialized`,
+  `update_options`, `layout`, `focus`, `dispose`;
 - position, selection, scroll, reveal, geometry, and read queries;
 - model decorations and `EditorDecorationsCollection`;
 - view zones and null-position overlay widgets;
@@ -212,11 +218,21 @@ may mutate decorations, hover state, rendering, or resolution events. Hover
 mouse/async/sync/loading delays are clearable owned handles with a generation
 guard retained for dispatch races.
 
-Grammar tokenization is demand-driven. Initial attach/build telemetry and token
-change telemetry read the passive store only. ViewModel scroll/content changes
-publish unstable visible ranges, while initial setup and
-`restore_view_state(Some(...))` publish one stabilized range after the restored
-scroll is committed. The browser scheduler selects one native-idle or 15 ms
+Grammar tokenization is demand-driven. Model attach/build telemetry and token
+change telemetry read the passive store only; `_attachModel` does not own
+Monaco's separate `handleInitialized` transition. ViewModel scroll/content
+changes publish unstable visible ranges. After `set_model` and any synchronous
+view-state restore or option update, the host calls `handle_initialized`; that
+separate boundary publishes the current model's stabilized visible demand
+without waiting for a render frame. Repeated calls re-stabilize that demand and
+can immediately supersede a pending unstable-range debounce.
+`restore_view_state(Some(...))` also publishes a stabilized range after the
+restored scroll is committed. Model attachment alone, including headless
+attachment, publishes no synthetic zero-viewport stable range. This behavior
+port does not claim full constructor
+arithmetic parity: real DOM `FontInfo` replaces the initial estimate in the
+first mounted read phase, and wrap-column computation retains the documented
+local reduced formula. The browser scheduler selects one native-idle or 15 ms
 timeout fallback implementation, exposes cancellable idle/zero/delay handles,
 and lets the model backend bound and cancel background work. The root consumes
 the ViewModel's typed outgoing token event only after the browser ViewEvent has

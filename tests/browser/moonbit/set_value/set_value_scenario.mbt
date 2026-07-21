@@ -67,6 +67,7 @@ fn run_set_value_test() -> Unit {
   quick_diff.set_original_content(model.uri, Some(original))
   let viewer = @viewer.Viewer::create(host, services~)
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   wait_for_text(ctx, "alpha_document_marker", 80, () => {
     ctx.assert_true(
       @support.query_count(".viewer-host > .monaco-editor") == 1,

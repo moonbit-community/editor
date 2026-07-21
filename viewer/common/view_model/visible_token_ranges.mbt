@@ -24,8 +24,9 @@ fn ViewModel::model_visible_ranges_for_tokenization(
 
 ///|
 /// Publishes the current model-visible ranges as stabilized. Only the
-/// one-time Viewer initialization and explicit view-state restore call this
-/// source method (`viewModelImpl.ts:234-237`).
+/// host's explicit `handle_initialized` boundary and view-state restore call
+/// this source method (`viewModelImpl.ts:234-237`). Model attach itself
+/// deliberately does not own the initialization publication.
 pub fn ViewModel::visible_lines_stabilized(self : ViewModel) -> Unit {
   match self.attached_view {
     Some(attached_view) =>

@@ -9,6 +9,10 @@ import {
 // Values
 pub fn device_pixel_ratio() -> Double
 
+pub fn element_client_height(@dom.Element) -> Double
+
+pub fn element_client_width(@dom.Element) -> Double
+
 pub fn element_contains(@dom.Element, @dom.Element) -> Bool
 
 pub fn element_contains_active_element(@dom.Element) -> Bool

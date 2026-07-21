@@ -346,6 +346,7 @@ fn BrowserGeometryFixture::new(
   |> ignore
   let model = browser_geometry_model(name)
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   let fixture : BrowserGeometryFixture = {
     name,
     viewer,

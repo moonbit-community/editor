@@ -232,6 +232,7 @@ fn run_markdown_comments_test() -> Unit {
     options=ViewerOptions(soft_wrap=true, smooth_scrolling=false),
   )
   viewer.set_model(Some(primary))
+  viewer.handle_initialized()
   guard viewer.get_dom_node() is Some(root) else {
     ctx.fail("missing mounted Viewer root")
     ctx.finish()
@@ -253,8 +254,14 @@ fn run_markdown_comments_test() -> Unit {
     () => viewer.set_selection(Selection(Position(3, 1), Position(3, 17))),
     () => viewer.focus(),
     () => viewer.set_model(None),
-    () => viewer.set_model(Some(replacement)),
-    () => viewer.set_model(Some(primary)),
+    () => {
+      viewer.set_model(Some(replacement))
+      viewer.handle_initialized()
+    },
+    () => {
+      viewer.set_model(Some(primary))
+      viewer.handle_initialized()
+    },
     () => viewer.set_scroll_top(viewer.get_scroll_height()),
     () => viewer.dispose(),
   )

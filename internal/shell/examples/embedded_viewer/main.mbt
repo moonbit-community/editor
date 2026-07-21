@@ -275,7 +275,11 @@ fn update_embed(
 fn open_embed_document_cmd(uri : @base_common.Uri) -> @rabbita.Cmd {
   @cmd.custom_cmd(_ => {
     match workspace_backend.model(uri) {
-      Some(model) => embed_viewer().set_model(Some(model))
+      Some(model) => {
+        let viewer = embed_viewer()
+        viewer.set_model(Some(model))
+        viewer.handle_initialized()
+      }
       None => dispatch_embed_msg(ViewerFailed)
     }
   })

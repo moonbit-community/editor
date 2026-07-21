@@ -16,6 +16,14 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     Mounted(mounted) =>
       mounted.container.set_attribute("data-mode-id", model.language_id)
   }
+  // Monaco updates the configuration's model line-count environment before it
+  // constructs ViewModel. Preserve the already measured outer client width,
+  // then derive the new gutter/content width and wrap column synchronously.
+  let model_line_count = model.snapshot.line_count()
+  self.configuration.adjust_content_width_for_model_line_count(model_line_count)
+  |> ignore
+  self.configuration.set_line_counts(model_line_count, 0)
+  self.configuration.recompute_soft_wrap_column() |> ignore
   // The decoration-change subscription attaches before the marker service
   // seeds the model so the seeding delta is observed too.
   listeners_to_remove.push(
@@ -190,9 +198,6 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
   })
   self.emit_view_event(ViewFlushed)
   self.apply_view_model_layout(view_model)
-  // `CodeEditorWidget.handleInitialized` owns the ordinary one-time stable
-  // visible-range publication; generic renders never repeat it.
-  view_model.visible_lines_stabilized()
   let build_finished = @base_browser.monotonic_now_ms()
   self.emit_view_model_built({
     model,

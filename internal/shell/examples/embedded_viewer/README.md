@@ -8,7 +8,8 @@ or WebSocket participates.
 
 - Startup registers the MoonBit tokenizer in the default `Languages` registry.
 - `FileTree.on_open` asks the in-memory host for a new
-  `viewer/common/model.TextModel` and calls `Viewer::set_model`.
+  `viewer/common/model.TextModel`, calls `Viewer::set_model`, then invokes the
+  separate `Viewer::handle_initialized` boundary after synchronous model setup.
 - `Viewer::on_did_change_model` captures the attached URI and schedules one
   native animation frame after the Viewer has queued its own DOM flush. The
   callback rechecks the current model URI, drops stale swaps, then drives

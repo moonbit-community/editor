@@ -352,8 +352,10 @@ fn Viewer::get_vertical_offset_after_position(
 /// model.
 pub fn Viewer::get_layout_info(self : Viewer) -> @config.EditorLayoutInfo {
   let model_line_count = match self.get_model() {
-    Some(model) => Some(model.snapshot.line_count())
-    None => None
+    Some(model) => model.snapshot.line_count()
+    // EditorConfiguration retains its one-digit model environment before any
+    // model is attached; `digit_count(0)` supplies the same minimum band.
+    None => 0
   }
   self.configuration.snapshot().layout_info(model_line_count)
 }

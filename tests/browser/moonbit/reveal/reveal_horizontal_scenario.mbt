@@ -41,6 +41,7 @@ fn run_reveal_horizontal_test() -> Unit {
       })
       |> ignore
       viewer.set_model(Some(model))
+      viewer.handle_initialized()
       // Give the first render time to measure the char width, content width, and
       // viewport box, then reveal a position below and to the right of the
       // viewport and poll until the deferred horizontal scroll lands.

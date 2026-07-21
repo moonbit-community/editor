@@ -83,6 +83,7 @@ fn run_scroll_perf_test() -> Unit {
   let zone = @rdom.document().create_element("div")
   zone.set_inner_html("scroll performance view zone")
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   viewer.change_view_zones(accessor => {
     accessor.add_zone(@viewer.view_zone(5, zone, height_in_px=18.0)) |> ignore
   })
@@ -93,7 +94,10 @@ fn run_scroll_perf_test() -> Unit {
     () => viewer.get_scroll_top(),
     () => viewer.get_scroll_left(),
     () => public_scroll_events.val,
-    () => viewer.set_model(Some(replacement)),
+    () => {
+      viewer.set_model(Some(replacement))
+      viewer.handle_initialized()
+    },
     () => viewer.set_model(None),
     () => viewer.dispose(),
     line => {

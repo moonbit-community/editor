@@ -187,24 +187,42 @@ fn Viewer::apply_font_info_to_view(self : Viewer, view : @view.View) -> Unit {
 }
 
 ///|
-/// Read phase of the render loop: the view box, the measured font, and
+/// Monaco `ElementSizeObserver.measureReferenceDomElement`: read the host's
+/// untransformed client box and clamp both axes to the source's 5px minimum.
+/// This helper is also used before `Viewer` construction publishes its
+/// configuration, so it deliberately has no `Viewer` dependency.
+fn read_container_size(container : @rdom.Element) -> (Double, Double) {
+  let width = @base_browser.element_client_width(container)
+  let height = @base_browser.element_client_height(container)
+  (
+    if width > 5.0 {
+      width
+    } else {
+      5.0
+    },
+    if height > 5.0 {
+      height
+    } else {
+      5.0
+    },
+  )
+}
+
+///|
+/// Read phase of the render loop: the host client box, the measured font, and
 /// the derived gutter width feed the layout model and every later hit
 /// test. DOM scroll offsets are treated only as browser reveal deltas;
 /// `ViewLayout` owns the editor scroll truth.
-fn Viewer::measure(self : Viewer, view : @view.View) -> Unit {
-  let rect = view.root.get_bounding_client_rect()
-  let previous_configuration = self.configuration.event_snapshot()
-  let model_line_count = match self.get_model() {
-    Some(model) => model.snapshot.line_count()
-    None => 0
+fn Viewer::measure(self : Viewer) -> Unit {
+  let container = match self.mount {
+    Headless => return
+    Mounted(mounted) => mounted.container
   }
+  let (width, height) = read_container_size(container)
+  let previous_configuration = self.configuration.event_snapshot()
   let event_batch = self.begin_view_event_batch()
   self.refresh_font_info()
-  let gutter_width = self.configuration
-    .snapshot()
-    .gutter_width(model_line_count)
-  let content_width = rect.get_width() - gutter_width
-  self.configuration.commit_measured_size(content_width, rect.get_height())
+  self.configuration.commit_measured_container_size(width, height)
   let measured_configuration = self.configuration.snapshot()
   match self.get_view_model() {
     Some(view_model) =>

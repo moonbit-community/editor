@@ -140,6 +140,7 @@ fn run_render_invalidation_test() -> Unit {
     ),
   )
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   viewer.set_position(Position(1, 21))
   viewer.delta_decorations([], [
     {

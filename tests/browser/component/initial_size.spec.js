@@ -4,7 +4,7 @@ import {
   installMoonBitReporter,
 } from '../support/moonbit_reporter.js';
 
-test('seeds layout before attach and stabilizes on the first mounted flush', async ({
+test('seeds layout before attach and stabilizes at explicit initialization', async ({
   page,
 }, testInfo) => {
   const reporter = await installMoonBitReporter(page);

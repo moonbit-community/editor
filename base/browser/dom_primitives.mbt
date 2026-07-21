@@ -1,4 +1,16 @@
 ///|
+/// Reads the element's inner layout width, including padding but excluding
+/// borders and scrollbars. This is the `clientWidth` used by Monaco's
+/// `ElementSizeObserver`; unlike a bounding rect it ignores CSS transforms.
+pub extern "js" fn element_client_width(element : @rdom.Element) -> Double =
+  #| (element) => element?.clientWidth ?? 0
+
+///|
+/// Reads the element's inner layout height with `clientHeight` semantics.
+pub extern "js" fn element_client_height(element : @rdom.Element) -> Double =
+  #| (element) => element?.clientHeight ?? 0
+
+///|
 /// Reads the element's unscaled layout width. This intentionally remains
 /// distinct from `get_bounding_client_rect`, whose dimensions include CSS
 /// transforms.

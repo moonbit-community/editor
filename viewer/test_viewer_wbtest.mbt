@@ -77,6 +77,8 @@ extern "js" fn install_mounted_test_browser() -> Unit =
   #|       this.scrollLeft = 0;
   #|       this.scrollWidth = 1000;
   #|       this.scrollHeight = 1000;
+  #|       this.clientWidth = 100;
+  #|       this.clientHeight = 100;
   #|     }
   #|     setAttribute(name, value) { this.attributes.set(name, String(value)); }
   #|     getAttribute(name) { return this.attributes.get(name) ?? ""; }
@@ -127,6 +129,7 @@ extern "js" fn install_mounted_test_browser() -> Unit =
   #|   const ownerDocument = new EventTarget();
   #|   ownerDocument.nodeType = 9;
   #|   ownerDocument.defaultView = globalThis;
+  #|   ownerDocument.body = new MountedTestElement("body", ownerDocument);
   #|   ownerDocument.createElement = (tag) =>
   #|     new MountedTestElement(tag, ownerDocument);
   #|   ownerDocument.createTextNode = (value) => ({
@@ -233,6 +236,17 @@ extern "js" fn mounted_test_frame_count() -> Int =
 ///|
 extern "js" fn mounted_test_child_count(element : @rdom.Element) -> Int =
   #| (element) => element.childNodes.length
+
+///|
+extern "js" fn set_mounted_test_client_size(
+  element : @rdom.Element,
+  width : Double,
+  height : Double,
+) -> Unit =
+  #| (element, width, height) => {
+  #|   element.clientWidth = width;
+  #|   element.clientHeight = height;
+  #| }
 
 ///|
 extern "js" fn same_mounted_test_element(

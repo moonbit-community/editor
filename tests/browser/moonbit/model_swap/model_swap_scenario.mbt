@@ -118,6 +118,7 @@ fn run_model_swap_test() -> Unit {
     "unknown-swap-overlay", unknown_overlay_node,
   )
   viewer.set_model(Some(model_a))
+  viewer.handle_initialized()
   viewer.add_overlay_widget(stale_overlay)
   viewer.add_overlay_widget(current_overlay)
   ctx.assert_true(
@@ -172,6 +173,7 @@ fn run_model_swap_test() -> Unit {
     install_model_swap_continue("model-a", () => {
       // Swap: the whole view is rebuilt (Monaco's detach-then-attach).
       viewer.set_model(Some(model_b))
+      viewer.handle_initialized()
       model_a.dispose()
       wait_for_text(ctx, "beta_document_marker", 80, () => {
         ctx.assert_true(
@@ -230,6 +232,7 @@ fn run_model_swap_test() -> Unit {
             // preceding None transition already covered ordinary placeholder
             // restoration). Queue a root render and dispose before it can run.
             viewer.set_model(Some(model_c))
+            viewer.handle_initialized()
             wait_for_text(ctx, "gamma_document_marker", 80, () => {
               ctx.assert_true(
                 @support.query_count(".swap-overlay-second") == 1,

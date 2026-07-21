@@ -185,6 +185,7 @@ fn run_cursor_input_events_test() -> Unit {
   })
   |> ignore
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   // Keep one caller-owned, focusable ViewZone below the fixture's last model
   // line. It does not perturb the visible cursor scenarios, while real DOM
   // Selection/copy and bubbling key events can exercise the editor-input

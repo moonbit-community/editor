@@ -124,6 +124,7 @@ fn run_viewer_api_test() -> Unit {
       })
       |> ignore
       viewer.set_model(Some(model))
+      viewer.handle_initialized()
       set_component_diagnostics(markers, model)
       let zone = @rdom.document().create_element("div")
       zone.set_attribute("class", "component-zone host-zone-class")

@@ -74,7 +74,11 @@ test "digit-band transition preserves outer width and reset stays model-scoped" 
   assert_eq(state.model_line_count, 0)
   assert_eq(state.view_line_count, 0)
   assert_true(state.snapshot().options == retained.options)
-  assert_eq(state.snapshot().content_width, retained.content_width)
+  assert_eq(state.snapshot().width, retained.width)
+  assert_eq(
+    state.snapshot().content_width,
+    retained.width - state.snapshot().gutter_width(0),
+  )
   assert_true(state.measure_requested)
 }
 

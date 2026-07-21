@@ -375,9 +375,10 @@ test('token ranges invalidate token consumers without touching content widgets',
     ),
   );
   // Provider replacement first invalidates the old full range, then the
-  // bounded tokenizer publishes its stored grammar tokens. Both frames stay
-  // token-scoped and the probe proves the sequence settles without a third.
-  expect(changed.frames).toBe(2);
+  // already-stabilized visible demand synchronously publishes its bounded
+  // grammar tokens. Both token-scoped invalidations coalesce into one frame;
+  // no redundant second DOM pass is needed.
+  expect(changed.frames).toBe(1);
   expect(changed.targets).toContain('viewLine');
   expect(changed.writes).toContain('cursor');
   expect(changed.writes).not.toContain('contentWidget');

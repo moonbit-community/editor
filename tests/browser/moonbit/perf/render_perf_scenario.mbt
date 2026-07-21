@@ -99,6 +99,7 @@ fn run_next_sample(
       ),
     ),
   )
+  viewer.handle_initialized()
 }
 
 ///|

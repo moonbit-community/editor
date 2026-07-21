@@ -56,6 +56,7 @@ fn run_quick_diff_test() -> Unit {
   )
   let viewer = @viewer.Viewer::create(host, services~)
   viewer.set_model(Some(model))
+  viewer.handle_initialized()
   wait_for_text(ctx, "bravo_changed", 80)
 }
 

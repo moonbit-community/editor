@@ -73,6 +73,7 @@ pub fn Viewer::get_value(Self) -> String
 pub fn Viewer::get_visible_column_from_position(Self, @common.Position) -> Int
 pub fn Viewer::get_visible_ranges(Self) -> Array[@common.Range]
 pub fn Viewer::get_width_of_line(Self, Int) -> Double
+pub fn Viewer::handle_initialized(Self) -> Unit
 pub fn Viewer::has_text_focus(Self) -> Bool
 pub fn Viewer::has_widget_focus(Self) -> Bool
 pub fn Viewer::layout(Self) -> Unit

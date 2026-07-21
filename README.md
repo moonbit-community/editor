@@ -1,6 +1,7 @@
 # Readonly MoonBit Viewer
 
-This repository has two main parts:
+The source checkout has two main parts. The published Mooncakes package
+contains the reusable viewer; the reference shell is repository-only:
 
 - `viewer`: the reusable MoonBit readonly viewer. It is Monaco-shaped in API
   and behavior where that helps embedders, but it stays MoonBit-owned and does
@@ -13,7 +14,13 @@ Monaco/VS Code is the primary design reference. CodeMirror is a secondary
 reference when its simpler state/view split is useful. Both submodules are
 reference-only.
 
-## Quick Start
+## Installation
+
+```sh
+moon add moonbit-community/editor@0.2.0
+```
+
+## Repository Development
 
 ```sh
 npm install

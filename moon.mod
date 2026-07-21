@@ -1,6 +1,6 @@
 name = "moonbit-community/editor"
 
-version = "0.1.1"
+version = "0.2.0"
 
 readme = "README.md"
 
@@ -31,6 +31,7 @@ options(
     "internal/shell",
     "tests",
     "scripts",
+    "internal/viewer/ui/scrollbar/mouse_wheel_classifier_reference_wbtest.mbt",
     "AGENTS.md",
     "justfile",
     "package.json",

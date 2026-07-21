@@ -12,9 +12,41 @@ Current behavior and ownership live in `docs/architecture.md`, `docs/harness.md`
 `docs/quality.md`, package READMEs, generated interfaces, source, and tests.
 Historical plans are evidence of how a change landed, not current contracts.
 
-As of 2026-07-20 there are no active checked-in execution plans.
+As of 2026-07-21 there are no active checked-in execution plans.
 
 ## Completed Work
+
+### Diago Markdown code-block rendering
+
+The shared multi-target Markdown boundary now recognizes only the exact
+lowercase `diago` fenced-info id and synchronously compiles it through
+`Milky2018/diago@0.3.0` with explicit SVG output before any caller code-block
+override. Successful output is wrapped in
+`.moonbit-viewer-markdown-diagram`; every Diago error rejoins the existing
+tokenized or cmark code fallback. Unlabelled, indented, differently cased,
+unknown, `uml`, and `plantuml` blocks remain ordinary code, and
+`has_code_block` remains true on success and failure.
+
+Hover, agent-feedback, and whole-line Markdown-comment styles constrain the
+SVG to its content width with scrolling. The direct public-Viewer component
+scenario proves inline SVG, width and overflow, positive geometry, measured
+ViewZone height, source-hidden/model-source truth, flush and swap behavior,
+input, and disposal. No renderer registry, public option or API, asynchronous
+placeholder, worker, SVG security policy, or UML adapter was added.
+
+The selected direct synchronous root facade increased the unminified editor
+bundle from 5,030,179 to 22,704,766 bytes and its gzip size from 552,524 to
+3,316,248 bytes. Inspection found the expected Diago parser, layout, SVG, and
+font payload rather than a duplicate import or build failure; lazy loading and
+bundle splitting remain outside this completed scope.
+
+Final validation passed 11 focused JS and 11 focused native Markdown tests,
+1,536 JS tests, 1,052 native tests, all 64 component browser tests, all 96
+Playwright tests, `moon info --target all`, `just check`, `just test`,
+`just build`, `just test-browser`, and `git diff --check`. The generated
+Markdown interface had no public change.
+
+Former artifact: `markdown-diagram-code-block-rendering.md`.
 
 ### Whole-line Markdown comment rendering
 

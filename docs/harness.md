@@ -76,8 +76,9 @@ The whole-line Markdown proof is the direct public-Viewer component scenario
 `tests/browser/component/markdown_comments.spec.js`. It does not route through
 the reference shell. The scenario owns its language configuration and models,
 then exposes compact evidence for projected source replacement,
-tokenized Markdown DOM, measured/offscreen ViewZone geometry, native
-link/selection input, resize/image updates, model flush/swap, and disposal.
+tokenized Markdown DOM, built-in Diago SVG layout/overflow, measured/offscreen
+ViewZone geometry, native link/selection input, resize/image updates, model
+flush/swap, and disposal.
 
 The corresponding real-shell proof is
 `tests/browser/smoke/viewer.spec.js`: it opens the fixture through the native

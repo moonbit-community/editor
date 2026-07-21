@@ -124,7 +124,9 @@ js-only. Concrete browser runtime packages live below the module-private
   not an external API.
 - `internal/viewer/markdown` is the multi-target safe-cmark boundary. It owns
   plaintext fallback, a cmark-independent code-block value, conversion facts,
-  and the shared editor-token HTML override;
+  the shared editor-token HTML override, and the private synchronous adapter
+  that renders exact lowercase `diago` fences through `Milky2018/diago` while
+  returning failures and every other code block to the existing fallback;
   `internal/viewer/browser/markdown` adds JS-only DOM retention, URI/media
   policy, activation listeners, size notification, and per-target disposal.
   Browser contributions consume these packages instead of owning private

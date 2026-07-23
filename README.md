@@ -17,7 +17,7 @@ reference-only.
 ## Installation
 
 ```sh
-moon add moonbit-community/editor@0.2.0
+moon add moonbit-community/editor@0.2.1
 ```
 
 ## Repository Development

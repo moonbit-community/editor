@@ -10,6 +10,7 @@
 /// All methods are plain calls (the host wraps them in its own effect
 /// system if it has one). The host must never render its own children
 /// into the element passed to `attach`.
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct Viewer {
   priv services : ViewerServices
   /// Services created by an omitted constructor argument belong to this
@@ -119,6 +120,7 @@ priv struct HorizontalRevealRangeRequest {
 }
 
 ///|
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct ViewerViewState {
   priv scroll_top : Double
   priv scroll_left : Double

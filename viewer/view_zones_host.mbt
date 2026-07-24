@@ -7,6 +7,7 @@
 /// Constructs the complete mutable ViewZone delegate through the public root
 /// package. Browser scenarios therefore need only `@viewer.view_zone(...)`;
 /// the internal browser ViewPart package stays an implementation detail.
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub fn view_zone(
   after_line_number : Int,
   dom_node : @rdom.Element,

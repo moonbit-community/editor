@@ -7,6 +7,7 @@
 /// mirroring Monaco's `HoverParticipantRegistry`. `Viewer::request_hover`
 /// projects these services into a `@hover.HoverParticipantServices` when it
 /// builds a hover computer.
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct ViewerServices {
   priv languages : @languages.LanguageHandle
   priv marker_decorations : @markers.MarkerDecorationsHandle

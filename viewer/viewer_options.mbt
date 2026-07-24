@@ -1,5 +1,6 @@
 ///|
 /// Runtime viewer options that affect view-model construction and layout.
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct ViewerOptions {
   priv soft_wrap : Bool
   priv tab_size : Int

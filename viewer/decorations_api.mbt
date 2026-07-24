@@ -81,9 +81,10 @@ pub fn Viewer::get_decorations_in_range(
 
 ///|
 /// Monaco's `IEditorDecorationsCollection` (`editorCommon.ts:544`), the
-/// non-deprecated decoration entry point: an id-managing wrapper over
+/// source API's non-deprecated decoration entry point: an id-managing wrapper over
 /// `delta_decorations` bound to one viewer. `onDidChange` and `has` are not
 /// ported (no consumer; the model-decoration event seam stays internal).
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct EditorDecorationsCollection {
   priv viewer : Viewer
   priv mut decoration_ids : Array[String]

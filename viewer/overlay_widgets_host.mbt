@@ -5,6 +5,7 @@
 ///|
 /// Constructs an unmanaged null-position overlay widget. The caller retains
 /// ownership of the supplied DOM node.
+#deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub fn overlay_widget(
   widget_id : String,
   node : @rdom.Element,

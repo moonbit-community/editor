@@ -120,7 +120,7 @@ fn push_token(
 
 ///|
 fn normal_step(view : StringView, top : Char) -> (StepOp, StringView) {
-  lexscan view with longest {
+  lexmatch view with longest {
     (re"^[ \t]+", after=rest) => (Blank, rest)
     (re"^//.*", after=rest) => (Emit(Comment), rest)
     // The empty block comment first: longest-match would otherwise read
@@ -169,7 +169,7 @@ fn comment_step(
   view : StringView,
   tag : @syntax.HighlightTag,
 ) -> (StepOp, StringView) {
-  lexscan view with longest {
+  lexmatch view with longest {
     (re"^\*/", after=rest) => (Pop(tag), rest)
     (re"^[^*]+", after=rest) => (Emit(tag), rest)
     (re"^\*", after=rest) => (Emit(tag), rest)
@@ -179,7 +179,7 @@ fn comment_step(
 
 ///|
 fn template_step(view : StringView) -> (StepOp, StringView) {
-  lexscan view with longest {
+  lexmatch view with longest {
     (re"^\$[{]", after=rest) => (Push(StringEscape, 'i'), rest)
     (re"^\\.", after=rest) => (Emit(StringEscape), rest)
     (re"^`", after=rest) => (Pop(String), rest)

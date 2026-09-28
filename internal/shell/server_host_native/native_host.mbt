@@ -425,6 +425,9 @@ async fn handle_protocol_connection(
   let session = sessions.attach(outbox)
   defer sessions.detach(session)
   @async.with_task_group() <| group => {
+    // Runs on error and on cancellation too: `catch` below no longer captures
+    // cancellation (moonbitlang/async >= 0.22).
+    defer remote_server.dispose_watches()
     group.spawn_bg(no_wait=true, allow_failure=true, () => {
       for ;; {
         ws.send_text(outbox.get())
@@ -448,7 +451,6 @@ async fn handle_protocol_connection(
       @websocket.ConnectionClosed(_, _) => ()
       _ => ()
     }
-    remote_server.dispose_watches()
   }
 }
 

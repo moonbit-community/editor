@@ -11,7 +11,7 @@ pub fn OverlayWidget::unmanaged(
   id : String,
   dom_node : @rdom.Element,
 ) -> OverlayWidget {
-  { id, dom_node }
+  { id, dom_node, }
 }
 
 ///|

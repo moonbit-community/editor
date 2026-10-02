@@ -169,7 +169,7 @@ pub fn normalize_markdown_comment_blocks(
       range.end_line_number_exclusive > model_line_count + 1 {
       warn_invalid_range(log_service, range)
     } else {
-      indexed.push({ block, original_index: index })
+      indexed.push({ block, original_index: index, })
     }
   }
   indexed.sort_by((left, right) => {

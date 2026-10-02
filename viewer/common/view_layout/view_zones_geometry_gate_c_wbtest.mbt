@@ -52,7 +52,7 @@ test "ViewLayout big-number rail is exact at 499999 500000 500001" {
   for case in cases {
     let (offset, expected_delta, expected_relative) = case
     let layout = rail_layout(offset)
-    let window : LineWindow = { start: 1, end: 2 }
+    let window : LineWindow = { start: 1, end: 2, }
     assert_eq(layout.big_numbers_delta_for_window(window), expected_delta)
     assert_eq(
       layout.relative_vertical_offset_for_line(window, 1),

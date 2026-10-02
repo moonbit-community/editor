@@ -13,7 +13,7 @@ pub fn CursorState::CursorState(
   model_state : SingleCursorState,
   view_state : SingleCursorState,
 ) -> CursorState {
-  { model_state, view_state }
+  { model_state, view_state, }
 }
 
 ///|
@@ -28,7 +28,7 @@ pub struct PartialModelCursorState {
 pub fn PartialModelCursorState::PartialModelCursorState(
   model_state : SingleCursorState,
 ) -> PartialModelCursorState {
-  { model_state, view_state: None }
+  { model_state, view_state: None, }
 }
 
 ///|
@@ -43,7 +43,7 @@ pub struct PartialViewCursorState {
 pub fn PartialViewCursorState::PartialViewCursorState(
   view_state : SingleCursorState,
 ) -> PartialViewCursorState {
-  { model_state: None, view_state }
+  { model_state: None, view_state, }
 }
 
 ///|

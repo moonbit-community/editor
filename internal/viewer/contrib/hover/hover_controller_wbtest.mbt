@@ -264,7 +264,7 @@ test "typed operation start covers delayed and every immediate state branch" {
   assert_true(immediate_idle is HoverOperationRunAsyncAndSync(7))
   assert_true(idle_with_options.state is HoverOpSecondWait)
   assert_true(idle_with_options.options == Some(immediate_options))
-  let second_wait = { ..first_wait, state: HoverOpSecondWait }
+  let second_wait = { ..first_wait, state: HoverOpSecondWait, }
   let (immediate_second, second_with_options) = second_wait.start(
     HoverStartImmediate,
     immediate_options,
@@ -351,13 +351,13 @@ test "operation result snapshots wait, complete, and loading facts" {
     }
     None => fail("expected an incomplete result")
   }
-  assert_true({ ..waiting, state: HoverOpFirstWait }.result() is None)
-  assert_true({ ..waiting, state: HoverOpSecondWait }.result() is None)
-  match { ..waiting, state: HoverOpWaitingForAsyncShowingLoading }.result() {
+  assert_true({ ..waiting, state: HoverOpFirstWait, }.result() is None)
+  assert_true({ ..waiting, state: HoverOpSecondWait, }.result() is None)
+  match { ..waiting, state: HoverOpWaitingForAsyncShowingLoading, }.result() {
     Some(result) => assert_true(result.has_loading_message)
     None => fail("expected a loading result")
   }
-  match { ..waiting, state: HoverOpIdle, async_done: true }.result() {
+  match { ..waiting, state: HoverOpIdle, async_done: true, }.result() {
     Some(result) => assert_true(result.is_complete)
     None => fail("expected a complete result")
   }

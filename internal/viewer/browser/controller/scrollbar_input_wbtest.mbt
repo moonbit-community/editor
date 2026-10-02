@@ -265,8 +265,13 @@ fn prepare_scrollbar_input_test_scrollable(
   )
   scrollable.content.set_scroll_top(scroll_top)
   scrollable.update_from_model(
-    { width: 100.0, scroll_width: 1000.0, height: 100.0, scroll_height: 1000.0 },
-    { scroll_left: 0.0, scroll_top },
+    {
+      width: 100.0,
+      scroll_width: 1000.0,
+      height: 100.0,
+      scroll_height: 1000.0,
+    },
+    { scroll_left: 0.0, scroll_top, },
   )
 }
 
@@ -339,8 +344,13 @@ test "AbstractScrollbar gesture owns listeners, drag state, and reset branches" 
     5000.0,
   )
   hover_scrollable.update_from_model(
-    { width: 100.0, scroll_width: 1000.0, height: 250.0, scroll_height: 5000.0 },
-    { scroll_left: 0.0, scroll_top: 200.0 },
+    {
+      width: 100.0,
+      scroll_width: 1000.0,
+      height: 250.0,
+      scroll_height: 5000.0,
+    },
+    { scroll_left: 0.0, scroll_top: 200.0, },
   )
   assert_eq(
     scrollbar_input_test_dispatch_mouse(slider, "pointermove", 0, 1, 3, 10, 30),

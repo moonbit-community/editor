@@ -208,7 +208,7 @@ fn visible_rows(root : TreeNode?) -> Array[TreeRow] {
 
 ///|
 fn push_rows(rows : Array[TreeRow], node : TreeNode, depth : Int) -> Unit {
-  rows.push({ node, depth })
+  rows.push({ node, depth, })
   if node.kind == Directory && node.expanded {
     match node.children {
       Some(children) =>

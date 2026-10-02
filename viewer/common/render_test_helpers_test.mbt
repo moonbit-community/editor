@@ -38,7 +38,7 @@ fn view_model_for(doc : @model.TextSnapshot) -> @view_model.ViewModel {
   // before constructing lines, then release the temporary attachment.
   let attached_view = model.on_before_attached()
   attached_view.set_visible_lines(
-    [{ start_line_number: 1, end_line_number: model.get_line_count() }],
+    [{ start_line_number: 1, end_line_number: model.get_line_count(), }],
     true,
   )
   model.on_before_detached(attached_view)

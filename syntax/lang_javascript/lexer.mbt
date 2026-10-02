@@ -19,7 +19,7 @@ pub struct JavascriptTokenizer {}
 #alias(new, deprecated)
 #warnings("-unnecessary_annotation")
 pub fn JavascriptTokenizer::JavascriptTokenizer() -> JavascriptTokenizer {
-  JavascriptTokenizer::{  }
+  JavascriptTokenizer::{ }
 }
 
 ///|
@@ -111,11 +111,11 @@ fn push_token(
   if tokens.length() > 0 {
     let last = tokens[tokens.length() - 1]
     if last.tag == tag && last.end == start {
-      tokens[tokens.length() - 1] = { start: last.start, end, tag }
+      tokens[tokens.length() - 1] = { start: last.start, end, tag, }
       return
     }
   }
-  tokens.push({ start, end, tag })
+  tokens.push({ start, end, tag, })
 }
 
 ///|

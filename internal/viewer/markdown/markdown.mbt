@@ -94,7 +94,7 @@ fn markdown_conversion_result(
         has_code_block: false,
       }
   }
-  { html, has_code_block: saw_code_block.val }
+  { html, has_code_block: saw_code_block.val, }
 }
 
 ///|

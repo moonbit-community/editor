@@ -276,7 +276,7 @@ test "Decorations leaves every caller handle live after bundle disposal" {
   )
   backings.languages.set_language_configuration("root-test", {
     comments: None,
-    folding_rules: Some({ off_side: true, markers: None }),
+    folding_rules: Some({ off_side: true, markers: None, }),
   })
   guard language_handle.get_language_configuration("root-test").folding_rules
     is Some(folding_rules) else {

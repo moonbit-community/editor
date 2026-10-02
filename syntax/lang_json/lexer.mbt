@@ -10,7 +10,7 @@ pub struct JsonTokenizer {}
 #alias(new, deprecated)
 #warnings("-unnecessary_annotation")
 pub fn JsonTokenizer::JsonTokenizer() -> JsonTokenizer {
-  JsonTokenizer::{  }
+  JsonTokenizer::{ }
 }
 
 ///|
@@ -39,13 +39,13 @@ pub impl @syntax.LineTokenizer for JsonTokenizer with fn tokenize_line(
     let consumed = view.length() - rest.length()
     match op {
       Blank => ()
-      Emit(tag) => tokens.push({ start: at, end: at + consumed, tag })
+      Emit(tag) => tokens.push({ start: at, end: at + consumed, tag, })
       EnterComment => {
-        tokens.push({ start: at, end: at + consumed, tag: Comment })
+        tokens.push({ start: at, end: at + consumed, tag: Comment, })
         in_comment = true
       }
       LeaveComment => {
-        tokens.push({ start: at, end: at + consumed, tag: Comment })
+        tokens.push({ start: at, end: at + consumed, tag: Comment, })
         in_comment = false
       }
     }

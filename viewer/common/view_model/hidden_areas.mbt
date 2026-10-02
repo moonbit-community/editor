@@ -19,7 +19,7 @@ priv struct HiddenAreasModel {
 
 ///|
 fn HiddenAreasModel::new() -> HiddenAreasModel {
-  { hidden_areas: Map([]), should_recompute: false, ranges: [] }
+  { hidden_areas: Map([]), should_recompute: false, ranges: [], }
 }
 
 ///|
@@ -192,7 +192,7 @@ fn ViewModel::capture_stable_viewport(self : ViewModel) -> StableViewport {
       start_line_delta,
     }
   }
-  { viewport_start_model_position: None, start_line_delta: 0 }
+  { viewport_start_model_position: None, start_line_delta: 0, }
 }
 
 ///|

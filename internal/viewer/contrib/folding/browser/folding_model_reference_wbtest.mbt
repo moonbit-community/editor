@@ -108,7 +108,7 @@ fn TestDecorationProvider::get_decorations(
 ///|
 /// The suite's exact `//#region` markers (`/^\/\/#region$/`).
 fn slash_region_markers() -> @languages.FoldingMarkers {
-  { start: line => line == "//#region", end: line => line == "//#endregion" }
+  { start: line => line == "//#region", end: line => line == "//#endregion", }
 }
 
 ///|
@@ -223,7 +223,7 @@ fn test_folding_model(
   let text_model = folding_test_model(lines)
   let folding_model = FoldingModel(
     text_model,
-    TestDecorationProvider::{ model: text_model }.access(),
+    TestDecorationProvider::{ model: text_model, }.access(),
   )
   let ranges = compute_ranges(text_model, false, markers?)
   folding_model.update(ranges)
@@ -258,7 +258,7 @@ test "collapse" {
   ])
   let folding_model = FoldingModel(
     text_model,
-    TestDecorationProvider::{ model: text_model }.access(),
+    TestDecorationProvider::{ model: text_model, }.access(),
   )
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)
@@ -665,7 +665,7 @@ test "folding decoration" {
     "class A {", "  void foo() {", "    if (true) {", "      hoo();", "    }", "  }",
     "}",
   ])
-  let provider = TestDecorationProvider::{ model: text_model }
+  let provider = TestDecorationProvider::{ model: text_model, }
   let folding_model = FoldingModel(text_model, provider.access())
   let ranges = compute_ranges(text_model, false)
   folding_model.update(ranges)

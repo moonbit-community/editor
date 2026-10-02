@@ -148,8 +148,13 @@ test "View disposes ViewParts before its lifetime store exactly once" {
   )
   let scrollable = view.editor_scrollbar.scrollable()
   scrollable.update_from_model(
-    { width: 100.0, scroll_width: 1000.0, height: 100.0, scroll_height: 1000.0 },
-    { scroll_left: 0.0, scroll_top: 0.0 },
+    {
+      width: 100.0,
+      scroll_width: 1000.0,
+      height: 100.0,
+      scroll_height: 1000.0,
+    },
+    { scroll_left: 0.0, scroll_top: 0.0, },
   )
   scrollable.reveal_for_scroll()
   assert_true(scrollable.hide_timeout is Some(_))

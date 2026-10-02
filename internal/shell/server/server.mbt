@@ -269,7 +269,7 @@ pub async fn RemoteServer::open_document(
       let document = self.tracked_document(document)
       self.documents.set(request.uri.to_string(), document)
       self.notify_document_cached(document)
-      DocumentLoaded({ id: request.id, document })
+      DocumentLoaded({ id: request.id, document, })
     }
     DocumentNotFound(uri) =>
       RemoteError(
@@ -562,7 +562,7 @@ async fn RemoteServer::handle_watch_event(
           let document = self.tracked_document(document)
           self.documents.set(uri.to_string(), document)
           self.notify_document_cached(document)
-          emit(DocumentChanged({ id: request_id, document }))
+          emit(DocumentChanged({ id: request_id, document, }))
         }
         DocumentNotFound(uri) =>
           emit(

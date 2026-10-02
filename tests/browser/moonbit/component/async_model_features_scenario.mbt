@@ -9,7 +9,7 @@ priv struct AsyncFeatureGate {
 
 ///|
 fn AsyncFeatureGate::new() -> AsyncFeatureGate {
-  { resolver: None }
+  { resolver: None, }
 }
 
 ///|
@@ -86,7 +86,7 @@ priv struct AsyncFeatureHarness {
 
 ///|
 fn AsyncFeatureHarness::new() -> AsyncFeatureHarness {
-  { next_call_id: Ref(1), calls: [], models: [] }
+  { next_call_id: Ref(1), calls: [], models: [], }
 }
 
 ///|
@@ -308,7 +308,7 @@ fn run_async_model_features_test() -> Unit {
   )
   let reports : Array[AsyncHoverReport] = []
   @viewer_testing.on_did_resolve_hover(viewer.get_id(), event => {
-    reports.push({ ok: event.ok, revision: event.revision })
+    reports.push({ ok: event.ok, revision: event.revision, })
   })
   |> ignore
   let disposed = Ref(false)

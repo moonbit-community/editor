@@ -42,7 +42,7 @@ test "predominant axis drops the minor delta" {
   assert_eq(delta_left, 8.0)
   assert_eq(delta_top, 0.0)
   let (delta_left, delta_top) = mouse_wheel_scroll_deltas(
-    { delta_x: -0.3 / 40.0, delta_y: -6.0 / 40.0 },
+    { delta_x: -0.3 / 40.0, delta_y: -6.0 / 40.0, },
     scroll_predominant_axis=false,
   )
   assert_eq(delta_left, 1.0)
@@ -53,7 +53,7 @@ test "predominant axis drops the minor delta" {
 /// The alt-key `fastScrollSensitivity` branch (default 5).
 test "alt key applies fast scroll sensitivity" {
   let (_, delta_top) = mouse_wheel_scroll_deltas(
-    { delta_x: 0.0, delta_y: -8.0 / 40.0 },
+    { delta_x: 0.0, delta_y: -8.0 / 40.0, },
     alt_key=true,
   )
   assert_eq(delta_top, 50.0)
@@ -165,8 +165,13 @@ extern "js" fn scrollable_timeout_test_run_pending() -> Unit =
 ///|
 fn prepare_scrollable_timeout_test(scrollable : ScrollableElementDom) -> Unit {
   scrollable.update_from_model(
-    { width: 100.0, scroll_width: 1000.0, height: 100.0, scroll_height: 1000.0 },
-    { scroll_left: 0.0, scroll_top: 0.0 },
+    {
+      width: 100.0,
+      scroll_width: 1000.0,
+      height: 100.0,
+      scroll_height: 1000.0,
+    },
+    { scroll_left: 0.0, scroll_top: 0.0, },
   )
 }
 

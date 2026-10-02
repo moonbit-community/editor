@@ -39,7 +39,7 @@ pub struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 #alias(new, deprecated)
 pub fn DefaultLinesDiffComputer::DefaultLinesDiffComputer() -> DefaultLinesDiffComputer {
   // The qualifier is required because a bare `{}` is parsed as a `Map`.
-  DefaultLinesDiffComputer::{  }
+  DefaultLinesDiffComputer::{ }
 }
 
 ///|
@@ -53,7 +53,7 @@ pub fn DefaultLinesDiffComputer::compute_diff(
   // `defaultLinesDiffComputer.ts:28`: a trivially-equal (empty or one-line)
   // input diffs to nothing.
   if original_lines.length() <= 1 && original_lines == modified_lines {
-    return { changes: [], moves: [], hit_timeout: false }
+    return { changes: [], moves: [], hit_timeout: false, }
   }
 
   // `defaultLinesDiffComputer.ts:33`: one side being the empty document maps
@@ -159,5 +159,5 @@ pub fn DefaultLinesDiffComputer::compute_diff(
       }
     }
   }
-  { changes, moves: [], hit_timeout: false }
+  { changes, moves: [], hit_timeout: false, }
 }

@@ -12,7 +12,7 @@ pub struct HoverParticipantRegistry {
 /// Creates an empty hover participant registry.
 #alias(new, deprecated)
 pub fn HoverParticipantRegistry::HoverParticipantRegistry() -> HoverParticipantRegistry {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|

@@ -196,7 +196,7 @@ pub fn ProtocolError::ProtocolError(
   provider_code? : String = "",
 ) -> ProtocolError {
   let message = if message == "" { code.to_string() } else { message }
-  { code, message, request_id, provider_code }
+  { code, message, request_id, provider_code, }
 }
 
 ///|
@@ -420,7 +420,7 @@ fn decode_document_client(
   build : (DocumentRequest) -> ClientPacket,
 ) -> ClientPacketDecodeResult {
   match parse_uri_field(packet, "uri", id) {
-    ParsedProtocolUri(uri) => DecodedClientPacket(build({ id, uri }))
+    ParsedProtocolUri(uri) => DecodedClientPacket(build({ id, uri, }))
     ProtocolUriError(error) => ClientPacketDecodeError(error)
   }
 }
@@ -478,7 +478,7 @@ fn decode_document_server(
     Some(document_json) =>
       match parse_source_document(document_json, id) {
         ParsedProtocolDocument(document) =>
-          DecodedServerPacket(build({ id, document }))
+          DecodedServerPacket(build({ id, document, }))
         ProtocolDocumentError(error) => ServerPacketDecodeError(error)
       }
     None =>
@@ -500,7 +500,7 @@ fn decode_directory_resolved_payload(
   match json_field(packet, "stat") {
     Some(stat_json) =>
       match parse_workspace_stat(stat_json) {
-        Some(stat) => DecodedServerPacket(DirectoryResolved({ id, stat }))
+        Some(stat) => DecodedServerPacket(DirectoryResolved({ id, stat, }))
         None =>
           ServerPacketDecodeError(
             ProtocolError(
@@ -1139,7 +1139,7 @@ fn parse_hover(value : Json) -> @language.Hover? {
               if contents.length() == 0 {
                 None
               } else {
-                Some({ range, contents })
+                Some({ range, contents, })
               }
             }
             None => None
@@ -1214,7 +1214,7 @@ fn parse_location(value : Json) -> @language.Location? {
       match (json_string_field(value, "uri"), json_field(value, "range")) {
         (Some(raw_uri), Some(range_json)) =>
           match (try_parse_uri(raw_uri), parse_range(range_json)) {
-            (Some(uri), Some(range)) => Some({ uri, range })
+            (Some(uri), Some(range)) => Some({ uri, range, })
             _ => None
           }
         _ => None

@@ -40,7 +40,7 @@ priv struct Oracle {
 
 ///|
 fn Oracle::new() -> Oracle {
-  { intervals: [] }
+  { intervals: [], }
 }
 
 ///|
@@ -579,7 +579,7 @@ priv struct AutoTest {
 
 ///|
 fn AutoTest::new(seed : UInt, forced_delta? : Bool = false) -> AutoTest {
-  let rng : Rng = { state: seed }
+  let rng : Rng = { state: seed, }
   let insert_cnt = rng.int_in(1, 30) // MIN_INSERTS..MAX_INSERTS
   let change_cnt = rng.int_in(10, 20) // MIN_CHANGE_CNT..MAX_CHANGE_CNT
   {

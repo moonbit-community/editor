@@ -65,7 +65,7 @@ test "read API: no-model scroll writes no-op and view state is None" {
   assert_eq(viewer.get_scroll_top(), -1.0)
   assert_eq(viewer.get_scroll_left(), -1.0)
   assert_true(viewer.save_view_state() is None)
-  viewer.restore_view_state(Some({ scroll_top: 10.0, scroll_left: 20.0 }))
+  viewer.restore_view_state(Some({ scroll_top: 10.0, scroll_left: 20.0, }))
   assert_eq(viewer.get_scroll_top(), -1.0)
   viewer.dispose()
 }

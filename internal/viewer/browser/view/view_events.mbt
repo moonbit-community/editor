@@ -43,7 +43,7 @@ pub fn ViewConfigurationChangedEvent::from_changed_options(
       result.push(option)
     }
   }
-  { changed_options: result }
+  { changed_options: result, }
 }
 
 ///|
@@ -135,7 +135,7 @@ pub fn ViewTokenChangeRange::ViewTokenChangeRange(
   from_line_number : Int,
   to_line_number : Int,
 ) -> ViewTokenChangeRange {
-  { from_line_number, to_line_number }
+  { from_line_number, to_line_number, }
 }
 
 ///|

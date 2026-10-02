@@ -88,7 +88,7 @@ fn create_model_decoration(
     after_content_class_name?=options.after_content_class_name,
   )
   {
-    decoration: { id, owner_id: 0, range, options: model_options },
+    decoration: { id, owner_id: 0, range, options: model_options, },
     resolved_options: {
       inline_class_name: options.inline_class_name,
       inline_class_name_affects_letter_spacing: options.inline_class_name_affects_letter_spacing,

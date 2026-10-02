@@ -167,7 +167,7 @@ pub fn TextModel::get_word_until_position(
   let position = self.validate_position(position)
   match self.get_word_at_position(position) {
     None =>
-      { word: "", start_column: position.column, end_column: position.column }
+      { word: "", start_column: position.column, end_column: position.column, }
     Some(word_at_position) =>
       {
         word: word_at_position.word[0:position.column -

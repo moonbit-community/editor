@@ -4,7 +4,8 @@ test "scrollable clamps positions inside its dimensions" {
   // Without dimensions the validated position clamps to the origin, while
   // Monaco retains the changed raw request and therefore emits an event.
   assert_true(
-    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is Some(_),
+    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0, })
+    is Some(_),
   )
   scrollable.set_dimensions({
     width: 800.0,
@@ -14,12 +15,14 @@ test "scrollable clamps positions inside its dimensions" {
   })
   |> ignore
   // Expanding the dimensions recovers the retained raw request.
-  assert_true(scrollable.position() == { scroll_left: 50.0, scroll_top: 100.0 })
   assert_true(
-    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0 }) is None,
+    scrollable.position() == { scroll_left: 50.0, scroll_top: 100.0, },
+  )
+  assert_true(
+    scrollable.set_position({ scroll_left: 50.0, scroll_top: 100.0, }) is None,
   )
   // Overshoot clamps to content minus viewport; undershoot clamps to zero.
-  scrollable.set_position({ scroll_left: 9999.0, scroll_top: 99999.0 })
+  scrollable.set_position({ scroll_left: 9999.0, scroll_top: 99999.0, })
   |> ignore
   debug_inspect(
     scrollable.position(),
@@ -27,7 +30,7 @@ test "scrollable clamps positions inside its dimensions" {
       #|{ scroll_left: 200, scroll_top: 1200 }
     ),
   )
-  scrollable.set_position({ scroll_left: -5.0, scroll_top: -5.0 }) |> ignore
+  scrollable.set_position({ scroll_left: -5.0, scroll_top: -5.0, }) |> ignore
   debug_inspect(
     scrollable.position(),
     content=(
@@ -37,7 +40,7 @@ test "scrollable clamps positions inside its dimensions" {
   // A different raw request still changes ScrollState even when both values
   // clamp to the same validated origin.
   assert_true(
-    scrollable.set_position({ scroll_left: -1.0, scroll_top: -1.0 }) is Some(_),
+    scrollable.set_position({ scroll_left: -1.0, scroll_top: -1.0, }) is Some(_),
   )
 }
 
@@ -51,7 +54,7 @@ test "shrinking dimensions re-clamps the position as one change fact" {
     scroll_height: 1000.0,
   })
   |> ignore
-  scrollable.set_position({ scroll_left: 0.0, scroll_top: 900.0 }) |> ignore
+  scrollable.set_position({ scroll_left: 0.0, scroll_top: 900.0, }) |> ignore
   let change = scrollable.set_dimensions({
     width: 100.0,
     scroll_width: 100.0,
@@ -59,7 +62,7 @@ test "shrinking dimensions re-clamps the position as one change fact" {
     scroll_height: 400.0,
   })
   guard change is Some(change) else { fail("expected a dimension change") }
-  assert_true(change.position == { scroll_left: 0.0, scroll_top: 300.0 })
+  assert_true(change.position == { scroll_left: 0.0, scroll_top: 300.0, })
   assert_eq(change.delta_top, -600.0)
   assert_true(change.top_changed && change.dimensions_changed)
   // Base Scrollable preserves the supplied extents; EditorScrollDimensions
@@ -99,7 +102,7 @@ test "force_integer_values truncates dimensions and positions" {
     ),
   )
   // A fractional trackpad delta lands on the truncated integer...
-  scrollable.set_position({ scroll_left: 0.0, scroll_top: 2.37 }) |> ignore
+  scrollable.set_position({ scroll_left: 0.0, scroll_top: 2.37, }) |> ignore
   debug_inspect(
     scrollable.position(),
     content=(
@@ -292,7 +295,7 @@ test "view layout windows and dimensions account for view zones" {
     ),
   )
   assert_eq(
-    layout.relative_vertical_offset_for_line({ start: 2, end: 5 }, 3),
+    layout.relative_vertical_offset_for_line({ start: 2, end: 5, }, 3),
     72,
   )
 }
@@ -316,7 +319,7 @@ test "view layout derives scroll dimensions from document and viewport" {
   layout.scroll_to(scroll_top=179400.0) |> ignore
   let change = layout.set_line_count(100)
   guard change is Some(change) else { fail("expected a dimension change") }
-  assert_true(change.position == { scroll_left: 0.0, scroll_top: 1212.0 })
+  assert_true(change.position == { scroll_left: 0.0, scroll_top: 1212.0, })
   assert_eq(change.delta_top, -178188.0)
   assert_true(change.top_changed && change.dimensions_changed)
   // The window origin is the content-space top of the window start (the

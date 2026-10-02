@@ -23,7 +23,7 @@ pub fn MarkdownCommentDom::MarkdownCommentDom(
   let content = document.create_element("div")
   content.set_attribute("class", "moonbit-viewer-markdown-comment-content")
   outer.append_child(content.as_node())
-  { outer, content }
+  { outer, content, }
 }
 
 ///|
@@ -91,7 +91,7 @@ pub fn MarkdownCommentDom::observe_size(
     pending_frame.val = None
     frame_scheduled.val = false
   })
-  { request_measure_: () => schedule_measure(true), lifetime }
+  { request_measure_: () => schedule_measure(true), lifetime, }
 }
 
 ///|

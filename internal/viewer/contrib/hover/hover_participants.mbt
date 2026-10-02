@@ -310,7 +310,7 @@ pub struct ContentHoverComputer {
 pub fn ContentHoverComputer::ContentHoverComputer(
   services : HoverParticipantServices,
 ) -> ContentHoverComputer {
-  { participants: hover_participant_registry.build_all(services) }
+  { participants: hover_participant_registry.build_all(services), }
 }
 
 ///|
@@ -472,7 +472,7 @@ fn computed_hover_from_parts(
   for part in sorted {
     range = union_range(range, hover_part_range(part))
   }
-  Some({ range, parts: sorted })
+  Some({ range, parts: sorted, })
 }
 
 ///|

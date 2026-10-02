@@ -7,7 +7,7 @@ pub struct NativeServerHost {
 ///|
 /// Creates the native host with the default file-watch polling interval.
 pub fn NativeServerHost::NativeServerHost() -> NativeServerHost {
-  { poll_interval_ms: 500 }
+  { poll_interval_ms: 500, }
 }
 
 ///|
@@ -142,7 +142,7 @@ async fn read_native_directory(
       }
       match (kind, @server.remote_document_uri(path)) {
         (Some(kind), Some(uri)) =>
-          children.push({ uri, name, kind, children: None })
+          children.push({ uri, name, kind, children: None, })
         _ => ()
       }
     }
@@ -282,7 +282,7 @@ priv struct ProtocolSessions {
 
 ///|
 fn ProtocolSessions::new() -> ProtocolSessions {
-  { next_session_id: Ref(0), outboxes: Map::default() }
+  { next_session_id: Ref(0), outboxes: Map::default(), }
 }
 
 ///|
@@ -389,7 +389,7 @@ fn diagnostics_push_packet(
   revision : String,
   diagnostics : Array[@language.Diagnostic],
 ) -> String {
-  @remote_protocol.ServerPacket::Diagnostics({ uri, revision, diagnostics })
+  @remote_protocol.ServerPacket::Diagnostics({ uri, revision, diagnostics, })
   .to_json()
   .stringify()
 }

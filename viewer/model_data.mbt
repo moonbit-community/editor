@@ -10,7 +10,7 @@ priv struct ViewerModelSlot {
 
 ///|
 fn ViewerModelSlot::ViewerModelSlot() -> ViewerModelSlot {
-  { generation: 0, current: None }
+  { generation: 0, current: None, }
 }
 
 ///|

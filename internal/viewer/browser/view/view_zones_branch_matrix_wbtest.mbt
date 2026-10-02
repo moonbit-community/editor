@@ -51,7 +51,7 @@ fn view_zones_branch_fixture_from_model(
     () => configuration.val,
     () => emitted_changes.val += 1,
   )
-  { view, view_model, model, configuration, emitted_changes, memory }
+  { view, view_model, model, configuration, emitted_changes, memory, }
 }
 
 ///|

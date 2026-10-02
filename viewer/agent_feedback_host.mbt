@@ -191,7 +191,10 @@ fn Viewer::sync_agent_feedback_lane(self : Viewer) -> Unit {
     }
     (false, Some(base)) => {
       ic.lane_base_width = None
-      self.update_options({ ..self.get_options(), line_decorations_width: base })
+      self.update_options({
+        ..self.get_options(),
+        line_decorations_width: base,
+      })
     }
     _ => ()
   }

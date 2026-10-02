@@ -754,7 +754,7 @@ fn TextModel::create_content_changed_2(
   is_eol_change : Bool,
 ) -> ModelContentChangedEvent {
   {
-    changes: [{ range, range_offset, range_length, text }],
+    changes: [{ range, range_offset, range_length, text, }],
     // `this._buffer.getEOL()`: read from the newly installed snapshot.
     eol: self.get_eol(),
     is_eol_change,

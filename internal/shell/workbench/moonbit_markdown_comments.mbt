@@ -19,7 +19,6 @@ fn install_moonbit_markdown_comment_provider(
   languages : @languages.Languages,
 ) -> Unit {
   languages.register_markdown_comment_provider(LanguageId("moonbit"), MoonBitMarkdownCommentProvider::{
-
   })
   |> ignore
 }

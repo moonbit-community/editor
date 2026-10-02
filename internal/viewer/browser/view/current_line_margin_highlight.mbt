@@ -18,7 +18,7 @@ priv struct CurrentLineMarginHighlightOverlay {
 
 ///|
 fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> CurrentLineMarginHighlightOverlay {
-  { state: CurrentLineHighlightState(), render_result: [] }
+  { state: CurrentLineHighlightState(), render_result: [], }
 }
 
 ///|

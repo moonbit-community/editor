@@ -25,7 +25,7 @@ fn token_test_harness(lines : Array[String]) -> TokenTestHarness {
     scheduler,
     message => errors.push(message),
   )
-  { model_state, errors }
+  { model_state, errors, }
 }
 
 ///|
@@ -40,7 +40,7 @@ fn logging_support(
     },
     tokenize_encoded=(text, has_eol, state) => {
       calls.push("\{text}:\{has_eol}:\{to_repr(state)}")
-      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text) }
+      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text), }
     },
   )
 }

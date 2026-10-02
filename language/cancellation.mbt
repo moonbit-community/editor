@@ -35,7 +35,7 @@ fn schedule_cancellation_inline(
 }
 
 ///|
-let cancellation_none : CancellationToken = { state: NeverCancelled }
+let cancellation_none : CancellationToken = { state: NeverCancelled, }
 
 ///|
 let cancellation_cancelled : CancellationToken = {
@@ -46,7 +46,7 @@ let cancellation_cancelled : CancellationToken = {
 fn MutableCancellationToken::new(
   schedule : (() -> Unit) -> @base_common.Disposable,
 ) -> MutableCancellationToken {
-  { cancelled: false, emitter: None, schedule }
+  { cancelled: false, emitter: None, schedule, }
 }
 
 ///|
@@ -227,10 +227,10 @@ pub fn CancellationTokenSource::token(
 /// listener still has next-turn/disposable delivery semantics.
 pub fn CancellationTokenSource::cancel(self : CancellationTokenSource) -> Unit {
   match self.token_value {
-    None => self.token_value = Some({ state: AlreadyCancelled(self.schedule) })
-    Some({ state: SourceMutable(token) }) => token.cancel()
+    None => self.token_value = Some({ state: AlreadyCancelled(self.schedule), })
+    Some({ state: SourceMutable(token), }) => token.cancel()
     Some(
-      { state: NeverCancelled | AlreadyCancelled(_) | CompatibilityMutable(_) }
+      { state: NeverCancelled | AlreadyCancelled(_) | CompatibilityMutable(_), }
     ) => ()
   }
 }
@@ -252,9 +252,9 @@ pub fn CancellationTokenSource::dispose(
   }
   match self.token_value {
     None => self.token_value = Some(cancellation_none)
-    Some({ state: SourceMutable(token) }) => token.dispose()
+    Some({ state: SourceMutable(token), }) => token.dispose()
     Some(
-      { state: NeverCancelled | AlreadyCancelled(_) | CompatibilityMutable(_) }
+      { state: NeverCancelled | AlreadyCancelled(_) | CompatibilityMutable(_), }
     ) => ()
   }
 }

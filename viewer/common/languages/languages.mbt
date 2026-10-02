@@ -22,7 +22,7 @@ priv struct LanguageFeatureSnapshot[T] {
 
 ///|
 fn[T] LanguageFeatureRegistry::new() -> LanguageFeatureRegistry[T] {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|
@@ -32,7 +32,7 @@ fn[T] LanguageFeatureRegistry::register(
   provider : T,
 ) -> @base_common.Disposable {
   let active = Ref(true)
-  let entry : LanguageFeatureEntry[T] = { selector, provider, active }
+  let entry : LanguageFeatureEntry[T] = { selector, provider, active, }
   self.entries.push(entry)
   @base_common.Disposable::from(() => {
     active.val = false
@@ -53,7 +53,7 @@ fn[T] LanguageFeatureRegistry::snapshot_matching(
   let result : Array[LanguageFeatureSnapshot[T]] = []
   for provider_index, entry in self.entries {
     if entry.active.val && entry.selector.matches(model) {
-      result.push({ entry, provider_index })
+      result.push({ entry, provider_index, })
     }
   }
   result

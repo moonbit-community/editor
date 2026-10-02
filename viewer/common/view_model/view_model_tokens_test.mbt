@@ -74,7 +74,7 @@ impl @syntax.LineTokenizer for FrameToy with fn tokenize_line(
     line_text[0] == 'l' &&
     line_text[1] == 'e' &&
     line_text[2] == 't' {
-    tokens.push({ start: 0, end: 3, tag: Keyword })
+    tokens.push({ start: 0, end: 3, tag: Keyword, })
     at = 3
   }
   while at < line_text.length() {
@@ -84,7 +84,7 @@ impl @syntax.LineTokenizer for FrameToy with fn tokenize_line(
         Some(index) => index + 2
         None => line_text.length()
       }
-      tokens.push({ start: at, end, tag: Comment })
+      tokens.push({ start: at, end, tag: Comment, })
       in_comment = close is None
       at = end
     } else {
@@ -149,7 +149,7 @@ test "stabilized demand threads grammar state through the demanded final line" {
   // block-comment state without exposing the token backend's force helper.
   let attached_view = model.on_before_attached()
   attached_view.set_visible_lines(
-    [{ start_line_number: 1, end_line_number: 4 }],
+    [{ start_line_number: 1, end_line_number: 4, }],
     true,
   )
   model.on_before_detached(attached_view)

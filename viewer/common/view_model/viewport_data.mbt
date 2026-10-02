@@ -18,7 +18,7 @@ pub fn viewport_data_from_view_model(
 ) -> @view_layout.ViewportData {
   let source_window : @view_layout.LineWindow = match partial_viewport {
     Some(partial) =>
-      { start: partial.start_line_number, end: partial.end_line_number + 1 }
+      { start: partial.start_line_number, end: partial.end_line_number + 1, }
     None => window
   }
   let source_line_height = match partial_viewport {

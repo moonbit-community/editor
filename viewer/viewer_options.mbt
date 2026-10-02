@@ -229,7 +229,7 @@ pub fn ViewerOptions::with_tab_size(
   self : ViewerOptions,
   tab_size : Int,
 ) -> ViewerOptions {
-  { ..self, tab_size: tab_size.max(1) }
+  { ..self, tab_size: tab_size.max(1), }
 }
 
 ///|
@@ -248,7 +248,7 @@ pub fn ViewerOptions::with_line_numbers_min_chars(
   self : ViewerOptions,
   line_numbers_min_chars : Int,
 ) -> ViewerOptions {
-  { ..self, line_numbers_min_chars: line_numbers_min_chars.max(1) }
+  { ..self, line_numbers_min_chars: line_numbers_min_chars.max(1), }
 }
 
 ///|
@@ -258,7 +258,7 @@ pub fn ViewerOptions::with_line_decorations_width(
   self : ViewerOptions,
   line_decorations_width : Int,
 ) -> ViewerOptions {
-  { ..self, line_decorations_width: line_decorations_width.max(0) }
+  { ..self, line_decorations_width: line_decorations_width.max(0), }
 }
 
 ///|

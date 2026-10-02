@@ -11,7 +11,7 @@ fn resource_marker(
   resource : @base_common.Uri,
   severity : MarkerSeverity,
 ) -> ResourceMarker {
-  { resource, marker: marker_data(severity, "msg") }
+  { resource, marker: marker_data(severity, "msg"), }
 }
 
 ///|

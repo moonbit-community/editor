@@ -483,7 +483,7 @@ test "host delta_decorations flows through query API and render inputs" {
   // decoration is the DecorationsOverlay's input, never a line span.
   let viewport = @view_model.viewport_data_from_view_model(
     view_model,
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     line_height=18,
   )
   assert_true(
@@ -508,12 +508,15 @@ test "decoration queries are scoped by editor id like Monaco" {
   viewer.set_model(Some(model))
   // Model-level decoration (ownerId 0): visible to the scoped query.
   let _ = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 3), options: ModelDecorationOptions("model-level") },
+    {
+      range: Range(1, 1, 1, 3),
+      options: ModelDecorationOptions("model-level"),
+    },
   ])
   // Foreign editor's decoration: filtered out.
   let _ = model.delta_decorations(
     [],
-    [{ range: Range(1, 4, 1, 6), options: ModelDecorationOptions("foreign") }],
+    [{ range: Range(1, 4, 1, 6), options: ModelDecorationOptions("foreign"), }],
     owner_id=viewer.editor_id + 1000,
   )
   let names = viewer.get_line_decorations(1).map(d => d.options.class_name)
@@ -582,7 +585,7 @@ impl @syntax.LineTokenizer for FirstCharKeywordToy with fn tokenize_line(
 ) {
   self.calls.val += 1
   ignore(line_text)
-  let tokens : Array[@syntax.LineToken] = [{ start: 0, end: 1, tag: Keyword }]
+  let tokens : Array[@syntax.LineToken] = [{ start: 0, end: 1, tag: Keyword, }]
   (tokens, state)
 }
 
@@ -645,7 +648,7 @@ test "tokenizer registration stays passive until explicit demand" {
   assert_eq(calls.val, 0)
   let demand_view = model.on_before_attached()
   demand_view.set_visible_lines(
-    [{ start_line_number: 1, end_line_number: 2 }],
+    [{ start_line_number: 1, end_line_number: 2, }],
     true,
   )
   model.on_before_detached(demand_view)

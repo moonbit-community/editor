@@ -328,7 +328,7 @@ pub fn AgentFeedbackService::accept_feedback(
     return
   }
   guard existing.state == Created else { return }
-  self.replace_item(resource, { ..existing, state: Accepted })
+  self.replace_item(resource, { ..existing, state: Accepted, })
 }
 
 ///|
@@ -373,7 +373,7 @@ pub fn AgentFeedbackService::update_feedback(
   guard self.feedback_by_id(resource, feedback_id) is Some(existing) else {
     return
   }
-  self.replace_item(resource, { ..existing, text: new_text })
+  self.replace_item(resource, { ..existing, text: new_text, })
 }
 
 ///|
@@ -394,7 +394,7 @@ pub fn AgentFeedbackService::set_feedback_resolved(
     Submitted
   }
   if existing.state != next_state {
-    self.replace_item(resource, { ..existing, state: next_state })
+    self.replace_item(resource, { ..existing, state: next_state, })
   }
 }
 
@@ -413,7 +413,7 @@ pub fn AgentFeedbackService::add_reply(
   replies.push(reply_text)
   let updated : @agent_feedback_api.AgentFeedback = { ..existing, replies, }
   self.replace_item(resource, updated)
-  self.did_add_reply.fire({ feedback: updated, reply_count: replies.length() })
+  self.did_add_reply.fire({ feedback: updated, reply_count: replies.length(), })
 }
 
 ///|
@@ -544,5 +544,5 @@ pub fn AgentFeedbackService::get_navigation_bearing(
       }
     None => -1
   }
-  { active_idx, total_count: item_ids.length() }
+  { active_idx, total_count: item_ids.length(), }
 }

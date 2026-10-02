@@ -22,7 +22,7 @@ pub fn ContiguousMultilineTokens::ContiguousMultilineTokens(
   start_line_number : Int,
   tokens : Array[Array[UInt]],
 ) -> ContiguousMultilineTokens {
-  { start_line_number_: start_line_number, tokens }
+  { start_line_number_: start_line_number, tokens, }
 }
 
 ///|

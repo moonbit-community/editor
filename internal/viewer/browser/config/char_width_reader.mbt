@@ -24,7 +24,7 @@ fn CharWidthRequest::new(
   chr : String,
   request_type : CharWidthRequestType,
 ) -> CharWidthRequest {
-  { chr, request_type, width: 0.0 }
+  { chr, request_type, width: 0.0, }
 }
 
 ///|

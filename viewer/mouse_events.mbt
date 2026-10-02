@@ -77,7 +77,7 @@ fn Viewer::emit_mouse_down(
   event : @editor_browser.EditorDomMouseEvent,
   target : @editor_browser.MouseTarget,
 ) -> Unit {
-  self.did_mouse_down.fire({ event, target: self.convert_mouse_target(target) })
+  self.did_mouse_down.fire({ event, target: self.convert_mouse_target(target), })
   // The hover measures its widget with `getBoundingClientRect`, so it reads
   // client coordinates (the recorded deviation on client- vs page-space).
   let client = event.pos.to_client_coordinates()
@@ -91,7 +91,7 @@ fn Viewer::emit_mouse_up(
   event : @editor_browser.EditorDomMouseEvent,
   target : @editor_browser.MouseTarget,
 ) -> Unit {
-  self.did_mouse_up.fire({ event, target: self.convert_mouse_target(target) })
+  self.did_mouse_up.fire({ event, target: self.convert_mouse_target(target), })
   self.on_editor_mouse_up()
 }
 
@@ -104,7 +104,7 @@ fn Viewer::emit_mouse_move(
   target : @editor_browser.MouseTarget,
 ) -> Unit {
   let converted = self.convert_mouse_target(target)
-  self.did_mouse_move.fire({ event, target: converted })
+  self.did_mouse_move.fire({ event, target: converted, })
   let client = event.pos.to_client_coordinates()
   self.record_hover_pointer(client.client_x, client.client_y, {
     ctrl: event.ctrl_key,
@@ -133,7 +133,7 @@ fn Viewer::emit_mouse_leave(
   self : Viewer,
   event : @editor_browser.EditorDomMouseEvent,
 ) -> Unit {
-  self.did_mouse_leave.fire({ event, target: None })
+  self.did_mouse_leave.fire({ event, target: None, })
   let client = event.pos.to_client_coordinates()
   self.on_editor_mouse_leave(client.client_x, client.client_y)
 }

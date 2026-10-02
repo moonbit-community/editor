@@ -2016,7 +2016,7 @@ fn segment(
   class_name : String,
   metadata? : Int = 0,
 ) -> DecorationSegment {
-  { start_offset, end_offset, class_name, metadata }
+  { start_offset, end_offset, class_name, metadata, }
 }
 
 ///|
@@ -2218,7 +2218,7 @@ fn assert_get_column(
   expected_column : Int,
 ) -> Unit raise {
   let actual = out.character_mapping.get_column(
-    { part_index, char_index },
+    { part_index, char_index, },
     part_length,
   )
   guard actual == expected_column else {

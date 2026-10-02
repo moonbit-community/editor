@@ -21,8 +21,8 @@ test "MoonBit Markdown comments ignore unanchored false and detached groups" {
     ),
   )
   assert_eq(blocks, [
-    { line_range: LineRange(8, 10), markdown: "Valid docs" },
-    { line_range: LineRange(11, 13), markdown: "Second docs" },
+    { line_range: LineRange(8, 10), markdown: "Valid docs", },
+    { line_range: LineRange(11, 13), markdown: "Second docs", },
   ])
 }
 
@@ -46,7 +46,7 @@ test "MoonBit Markdown comments keep an EOF half-open range after CRLF normaliza
   let blocks = moonbit_markdown_comments_in_snapshot(
     TextSnapshot("let before = 1\r\n///|\r\n/// EOF docs"),
   )
-  assert_eq(blocks, [{ line_range: LineRange(2, 4), markdown: "EOF docs" }])
+  assert_eq(blocks, [{ line_range: LineRange(2, 4), markdown: "EOF docs", }])
 }
 
 ///|
@@ -79,7 +79,7 @@ test "workbench installs the provider only for MoonBit models" {
     fail("expected the workbench MoonBit provider")
   }
   assert_eq(blocks, [
-    { line_range: LineRange(1, 3), markdown: "Registered docs" },
+    { line_range: LineRange(1, 3), markdown: "Registered docs", },
   ])
   assert_true(handle.markdown_comment_provider_result(plaintext) is None)
 }

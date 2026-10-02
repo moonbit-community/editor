@@ -33,7 +33,7 @@ pub fn Range::Range(
       end_column: start_column,
     }
   } else {
-    { start_line_number, start_column, end_line_number, end_column }
+    { start_line_number, start_column, end_line_number, end_column, }
   }
 }
 

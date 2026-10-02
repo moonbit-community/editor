@@ -749,7 +749,7 @@ fn Viewer::maybe_notify_hover_resolved(
     Some(model) => model.revision
     None => ""
   }
-  self.emit_hover_resolved({ ok: hc.hover.view is Some(_), revision })
+  self.emit_hover_resolved({ ok: hc.hover.view is Some(_), revision, })
 }
 
 ///|

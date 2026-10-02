@@ -61,7 +61,7 @@ fn cursor_controller_test_model(text? : String = "abc") -> @model.TextModel {
 ///|
 test "model validation resets only residues whose endpoints changed" {
   let model = cursor_controller_test_model(text="a\u{1F4DA}b")
-  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
+  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0, }
   let controller = CursorsController(model, identity.context())
 
   controller.set_model_cursor_state(
@@ -154,7 +154,7 @@ test "model selections become collapsed Simple anchors in source order" {
 ///|
 test "central partial transition covers null model view and full shapes" {
   let model = cursor_controller_test_model()
-  let converter = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
+  let converter = CursorTestConverter::{ column_delta: 1, range_delta: 1, }
   let raw_cursor = Cursor()
   let raw_before = raw_cursor.as_cursor_state()
   assert_false(raw_cursor.set_state(converter.context(), None, None))
@@ -207,7 +207,7 @@ test "central partial transition covers null model view and full shapes" {
 ///|
 test "single-cursor normalize returns without changing primary state" {
   let model = cursor_controller_test_model()
-  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
+  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0, }
   let controller = CursorsController(model, identity.context())
   controller.set_model_cursor_state(
     SingleCursorState(
@@ -228,7 +228,7 @@ test "single-cursor normalize returns without changing primary state" {
 ///|
 test "view-only state converts its complete anchor range as one unit" {
   let model = cursor_controller_test_model()
-  let converter = CursorTestConverter::{ column_delta: 1, range_delta: 2 }
+  let converter = CursorTestConverter::{ column_delta: 1, range_delta: 2, }
   let controller = CursorsController(model, converter.context())
   let view_state = SingleCursorState(
     Position(1, 4),
@@ -247,8 +247,8 @@ test "view-only state converts its complete anchor range as one unit" {
 ///|
 test "mapping reprojection observes handling and pending model-version guards" {
   let model = cursor_controller_test_model()
-  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0 }
-  let shifted = CursorTestConverter::{ column_delta: 1, range_delta: 1 }
+  let identity = CursorTestConverter::{ column_delta: 0, range_delta: 0, }
+  let shifted = CursorTestConverter::{ column_delta: 1, range_delta: 1, }
   let controller = CursorsController(model, identity.context())
   controller.set_model_cursor_state(
     SingleCursorState::collapsed(Position(1, 2)),
@@ -267,7 +267,10 @@ test "mapping reprojection observes handling and pending model-version guards" {
   // mapping notification must wait for the content-event lane instead of
   // reprojecting against torn model/view generations.
   model.set_value("abcd")
-  let further_shifted = CursorTestConverter::{ column_delta: 2, range_delta: 2 }
+  let further_shifted = CursorTestConverter::{
+    column_delta: 2,
+    range_delta: 2,
+  }
   controller.set_context(further_shifted.context())
   assert_true(controller.view_state().position == Position(1, 3))
 }

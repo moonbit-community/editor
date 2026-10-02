@@ -29,7 +29,7 @@ let next_hover_participant_owner_id : Ref[Int] = Ref(0)
 #alias(new, deprecated)
 pub fn HoverParticipantOwner::HoverParticipantOwner() -> HoverParticipantOwner {
   next_hover_participant_owner_id.val += 1
-  { id: next_hover_participant_owner_id.val }
+  { id: next_hover_participant_owner_id.val, }
 }
 
 ///|

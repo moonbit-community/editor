@@ -271,7 +271,7 @@ priv struct EditorIdCounter {
 }
 
 ///|
-let editor_id_counter : EditorIdCounter = { value: 0 }
+let editor_id_counter : EditorIdCounter = { value: 0, }
 
 ///|
 fn next_editor_id() -> Int {
@@ -561,7 +561,7 @@ pub fn Viewer::set_model(self : Viewer, model : @model.TextModel?) -> Unit {
       Mounted(mounted) => mounted.set_editor_focus(false) |> ignore
     }
   }
-  self.did_change_model.fire({ old_model_url, new_model_url })
+  self.did_change_model.fire({ old_model_url, new_model_url, })
   // `_postDetachModelCleanup` (`cew:2008-2010`): sweep this editor's
   // decorations off the outgoing model by owner id.
   match detached_model {
@@ -766,7 +766,7 @@ pub fn Viewer::has_widget_focus(self : Viewer) -> Bool {
 pub fn Viewer::save_view_state(self : Viewer) -> ViewerViewState? {
   guard self.get_view_model() is Some(view_model) else { return None }
   let position = view_model.view_layout.position()
-  Some({ scroll_top: position.scroll_top, scroll_left: position.scroll_left })
+  Some({ scroll_top: position.scroll_top, scroll_left: position.scroll_left, })
 }
 
 ///|

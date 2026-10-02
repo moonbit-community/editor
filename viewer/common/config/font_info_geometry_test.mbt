@@ -270,13 +270,13 @@ test "FontInfo equals includes measured identity and omits three source axes" {
     ),
   )
   let included : Array[@config.FontInfo] = [
-    { ..base, font_family: "Other" },
-    { ..base, font_weight: "bold" },
-    { ..base, font_size: 13.0 },
-    { ..base, font_feature_settings: "features" },
-    { ..base, font_variation_settings: "variations" },
-    { ..base, line_height: 19 },
-    { ..base, letter_spacing: 1.0 },
+    { ..base, font_family: "Other", },
+    { ..base, font_weight: "bold", },
+    { ..base, font_size: 13.0, },
+    { ..base, font_feature_settings: "features", },
+    { ..base, font_variation_settings: "variations", },
+    { ..base, line_height: 19, },
+    { ..base, letter_spacing: 1.0, },
     {
       ..base,
       typical_halfwidth_character_width: base.typical_halfwidth_character_width +
@@ -291,15 +291,15 @@ test "FontInfo equals includes measured identity and omits three source axes" {
       ..base,
       can_use_halfwidth_rightwards_arrow: !base.can_use_halfwidth_rightwards_arrow,
     },
-    { ..base, space_width: base.space_width + 1.0 },
-    { ..base, middot_width: base.middot_width + 1.0 },
-    { ..base, wsmiddot_width: base.wsmiddot_width + 1.0 },
-    { ..base, max_digit_width: base.max_digit_width + 1.0 },
+    { ..base, space_width: base.space_width + 1.0, },
+    { ..base, middot_width: base.middot_width + 1.0, },
+    { ..base, wsmiddot_width: base.wsmiddot_width + 1.0, },
+    { ..base, max_digit_width: base.max_digit_width + 1.0, },
   ]
   for variant in included {
     assert_false(base.equals(variant))
   }
-  assert_true(base.equals({ ..base, pixel_ratio: 2.0 }))
-  assert_true(base.equals({ ..base, is_trusted: !base.is_trusted }))
-  assert_true(base.equals({ ..base, is_monospace: !base.is_monospace }))
+  assert_true(base.equals({ ..base, pixel_ratio: 2.0, }))
+  assert_true(base.equals({ ..base, is_trusted: !base.is_trusted, }))
+  assert_true(base.equals({ ..base, is_monospace: !base.is_monospace, }))
 }

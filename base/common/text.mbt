@@ -23,7 +23,7 @@ pub struct OffsetRange {
 /// Builds a position without normalization; callers decide the coordinate
 /// space before conversion through a snapshot.
 pub fn Position::Position(line_number : Int, column : Int) -> Position {
-  { line_number, column }
+  { line_number, column, }
 }
 
 ///|
@@ -125,9 +125,9 @@ pub fn OffsetRange::OffsetRange(
   end_exclusive : Int,
 ) -> OffsetRange {
   if start <= end_exclusive {
-    { start, end_exclusive }
+    { start, end_exclusive, }
   } else {
-    { start: end_exclusive, end_exclusive: start }
+    { start: end_exclusive, end_exclusive: start, }
   }
 }
 
@@ -168,7 +168,7 @@ pub fn OffsetRange::try_create(
   if start > end_exclusive {
     None
   } else {
-    Some({ start, end_exclusive })
+    Some({ start, end_exclusive, })
   }
 }
 

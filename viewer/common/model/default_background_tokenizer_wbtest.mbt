@@ -35,7 +35,7 @@ fn worker_scheduler_harness() -> WorkerSchedulerHarness {
     idle=callback => {
       let active = Ref(true)
       trace.push("idle-scheduled")
-      idle.push({ callback, active })
+      idle.push({ callback, active, })
       @base_common.Disposable::from(() => {
         trace.push("idle-cancelled")
         active.val = false
@@ -44,7 +44,7 @@ fn worker_scheduler_harness() -> WorkerSchedulerHarness {
     zero_timeout=callback => {
       let active = Ref(true)
       trace.push("zero-scheduled")
-      zero.push({ callback, active })
+      zero.push({ callback, active, })
       @base_common.Disposable::from(() => {
         trace.push("zero-cancelled")
         active.val = false
@@ -70,7 +70,7 @@ fn worker_scheduler_harness() -> WorkerSchedulerHarness {
       value
     },
   )
-  { scheduler, idle, zero, now_values, before_next_now, trace }
+  { scheduler, idle, zero, now_values, before_next_now, trace, }
 }
 
 ///|
@@ -124,7 +124,7 @@ fn default_worker_harness(
     tokenize_encoded=(text, _has_eol, _state) => {
       lexer_calls.push(text)
       scheduling.trace.push("lex")
-      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text) }
+      { tokens: [0, tag_to_metadata(Plain)], end_state: TokenizerState(text), }
     },
   )
   let tokenizer = TokenizerWithStateStoreAndTextModel(

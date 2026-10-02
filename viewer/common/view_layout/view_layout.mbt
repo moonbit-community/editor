@@ -605,10 +605,10 @@ pub fn ViewLayout::dispose(self : ViewLayout) -> Unit {
 /// included. Recomputed every frame; the view renders exactly these lines.
 pub fn ViewLayout::visible_window(self : ViewLayout) -> LineWindow {
   if self.line_count <= 0 {
-    return { start: 1, end: 1 }
+    return { start: 1, end: 1, }
   }
   let data = self.get_lines_viewport_data()
-  { start: data.start_line_number, end: data.end_line_number + 1 }
+  { start: data.start_line_number, end: data.end_line_number + 1, }
 }
 
 ///|

@@ -32,7 +32,7 @@ fn InternalTokenizationSupportAdapter::InternalTokenizationSupportAdapter(
   initial_state~ : () -> @syntax.TokenizerState raise,
   tokenize_encoded~ : (String, Bool, @syntax.TokenizerState) -> EncodedTokenizationResult raise,
 ) -> InternalTokenizationSupportAdapter {
-  { get_initial_state: initial_state, tokenize_encoded }
+  { get_initial_state: initial_state, tokenize_encoded, }
 }
 
 ///|
@@ -87,7 +87,7 @@ priv struct TokenizationStateStore {
 ///|
 /// Creates an empty state store.
 fn TokenizationStateStore::TokenizationStateStore() -> TokenizationStateStore {
-  { line_end_states: [] }
+  { line_end_states: [], }
 }
 
 ///|
@@ -130,7 +130,7 @@ priv struct RangePriorityQueueImpl {
 ///|
 /// Creates an empty queue.
 fn RangePriorityQueueImpl::RangePriorityQueueImpl() -> RangePriorityQueueImpl {
-  { ranges: [] }
+  { ranges: [], }
 }
 
 ///|
@@ -302,7 +302,7 @@ fn TrackingTokenizationStateStore::get_first_invalid_line(
   guard self.get_start_state(line_number, initial_state) is Some(start_state) else {
     abort("Start state must be defined")
   }
-  Some({ line_number, start_state })
+  Some({ line_number, start_state, })
 }
 
 ///|
@@ -423,11 +423,11 @@ fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
 ) -> HeuristicTokenizationResult {
   let first_invalid = self.base.store.get_first_invalid_end_state_line_number_or_max()
   if end_line_number <= first_invalid {
-    return { heuristic_tokens: false }
+    return { heuristic_tokens: false, }
   }
   if start_line_number <= first_invalid {
     self.update_tokens_until_line(builder, end_line_number)
-    return { heuristic_tokens: false }
+    return { heuristic_tokens: false, }
   }
   let mut state = self.guess_start_state(start_line_number)
   for line_number in start_line_number..<=end_line_number {
@@ -444,7 +444,7 @@ fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
     builder.add(line_number, result.tokens)
     state = result.end_state
   }
-  { heuristic_tokens: true }
+  { heuristic_tokens: true, }
 }
 
 ///|
@@ -525,7 +525,7 @@ fn find_likely_relevant_lines(
     i -= 1
   }
   likely_relevant_lines.rev_in_place()
-  { likely_relevant_lines, initial_state }
+  { likely_relevant_lines, initial_state, }
 }
 
 ///|
@@ -576,7 +576,7 @@ priv struct BackgroundTokenizationStore {
 fn BackgroundTokenizationStore::BackgroundTokenizationStore(
   set_tokens~ : (Array[@common_tokens.ContiguousMultilineTokens]) -> Unit,
 ) -> BackgroundTokenizationStore {
-  { apply_tokens: set_tokens }
+  { apply_tokens: set_tokens, }
 }
 
 ///|

@@ -154,8 +154,8 @@ test "set_value bumps the version id and swaps the snapshot" {
 test "set_value destroys all decorations; stale ids delta as a no-op" {
   let model = wb_model("alpha\nbravo")
   let ids = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 3), options: wb_options("one") },
-    { range: Range(2, 1, 2, 4), options: wb_options("two") },
+    { range: Range(1, 1, 1, 3), options: wb_options("one"), },
+    { range: Range(2, 1, 2, 4), options: wb_options("two"), },
   ])
   assert_eq(model.get_all_decorations().length(), 2)
   model.set_value("alpha\nbravo")
@@ -164,7 +164,7 @@ test "set_value destroys all decorations; stale ids delta as a no-op" {
   // the destroyed ids are unknown to the fresh storage: removing them is a
   // no-op and re-adding through them seeds fresh nodes
   let replaced = model.delta_decorations(ids, [
-    { range: Range(1, 1, 1, 2), options: wb_options("three") },
+    { range: Range(1, 1, 1, 2), options: wb_options("three"), },
   ])
   assert_eq(replaced.length(), 1)
   assert_eq(model.get_all_decorations().length(), 1)
@@ -202,7 +202,7 @@ test "set_value re-seeds visible token state without a full reset event" {
   )
   let model = wb_model("alpha\nbravo")
   let view = model.on_before_attached()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   let to_lines : Array[Int] = []
   let _sub = model.on_did_change_tokens(e => {
     to_lines.push(e.ranges[0].to_line_number)

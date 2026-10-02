@@ -114,7 +114,7 @@ priv struct QuickDiffContributionState {
 fn QuickDiffContributionState::QuickDiffContributionState(
   collection : EditorDecorationsCollection,
 ) -> QuickDiffContributionState {
-  { collection, listeners: [] }
+  { collection, listeners: [], }
 }
 
 ///|
@@ -143,7 +143,7 @@ priv struct EditorContributionEntry {
 fn EditorContributionEntry::EditorContributionEntry(
   instance : EditorContributionInstance,
 ) -> EditorContributionEntry {
-  { instance, listeners: [], lifecycle: ContributionLive }
+  { instance, listeners: [], lifecycle: ContributionLive, }
 }
 
 ///|
@@ -219,7 +219,7 @@ priv struct EditorContributions {
 
 ///|
 fn EditorContributions::EditorContributions() -> EditorContributions {
-  { instances: Map([]), lifecycle: ContributionsLive }
+  { instances: Map([]), lifecycle: ContributionsLive, }
 }
 
 ///|
@@ -315,7 +315,7 @@ fn EditorContributionDescription::EditorContributionDescription(
   ctor : (Viewer) -> EditorContributionInstance,
   initialize : (Viewer) -> Array[@base_common.Disposable],
 ) -> EditorContributionDescription {
-  { id, instantiation, ctor, initialize }
+  { id, instantiation, ctor, initialize, }
 }
 
 ///|
@@ -412,7 +412,7 @@ fn EditorContributionRegistry::register_editor_command(
   keybindings : Array[(String, Bool, Bool)],
   shift_keybindings? : Array[(String, Bool, Bool)] = [],
 ) -> Unit {
-  let command : EditorCommand = { id, precondition, run }
+  let command : EditorCommand = { id, precondition, run, }
   self.commands.set(command.id, RegisteredEditor(command))
   for binding in keybindings {
     let (key, alt, ctrl_cmd) = binding
@@ -605,7 +605,7 @@ priv struct EditorRegistryHolder {
 /// global initializer — the registered ctor/run closures reach `Viewer`
 /// methods whose dispatch consults the registry back, which MoonBit's
 /// toplevel-definition cycle check would reject as an initializer cycle.
-let editor_registry_holder : EditorRegistryHolder = { registry: None }
+let editor_registry_holder : EditorRegistryHolder = { registry: None, }
 
 ///|
 /// The singleton (`EditorContributionRegistry.INSTANCE`), populated once.

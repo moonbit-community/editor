@@ -126,20 +126,20 @@ test "retained line factory reads the current option snapshot on every creation"
 test "ViewLineOptions equality covers every applicable source render axis" {
   let base = ViewLineOptions::ViewLineOptions()
   let variants : Array[ViewLineOptions] = [
-    { ..base, line_height: base.line_height + 1 },
-    { ..base, space_width: base.space_width + 1.0 },
-    { ..base, middot_width: base.middot_width + 1.0 },
-    { ..base, wsmiddot_width: base.wsmiddot_width + 1.0 },
-    { ..base, use_monospace_optimizations: !base.use_monospace_optimizations },
+    { ..base, line_height: base.line_height + 1, },
+    { ..base, space_width: base.space_width + 1.0, },
+    { ..base, middot_width: base.middot_width + 1.0, },
+    { ..base, wsmiddot_width: base.wsmiddot_width + 1.0, },
+    { ..base, use_monospace_optimizations: !base.use_monospace_optimizations, },
     {
       ..base,
       can_use_halfwidth_rightwards_arrow: !base.can_use_halfwidth_rightwards_arrow,
     },
-    { ..base, stop_rendering_line_after: base.stop_rendering_line_after + 1 },
-    { ..base, render_whitespace: All },
-    { ..base, render_control_characters: !base.render_control_characters },
-    { ..base, font_ligatures: !base.font_ligatures },
-    { ..base, vertical_scrollbar_size: base.vertical_scrollbar_size + 1.0 },
+    { ..base, stop_rendering_line_after: base.stop_rendering_line_after + 1, },
+    { ..base, render_whitespace: All, },
+    { ..base, render_control_characters: !base.render_control_characters, },
+    { ..base, font_ligatures: !base.font_ligatures, },
+    { ..base, vertical_scrollbar_size: base.vertical_scrollbar_size + 1.0, },
   ]
   assert_true(base.equals(base))
   for variant in variants {

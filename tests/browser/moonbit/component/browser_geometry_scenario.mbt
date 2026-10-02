@@ -71,7 +71,7 @@ fn BrowserIframeContentWidget::content_widget_handle(
       })
     },
     allow_editor_overflow=self.allow_overflow,
-    before_render=() => Some({ width: 80.0, height: 30.0 }),
+    before_render=() => Some({ width: 80.0, height: 30.0, }),
     after_render=(position, coordinate) => {
       self.after_position = match position {
         Some(Above) => "above"
@@ -162,7 +162,7 @@ fn BrowserIframeGeometryFixture::new() -> BrowserIframeGeometryFixture {
   widgets.set_widget_position(normal.content_widget_handle())
   widgets.add_widget(overflow.content_widget_handle())
   widgets.set_widget_position(overflow.content_widget_handle())
-  { widgets, normal, overflow, anchor_left, anchor_top }
+  { widgets, normal, overflow, anchor_left, anchor_top, }
 }
 
 ///|
@@ -312,7 +312,6 @@ fn BrowserGeometryFixture::new(
 ) -> BrowserGeometryFixture {
   let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), BrowserGeometryHoverProvider::{
-
   })
   |> ignore
   let log_service = @log.LogService()

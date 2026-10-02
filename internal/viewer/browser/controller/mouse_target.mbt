@@ -804,7 +804,7 @@ pub fn HitTestRequest::fulfill_overlay_widget(
 ///|
 /// `EMPTY_CONTENT_AFTER_LINES` (mouseTarget.ts:508).
 fn empty_content_after_lines() -> @editor_browser.MouseTargetContentEmptyData {
-  { is_after_lines: true, horizontal_distance_to_text: None }
+  { is_after_lines: true, horizontal_distance_to_text: None, }
 }
 
 ///|

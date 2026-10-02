@@ -105,7 +105,6 @@ fn run_cursor_input_events_test() -> Unit {
   )
   let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), CursorInputHoverProvider::{
-
   })
   |> ignore
   let log_service = @log.LogService()

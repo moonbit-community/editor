@@ -77,7 +77,7 @@ test "consumed payloads retain independent flags and array identity" {
 ///|
 test "dispatcher gives every handler a whole batch before reentrant FIFO batch" {
   let deliveries : Array[String] = []
-  let holder : Ref[ViewEventDispatcher?] = { val: None }
+  let holder : Ref[ViewEventDispatcher?] = { val: None, }
   let did_reenter = Ref(false)
   let dispatcher = ViewEventDispatcher::ViewEventDispatcher(events => {
     let batch = view_event_test_batch_name(events)
@@ -109,7 +109,7 @@ test "dispatcher gives every handler a whole batch before reentrant FIFO batch" 
 ///|
 test "ViewZones outgoing continuation waits for reentrant internal delivery" {
   let deliveries : Array[String] = []
-  let holder : Ref[ViewEventDispatcher?] = { val: None }
+  let holder : Ref[ViewEventDispatcher?] = { val: None, }
   let dispatcher = ViewEventDispatcher::ViewEventDispatcher(events => {
     let batch = view_event_test_batch_name(events)
     deliveries.push("h1:" + batch)
@@ -512,7 +512,7 @@ test "ViewLines propagates changed token decoration option and selection invalid
   let (line_a, _) = view_event_test_retained_line(parent, input_a)
   let (line_b, _) = view_event_test_retained_line(parent, input_b)
   let (line_c, _) = view_event_test_retained_line(parent, input_c)
-  lines.window = { start: 10, end: 13 }
+  lines.window = { start: 10, end: 13, }
   lines.lines = [line_a, line_b, line_c]
 
   // Nested VisibleLinesCollection predicates stay independently observable:
@@ -679,7 +679,7 @@ test "ViewLines option equality catches same-space font render axes" {
     lines.get_dom_node(),
     original_input,
   )
-  lines.window = { start: 1, end: 2 }
+  lines.window = { start: 1, end: 2, }
   lines.lines = [line]
   live_configuration.val = ViewLinesConfiguration(
     space_width=7.2,
@@ -726,7 +726,7 @@ test "ViewLines empty flush resets to one and defers ordinary DOM replacement" {
   assert_eq(lines.lines.length(), 0)
   let input = view_event_test_line_input("stale", None)
   let (stale_line, stale_node) = view_event_test_retained_line(parent, input)
-  lines.window = { start: 50, end: 51 }
+  lines.window = { start: 50, end: 51, }
   lines.lines = [stale_line]
 
   assert_true(view_lines_on_view_event(lines, ViewFlushed))
@@ -1103,7 +1103,7 @@ test "ViewLines and ViewCursors cover four scroll flags and token endpoints" {
   install_view_lifecycle_test_browser()
   let view = View::View()
   let lines = view.view_lines
-  lines.window = { start: 10, end: 13 }
+  lines.window = { start: 10, end: 13, }
   lines.lines = [ViewLine(), ViewLine(), ViewLine()]
   assert_false(
     view_lines_on_view_event(
@@ -1302,7 +1302,7 @@ fn view_event_test_overlay_render_context(
     Position(1, cursor_column),
   )
   let input : ViewRenderInput = {
-    window: { start: 1, end: 2 },
+    window: { start: 1, end: 2, },
     view_model,
     layout,
     selection_view_range: None,
@@ -1370,7 +1370,7 @@ test "View renders text before prepare and completes all prepares before writes"
     view.view_lines.get_dom_node(),
     view_event_test_line_input("alpha", None),
   )
-  view.view_lines.window = { start: 1, end: 2 }
+  view.view_lines.window = { start: 1, end: 2, }
   view.view_lines.lines = [retained_line]
   for part in view.view_parts {
     part.on_did_render()
@@ -1400,7 +1400,7 @@ test "View renders text before prepare and completes all prepares before writes"
   }
   let selection = @core.Selection(Position(1, 1), Position(1, 1))
   let input : ViewRenderInput = {
-    window: { start: 1, end: 2 },
+    window: { start: 1, end: 2, },
     view_model,
     layout,
     selection_view_range: None,

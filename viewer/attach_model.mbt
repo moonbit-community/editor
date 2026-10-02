@@ -206,7 +206,7 @@ fn Viewer::attach_model(self : Viewer, model : @model.TextModel) -> Unit {
     tokenize_ms: 0.0,
     build_ms: build_finished - build_started,
   })
-  self.pending_rendered = Some({ model, fresh: true })
+  self.pending_rendered = Some({ model, fresh: true, })
   self.configuration.request_measure()
   self.schedule_render()
 }
@@ -402,7 +402,7 @@ fn Viewer::handle_model_tokens_changed(
     Some(pending) => pending.fresh
     None => false
   }
-  self.pending_rendered = Some({ model, fresh })
+  self.pending_rendered = Some({ model, fresh, })
   self.schedule_render()
 }
 
@@ -511,7 +511,7 @@ fn Viewer::on_line_mapping_changed(
     Some(pending) => pending.fresh
     None => false
   }
-  self.pending_rendered = Some({ model, fresh })
+  self.pending_rendered = Some({ model, fresh, })
 }
 
 ///|

@@ -222,7 +222,7 @@ test "fromFoldRanges round-trips ranges, state, and the debug string" {
   assert_eq(region.parent_index(), 0)
   assert_false(region.is_collapsed())
   assert_true(
-    region.contained_by({ start_line_number: 1, end_line_number: 10 }),
+    region.contained_by({ start_line_number: 1, end_line_number: 10, }),
   )
   assert_true(region.contains_line(3))
   assert_false(region.hides_line(3))

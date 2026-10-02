@@ -27,7 +27,12 @@ test "crossing in-flight responses resolve their own requests" {
   )
   assert_true(
     resolve_pending_response(
-      HoverResult({ id: first, uri: test_uri(), revision: "rev-1", hover: None }),
+      HoverResult({
+        id: first,
+        uri: test_uri(),
+        revision: "rev-1",
+        hover: None,
+      }),
     ),
   )
   debug_inspect(
@@ -39,7 +44,12 @@ test "crossing in-flight responses resolve their own requests" {
   // Each entry resolves exactly once.
   assert_false(
     resolve_pending_response(
-      HoverResult({ id: first, uri: test_uri(), revision: "rev-1", hover: None }),
+      HoverResult({
+        id: first,
+        uri: test_uri(),
+        revision: "rev-1",
+        hover: None,
+      }),
     ),
   )
   assert_eq(pending_requests.length(), 0)

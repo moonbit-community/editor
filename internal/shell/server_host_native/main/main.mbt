@@ -52,7 +52,7 @@ fn parse_args(args : ArrayView[String]) -> DevServerConfig {
     }
     i = i + 1
   }
-  { root, port, asset_dir, moon_command }
+  { root, port, asset_dir, moon_command, }
 }
 
 ///|

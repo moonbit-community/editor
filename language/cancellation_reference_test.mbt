@@ -22,7 +22,7 @@ fn manual_cancellation_scheduler(
 ) -> (() -> Unit) -> @base_common.Disposable {
   callback => {
     let active = Ref(true)
-    scheduled.push({ callback, active })
+    scheduled.push({ callback, active, })
     @base_common.Disposable::from(() => active.val = false)
   }
 }

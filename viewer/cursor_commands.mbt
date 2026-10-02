@@ -24,7 +24,7 @@ fn CursorMoveCommandArgs::new(
   view_position? : @base_common.Position,
   reveal_type? : @controller.NavigationCommandRevealType = Regular,
 ) -> CursorMoveCommandArgs {
-  { source, position, view_position, reveal_type }
+  { source, position, view_position, reveal_type, }
 }
 
 ///|
@@ -58,7 +58,7 @@ fn CursorMoveCommandOptions::new(
   source? : String = "keyboard",
   page_size? : Int,
 ) -> CursorMoveCommandOptions {
-  { source, page_size }
+  { source, page_size, }
 }
 
 ///|
@@ -73,7 +73,7 @@ fn EndCommandOptions::new(
   source? : String = "keyboard",
   sticky? : Bool,
 ) -> EndCommandOptions {
-  { source, sticky }
+  { source, sticky, }
 }
 
 ///|
@@ -90,7 +90,7 @@ fn SetSelectionCommandOptions::new(
   selection : @core.Selection,
   source? : String = "",
 ) -> SetSelectionCommandOptions {
-  { source, selection }
+  { source, selection, }
 }
 
 ///|
@@ -105,14 +105,14 @@ fn CursorSetSelectionCommandArgs::new(
   source? : String = "",
   selection? : @core.Selection,
 ) -> CursorSetSelectionCommandArgs {
-  { source, selection }
+  { source, selection, }
 }
 
 ///|
 fn CursorSetSelectionCommandArgs::from_options(
   options : SetSelectionCommandOptions,
 ) -> CursorSetSelectionCommandArgs {
-  { source: options.source, selection: Some(options.selection) }
+  { source: options.source, selection: Some(options.selection), }
 }
 
 ///|
@@ -140,7 +140,7 @@ fn BaseMoveToCommand::new(
   id : String,
   in_selection_mode~ : Bool,
 ) -> BaseMoveToCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -201,7 +201,7 @@ fn CursorMoveBasedCommand::new(
   id : String,
   args : @view_model.SimpleMoveArguments,
 ) -> CursorMoveBasedCommand {
-  { id, static_args: args }
+  { id, static_args: args, }
 }
 
 ///|
@@ -259,7 +259,7 @@ priv struct HomeCommand {
 
 ///|
 fn HomeCommand::new(id : String, in_selection_mode~ : Bool) -> HomeCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -293,7 +293,7 @@ fn LineStartCommand::new(
   id : String,
   in_selection_mode~ : Bool,
 ) -> LineStartCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -344,7 +344,7 @@ priv struct EndCommand {
 
 ///|
 fn EndCommand::new(id : String, in_selection_mode~ : Bool) -> EndCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -384,7 +384,7 @@ fn LineEndCommand::new(
   id : String,
   in_selection_mode~ : Bool,
 ) -> LineEndCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -437,7 +437,7 @@ priv struct WordCommand {
 
 ///|
 fn WordCommand::new(id : String, in_selection_mode~ : Bool) -> WordCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -478,7 +478,7 @@ priv struct LineCommand {
 
 ///|
 fn LineCommand::new(id : String, in_selection_mode~ : Bool) -> LineCommand {
-  { id, in_selection_mode }
+  { id, in_selection_mode, }
 }
 
 ///|
@@ -520,7 +520,7 @@ priv struct SelectAllCommand {
 
 ///|
 fn SelectAllCommand::new() -> SelectAllCommand {
-  { id: "editor.action.selectAll" }
+  { id: "editor.action.selectAll", }
 }
 
 ///|
@@ -561,7 +561,7 @@ priv struct SetSelectionCommand {
 
 ///|
 fn SetSelectionCommand::new() -> SetSelectionCommand {
-  { id: "setSelection" }
+  { id: "setSelection", }
 }
 
 ///|

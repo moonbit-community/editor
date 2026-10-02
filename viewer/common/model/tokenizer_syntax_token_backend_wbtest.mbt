@@ -27,7 +27,7 @@ fn backend_harness(
     scheduler,
     message => errors.push(message),
   )
-  { model_state, attached, scheduler, disposing, errors }
+  { model_state, attached, scheduler, disposing, errors, }
 }
 
 ///|
@@ -49,14 +49,14 @@ fn backend_scheduler_harness() -> BackendSchedulerHarness {
   let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)
-      idle.push({ callback, active })
+      idle.push({ callback, active, })
       @base_common.Disposable::from(() => active.val = false)
     },
     zero_timeout=_callback => @base_common.Disposable::from(() => ()),
     delay=(_ms, _callback) => @base_common.Disposable::from(() => ()),
     now=() => now.val,
   )
-  { scheduler, idle }
+  { scheduler, idle, }
 }
 
 ///|
@@ -84,7 +84,7 @@ test "passive reads never invoke support; stable attached ranges store exact ran
   assert_eq(backend.get_line_tokens(2).get_count(), 1)
   assert_eq(calls.length(), 0)
   let view = attached_views.attach_view()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   assert_eq(calls.length(), 2)
   assert_eq(events.length(), 1)
   assert_eq(events[0].ranges[0].from_line_number, 1)
@@ -106,7 +106,7 @@ test "too-large and missing support stay passive defaults and schedule nothing" 
   )
   assert_eq(resolves.val, 0)
   let view = attached_views.attach_view()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1, }], true)
   assert_eq(resolves.val, 0)
   assert_eq(backend.get_line_tokens(1).get_count(), 1)
 }
@@ -122,7 +122,10 @@ test "stable attached ranges refresh synchronously without a scheduler" {
     _ => Some(logging_support(calls, Ref(0))),
   )
   let handle = attached_views.attach_view()
-  handle.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  handle.set_visible_lines(
+    [{ start_line_number: 1, end_line_number: 2, }],
+    true,
+  )
   assert_eq(calls.length(), 2)
   assert_eq(backend.get_line_tokens(1).get_line_content(), "one")
 }
@@ -171,7 +174,7 @@ test "disposing guard drops token events from reset and visible refresh" {
   harness.disposing.val = true
   backend.reset_tokenization()
   let view = attached_views.attach_view()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 1, }], true)
   assert_eq(token_events.val, 0)
 }
 

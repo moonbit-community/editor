@@ -25,12 +25,12 @@ test "windowed viewport data matches the matching slice of a whole-document buil
   let view_model = @view_model.ViewModel(model)
   let whole = @view_model.viewport_data_from_view_model(
     view_model,
-    { start: 1, end: model.get_line_count() + 1 },
+    { start: 1, end: model.get_line_count() + 1, },
     line_height=18,
   )
   let window = @view_model.viewport_data_from_view_model(
     view_model,
-    { start: 3, end: 6 },
+    { start: 3, end: 6, },
     line_height=18,
   )
   assert_eq(window.lines.length(), 3)
@@ -51,13 +51,13 @@ test "window bounds clamp to the document" {
   let model = plain_text_model("a\nb\nc")
   let view_model = @view_model.ViewModel(model)
   debug_inspect(
-    view_model.clamp_window({ start: -5, end: 99 }),
+    view_model.clamp_window({ start: -5, end: 99, }),
     content=(
       #|{ start: 1, end: 4 }
     ),
   )
   debug_inspect(
-    view_model.clamp_window({ start: 99, end: 99 }),
+    view_model.clamp_window({ start: 99, end: 99, }),
     content=(
       #|{ start: 3, end: 4 }
     ),
@@ -65,7 +65,7 @@ test "window bounds clamp to the document" {
   // The viewport builder applies the same clamps.
   let viewport = @view_model.viewport_data_from_view_model(
     view_model,
-    { start: -5, end: 99 },
+    { start: -5, end: 99, },
     line_height=18,
   )
   assert_eq(viewport.start_line_number, 1)

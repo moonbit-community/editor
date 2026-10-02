@@ -21,7 +21,7 @@ pub fn LanguageFilter::LanguageFilter(
   scheme? : String,
   pattern? : String,
 ) -> LanguageFilter {
-  { language, scheme, pattern }
+  { language, scheme, pattern, }
 }
 
 ///|

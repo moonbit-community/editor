@@ -58,7 +58,7 @@ pub fn compute_changes(
   let result = @diff.get_default().compute_diff(
     original_lines,
     modified_lines,
-    { ignore_trim_whitespace, max_computation_time_ms, compute_moves: false },
+    { ignore_trim_whitespace, max_computation_time_ms, compute_moves: false, },
   )
   to_line_changes(result.changes)
 }

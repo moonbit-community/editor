@@ -25,7 +25,7 @@ impl @syntax.LineTokenizer for InitialSizeCountingTokenizer with fn tokenize_lin
   self.calls.val += 1
   let tokens : Array[@syntax.LineToken] = []
   if line_text.length() > 0 {
-    tokens.push({ start: 0, end: 1, tag: Keyword })
+    tokens.push({ start: 0, end: 1, tag: Keyword, })
   }
   (tokens, state)
 }

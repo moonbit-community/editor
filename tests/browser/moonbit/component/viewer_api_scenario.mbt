@@ -5,7 +5,7 @@ priv struct ComponentHoverProvider {
 
 ///|
 fn ComponentHoverProvider::new() -> ComponentHoverProvider {
-  { hover_text: "wrapped component hover" }
+  { hover_text: "wrapped component hover", }
 }
 
 ///|

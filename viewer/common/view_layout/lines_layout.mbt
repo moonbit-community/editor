@@ -35,7 +35,7 @@ pub fn EditorWhitespace::EditorWhitespace(
   height : Int,
   min_width : Int,
 ) -> EditorWhitespace {
-  { id, after_line_number, ordinal, height, min_width, prefix_sum: 0.0 }
+  { id, after_line_number, ordinal, height, min_width, prefix_sum: 0.0, }
 }
 
 ///|
@@ -84,7 +84,7 @@ priv struct PendingChanges {
 
 ///|
 fn PendingChanges::new() -> PendingChanges {
-  { has_pending: false, inserts: [], changes: [], removes: [] }
+  { has_pending: false, inserts: [], changes: [], removes: [], }
 }
 
 ///|
@@ -189,7 +189,7 @@ pub fn WhitespaceChangeAccessor::change_one_whitespace(
 ) -> Unit {
   self.had_a_change = true
   let new_height = javascript_to_int32(new_height)
-  self.layout.pending_changes.change({ id, new_after_line_number, new_height })
+  self.layout.pending_changes.change({ id, new_after_line_number, new_height, })
 }
 
 ///|
@@ -305,7 +305,7 @@ pub fn LinesLayout::change_whitespace(
   self : LinesLayout,
   callback : (WhitespaceChangeAccessor) -> Unit raise?,
 ) -> Bool raise? {
-  let accessor = { layout: self, had_a_change: false }
+  let accessor = { layout: self, had_a_change: false, }
   // Monaco commits in `finally`: queued work survives a callback failure, and
   // the queues are cleared before that failure continues to the caller.
   defer self.pending_changes.commit(self)

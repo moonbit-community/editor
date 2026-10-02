@@ -31,7 +31,7 @@ fn async_hover_mouse_target() -> @editor_browser.MouseTarget {
     mouse_column=1,
     position=Position(1, 1),
     range=Range(1, 1, 1, 1),
-    detail={ might_be_foreign_element: false, injected_text: None },
+    detail={ might_be_foreign_element: false, injected_text: None, },
   )
 }
 
@@ -50,7 +50,7 @@ struct ManualHoverScheduler {
 
 ///|
 fn ManualHoverScheduler::new() -> ManualHoverScheduler {
-  { now_ms: 0, tasks: [] }
+  { now_ms: 0, tasks: [], }
 }
 
 ///|
@@ -140,7 +140,7 @@ fn AsyncModelFeatureTestServices::new() -> AsyncModelFeatureTestServices {
     languages=languages.language_handle(log_service.log_handle()),
     log_service=log_service.log_handle(),
   )
-  { services, languages, log_service }
+  { services, languages, log_service, }
 }
 
 ///|

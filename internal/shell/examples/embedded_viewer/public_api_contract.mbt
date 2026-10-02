@@ -143,7 +143,7 @@ fn compile_external_viewer_api_contract(
   )
   viewer.set_model(Some(model))
   viewer.handle_initialized()
-  viewer.get_scrolled_visible_position({ line_number: 1, column: 1 })
+  viewer.get_scrolled_visible_position({ line_number: 1, column: 1, })
   |> require_contract_scrolled_position
 
   // Browser-owned types remain inferred: this external host imports neither

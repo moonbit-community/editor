@@ -125,7 +125,7 @@ fn prepare_cursor_render_data(
     padding_left = 1.0
     left -= padding_left
   }
-  { top, left, padding_left, width, height: line_height }
+  { top, left, padding_left, width, height: line_height, }
 }
 
 ///|

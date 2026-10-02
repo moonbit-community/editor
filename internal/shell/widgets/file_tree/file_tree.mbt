@@ -39,7 +39,7 @@ pub fn FileTree::FileTree(
     },
     view=view_file_tree,
   )
-  { emit, cell }
+  { emit, cell, }
 }
 
 ///|

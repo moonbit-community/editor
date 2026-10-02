@@ -162,7 +162,7 @@ test "moveDown retry normalization stops at the exact cap of ten" {
   let mut calls = 0
   let target = cursor_move_down_with_retry(3, 100, i => {
     calls += 1
-    ({ line_number: 4 + i, column: 1, leftover_visible_columns: 0 }, 3)
+    ({ line_number: 4 + i, column: 1, leftover_visible_columns: 0, }, 3)
   })
   assert_eq(calls, 11)
   assert_eq(target.line_number, 14)

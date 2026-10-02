@@ -21,7 +21,7 @@ pub fn LineCommentRule::LineCommentRule(
   comment : String,
   no_indent? : Bool = false,
 ) -> LineCommentRule {
-  { comment, no_indent }
+  { comment, no_indent, }
 }
 
 ///|
@@ -109,5 +109,5 @@ pub fn Languages::get_language_configuration(
 ) -> LanguageConfiguration {
   self.language_configurations
   .get(language_id)
-  .unwrap_or({ comments: None, folding_rules: None })
+  .unwrap_or({ comments: None, folding_rules: None, })
 }

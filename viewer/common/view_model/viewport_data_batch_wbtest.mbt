@@ -61,7 +61,7 @@ test "real viewport uses one batch, one passive read per projected model line, a
 
   let viewport = viewport_data_from_view_model(
     view_model,
-    { start: 1, end: 6 },
+    { start: 1, end: 6, },
     line_height=18,
   )
 

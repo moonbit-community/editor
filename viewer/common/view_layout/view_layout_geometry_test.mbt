@@ -49,7 +49,7 @@ test "EditorScrollable emits only exact content-size identity changes" {
   assert_true(initial == EditorScrollDimensions(0.0, 0.0, 0.0, 0.0))
   assert_true(
     scrollable.dimensions() ==
-    { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0 },
+    { width: 0.0, scroll_width: 0.0, height: 0.0, scroll_height: 0.0, },
   )
   let changes : Array[@view_layout.ContentSizeChange] = []
   let listener = scrollable.on_did_content_size_change(change => {

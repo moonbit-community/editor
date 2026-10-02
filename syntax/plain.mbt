@@ -10,7 +10,7 @@ pub struct PlainTokenizer {}
 #alias(new, deprecated)
 #warnings("-unnecessary_annotation")
 pub fn PlainTokenizer::PlainTokenizer() -> PlainTokenizer {
-  PlainTokenizer::{  }
+  PlainTokenizer::{ }
 }
 
 ///|
@@ -35,16 +35,16 @@ pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
     } else if unit == 47 &&
       offset + 1 < line_text.length() &&
       line_text[offset + 1].to_int() == 47 {
-      tokens.push({ start: offset, end: line_text.length(), tag: Comment })
+      tokens.push({ start: offset, end: line_text.length(), tag: Comment, })
       offset = line_text.length()
     } else if unit == 34 {
       let start = offset
       offset = consume_string(line_text, offset)
-      tokens.push({ start, end: offset, tag: String })
+      tokens.push({ start, end: offset, tag: String, })
     } else if is_digit(unit) {
       let start = offset
       offset = consume_while(line_text, offset, is_digit)
-      tokens.push({ start, end: offset, tag: Number })
+      tokens.push({ start, end: offset, tag: Number, })
     } else if is_ident_start(unit) {
       let start = offset
       offset = consume_while(line_text, offset, is_ident_continue)
@@ -68,7 +68,7 @@ pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
       } else {
         offset + 1
       }
-      tokens.push({ start, end: offset, tag: Punctuation })
+      tokens.push({ start, end: offset, tag: Punctuation, })
     }
   }
   (tokens, state)

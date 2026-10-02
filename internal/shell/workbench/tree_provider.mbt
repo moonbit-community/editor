@@ -6,7 +6,6 @@ priv struct RemoteWorkspaceTreeProvider {}
 
 ///|
 let workspace_tree_provider : &@workspace.WorkspaceTreeProvider = RemoteWorkspaceTreeProvider::{
-
 }
 
 ///|
@@ -21,7 +20,9 @@ impl @workspace.WorkspaceTreeProvider for RemoteWorkspaceTreeProvider with fn re
   _self,
   uri,
 ) {
-  let response = protocol_request("resolve", id => ResolveDirectory({ id, uri }))
+  let response = protocol_request("resolve", id => {
+    ResolveDirectory({ id, uri, })
+  })
   match response {
     DirectoryResolved(payload) => WorkspaceResolved(payload.stat)
     RemoteError(error) =>

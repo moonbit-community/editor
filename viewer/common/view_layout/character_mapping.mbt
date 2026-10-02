@@ -27,9 +27,9 @@ pub struct CharacterMapping {
 pub fn CharacterMapping::CharacterMapping(length : Int) -> CharacterMapping {
   let entries : Array[CharacterMappingEntry] = []
   for _ in 0..<length {
-    entries.push({ part_index: 0, char_index: 0, visible_column: 0 })
+    entries.push({ part_index: 0, char_index: 0, visible_column: 0, })
   }
-  { length, entries }
+  { length, entries, }
 }
 
 ///|
@@ -43,7 +43,7 @@ pub fn CharacterMapping::set_column_info(
 ) -> Unit {
   let index = column - 1
   if index >= 0 && index < self.entries.length() {
-    self.entries[index] = { part_index, char_index, visible_column }
+    self.entries[index] = { part_index, char_index, visible_column, }
   }
 }
 
@@ -54,11 +54,11 @@ pub fn CharacterMapping::get_dom_position(
   column : Int,
 ) -> DomPosition {
   if self.length == 0 {
-    return { part_index: 0, char_index: 0 }
+    return { part_index: 0, char_index: 0, }
   }
   let index = @base_common.clamp_int(column - 1, 0, self.length - 1)
   let entry = self.entries[index]
-  { part_index: entry.part_index, char_index: entry.char_index }
+  { part_index: entry.part_index, char_index: entry.char_index, }
 }
 
 ///|

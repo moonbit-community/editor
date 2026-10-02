@@ -21,7 +21,7 @@ priv struct MarkerDecorations {
 ///|
 /// Builds an empty per-model decoration map bound to `model`.
 fn MarkerDecorations::new(model : @model.TextModel) -> MarkerDecorations {
-  { model, entries: [], disposed: false, generation: 0 }
+  { model, entries: [], disposed: false, generation: 0, }
 }
 
 ///|
@@ -105,7 +105,7 @@ fn MarkerDecorations::update(
   }
   let new_decorations : Array[@model.ModelDeltaDecoration] = added.map(marker => {
     let range = create_decoration_range(self.model, marker)
-    { range, options: create_decoration_option(marker) }
+    { range, options: create_decoration_option(marker), }
   })
   let ids = self.model.delta_decorations(old_ids, new_decorations)
   // `delta_decorations` fires the model event before it returns. A listener

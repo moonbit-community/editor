@@ -153,7 +153,7 @@ pub fn InjectedTextOptions::InjectedTextOptions(
   inline_class_name? : String,
   attached_index? : Int = -1,
 ) -> InjectedTextOptions {
-  { content, inline_class_name, attached_index }
+  { content, inline_class_name, attached_index, }
 }
 
 ///|

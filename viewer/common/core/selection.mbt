@@ -31,7 +31,7 @@ pub fn Selection::Selection(
   selection_start : @base_common.Position,
   position : @base_common.Position,
 ) -> Selection {
-  { selection_start, position }
+  { selection_start, position, }
 }
 
 ///|
@@ -41,7 +41,7 @@ pub fn Selection::from_positions(
   start : @base_common.Position,
   end : @base_common.Position,
 ) -> Selection {
-  { selection_start: start, position: end }
+  { selection_start: start, position: end, }
 }
 
 ///|

@@ -101,7 +101,7 @@ pub fn SingleCursorState::moved(
   leftover_visible_columns? : Int = 0,
 ) -> SingleCursorState {
   if in_selection_mode {
-    { ..self, position, leftover_visible_columns }
+    { ..self, position, leftover_visible_columns, }
   } else {
     SingleCursorState(
       position,

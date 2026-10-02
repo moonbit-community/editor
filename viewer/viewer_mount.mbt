@@ -36,7 +36,7 @@ fn PlaceholderDom::PlaceholderDom(theme : String) -> PlaceholderDom {
   let text = document.create_text_node("")
   message.append_child(text.as_node())
   root.append_child(message.as_node())
-  { root, text }
+  { root, text, }
 }
 
 ///|

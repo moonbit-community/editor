@@ -45,7 +45,7 @@ fn InlineDecoration::InlineDecoration(
   inline_class_name : String,
   type_ : InlineDecorationType,
 ) -> InlineDecoration {
-  { range, inline_class_name, type_ }
+  { range, inline_class_name, type_, }
 }
 
 ///|
@@ -124,7 +124,7 @@ fn InlineModelDecorationsComputer::InlineModelDecorationsComputer(
   model : @model.TextModel,
   coordinates_converter : CoordinatesConverter,
 ) -> InlineModelDecorationsComputer {
-  { context, model, coordinates_converter, decorations_cache: Map([]) }
+  { context, model, coordinates_converter, decorations_cache: Map([]), }
 }
 
 ///|

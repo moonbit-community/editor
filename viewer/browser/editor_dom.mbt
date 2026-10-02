@@ -35,7 +35,10 @@ pub(all) struct PageCoordinates {
 pub fn PageCoordinates::to_client_coordinates(
   self : PageCoordinates,
 ) -> ClientCoordinates {
-  { client_x: self.x - window_scroll_x(), client_y: self.y - window_scroll_y() }
+  {
+    client_x: self.x - window_scroll_x(),
+    client_y: self.y - window_scroll_y(),
+  }
 }
 
 ///|
@@ -50,7 +53,10 @@ pub(all) struct ClientCoordinates {
 pub fn ClientCoordinates::to_page_coordinates(
   self : ClientCoordinates,
 ) -> PageCoordinates {
-  { x: self.client_x + window_scroll_x(), y: self.client_y + window_scroll_y() }
+  {
+    x: self.client_x + window_scroll_x(),
+    y: self.client_y + window_scroll_y(),
+  }
 }
 
 ///|
@@ -103,7 +109,7 @@ pub fn create_coordinates_relative_to_editor(
     @base_browser.element_offset_height(editor_view_dom_node)
   let relative_x = (pos.x - editor_page_position.x) / scale_x
   let relative_y = (pos.y - editor_page_position.y) / scale_y
-  { x: relative_x, y: relative_y }
+  { x: relative_x, y: relative_y, }
 }
 
 ///|
@@ -162,7 +168,7 @@ pub fn EditorDomMouseEvent::EditorDomMouseEvent(
     timestamp: base.timestamp,
     default_prevented: base.default_prevented,
     is_from_pointer_capture,
-    pos: { x: base.posx, y: base.posy },
+    pos: { x: base.posx, y: base.posy, },
     editor_view_dom_node,
     editor_pos_cache: None,
     relative_pos_cache: None,

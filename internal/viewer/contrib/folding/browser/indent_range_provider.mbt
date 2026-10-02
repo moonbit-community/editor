@@ -278,7 +278,7 @@ pub fn compute_ranges(
         // else: no end marker found, treat line as a regular line
       } else {
         // end pattern match
-        previous_regions.push({ indent: -2, end_above: line, line })
+        previous_regions.push({ indent: -2, end_above: line, line, })
         continue line - 1
       }
     }
@@ -302,7 +302,7 @@ pub fn compute_ranges(
       previous.end_above = line
     } else {
       // previous.indent < indent: new region with a bigger indent
-      previous_regions.push({ indent, end_above: line, line })
+      previous_regions.push({ indent, end_above: line, line, })
     }
     continue line - 1
   }

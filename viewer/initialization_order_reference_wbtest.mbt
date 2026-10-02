@@ -26,7 +26,7 @@ impl @syntax.LineTokenizer for InitializationCountingTokenizer with fn tokenize_
   self.calls.val += 1
   let tokens : Array[@syntax.LineToken] = []
   if line_text.length() > 0 {
-    tokens.push({ start: 0, end: 1, tag: Keyword })
+    tokens.push({ start: 0, end: 1, tag: Keyword, })
   }
   (tokens, state)
 }
@@ -149,13 +149,13 @@ test "initialization reentry does not initialize a replacement model" {
   let first_calls = Ref(0)
   let first_registration = @syntax.tokenization_registry.register(
     "initialization-order-reentry-first",
-    InitializationCountingTokenizer::{ calls: first_calls },
+    InitializationCountingTokenizer::{ calls: first_calls, },
   )
   defer first_registration.dispose()
   let replacement_calls = Ref(0)
   let replacement_registration = @syntax.tokenization_registry.register(
     "initialization-order-reentry-replacement",
-    InitializationCountingTokenizer::{ calls: replacement_calls },
+    InitializationCountingTokenizer::{ calls: replacement_calls, },
   )
   defer replacement_registration.dispose()
   let viewer = Viewer::Viewer()

@@ -45,7 +45,7 @@ pub fn GuidesTextModelPart::GuidesTextModelPart(
   indent_size? : Int = 4,
   off_side? : Bool = false,
 ) -> GuidesTextModelPart {
-  { text_model, tab_size, indent_size, off_side }
+  { text_model, tab_size, indent_size, off_side, }
 }
 
 ///|
@@ -339,7 +339,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       indent = initial_indent
       if indent == 0 {
         // No need to continue
-        return { start_line_number, end_line_number, indent }
+        return { start_line_number, end_line_number, indent, }
       }
     }
     if go_up {
@@ -357,7 +357,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
       }
     }
   }
-  { start_line_number, end_line_number, indent }
+  { start_line_number, end_line_number, indent, }
 }
 
 ///|

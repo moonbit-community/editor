@@ -91,7 +91,7 @@ fn model_tokenization_scheduler_harness() -> ModelTokenizationSchedulerHarness {
   let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)
-      idle.push({ callback, active })
+      idle.push({ callback, active, })
       @base_common.Disposable::from(() => active.val = false)
     },
     zero_timeout=_callback => {
@@ -107,7 +107,7 @@ fn model_tokenization_scheduler_harness() -> ModelTokenizationSchedulerHarness {
     },
     now=() => 0.0,
   )
-  { scheduler, idle, zero, delayed, delay_milliseconds }
+  { scheduler, idle, zero, delayed, delay_milliseconds, }
 }
 
 ///|
@@ -225,7 +225,7 @@ test "set_value updates shared token state and token_count stays passive" {
   assert_eq(calls.val, 0)
 
   let view = model.on_before_attached()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   assert_eq(calls.val, 2)
   let before_count = calls.val
   assert_eq(model.tokenization.token_count(), 3)
@@ -267,9 +267,12 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   assert_eq(model.get_attached_editor_count(), 4)
   assert_eq(first_scheduler.idle.length(), 1)
   assert_true(later_scheduler.idle.is_empty())
-  later.set_visible_lines([{ start_line_number: 3, end_line_number: 3 }], false)
+  later.set_visible_lines(
+    [{ start_line_number: 3, end_line_number: 3, }],
+    false,
+  )
   another_headless.set_visible_lines(
-    [{ start_line_number: 5, end_line_number: 5 }],
+    [{ start_line_number: 5, end_line_number: 5, }],
     false,
   )
   assert_eq(first_scheduler.delayed.length(), 2)
@@ -285,7 +288,7 @@ test "attached epoch selects first scheduler, retains it, then cancels and clear
   assert_true(first_scheduler.idle[0].active.val)
   assert_true(model.tokenization_state.scheduler.val is Some(_))
   headless.set_visible_lines(
-    [{ start_line_number: 1, end_line_number: 1 }],
+    [{ start_line_number: 1, end_line_number: 1, }],
     false,
   )
   assert_eq(first_scheduler.delayed.length(), 3)
@@ -470,7 +473,7 @@ test "Some then None scheduler epoch retains supplier until final detach" {
   assert_true(scheduler.idle[0].active.val)
   assert_true(model.tokenization_state.scheduler.val is Some(_))
   sibling.set_visible_lines(
-    [{ start_line_number: 2, end_line_number: 2 }],
+    [{ start_line_number: 2, end_line_number: 2, }],
     false,
   )
   assert_eq(scheduler.delayed.length(), 1)
@@ -528,7 +531,7 @@ test "TextModel reports a failing tokenizer and remains live for later reset" {
   // an attached visible range can then tokenize normally.
   model.set_value("still\nlive")
   let view = model.on_before_attached()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   // One successful reset probes support and then seeds the state store, so
   // the initial-state callback runs twice after the first reported failure.
   assert_eq(attempts.val, 3)

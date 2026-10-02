@@ -122,7 +122,7 @@ async test "hover skips a provider None result and continues in order" {
   let good_tokens : Array[@language.CancellationToken] = []
   let none_registration = languages.register_hover_provider(
     LanguageId("moonbit"),
-    NoneHoverProvider::{ calls: none_calls, observed_tokens: none_tokens },
+    NoneHoverProvider::{ calls: none_calls, observed_tokens: none_tokens, },
   )
   let good_registration = languages.register_hover_provider(
     LanguageId("moonbit"),

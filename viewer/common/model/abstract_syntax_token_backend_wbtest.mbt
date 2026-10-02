@@ -21,7 +21,7 @@ fn deterministic_scheduler(
     },
     delay=(_milliseconds, callback) => {
       let active = Ref(true)
-      delayed.push({ callback, active })
+      delayed.push({ callback, active, })
       @base_common.Disposable::from(() => active.val = false)
     },
     now=() => 0.0,
@@ -55,7 +55,10 @@ test "AttachedViews preserves identity and emits committed and absent states" {
   manager.on_did_change_visible_ranges(event => events.push(event)) |> ignore
   let first = manager.attach_view()
   let second = manager.attach_view()
-  first.set_visible_lines([{ start_line_number: 3, end_line_number: 5 }], false)
+  first.set_visible_lines(
+    [{ start_line_number: 3, end_line_number: 5, }],
+    false,
+  )
   let first_state = first.state_value.unwrap()
   assert_false(first_state.stabilized)
   assert_eq(first_state.visible_line_ranges.length(), 1)
@@ -63,8 +66,8 @@ test "AttachedViews preserves identity and emits committed and absent states" {
   assert_eq(first_state.visible_line_ranges[0].end_line_number_exclusive, 6)
   second.set_visible_lines(
     [
-      { start_line_number: 1, end_line_number: 2 },
-      { start_line_number: 6, end_line_number: 7 },
+      { start_line_number: 1, end_line_number: 2, },
+      { start_line_number: 6, end_line_number: 7, },
     ],
     true,
   )

@@ -10,7 +10,7 @@ priv struct WorkbenchLogger {}
 
 ///|
 fn workbench_log_service() -> @log.LogService {
-  LogService(logger=WorkbenchLogger::{  })
+  LogService(logger=WorkbenchLogger::{ })
 }
 
 ///|

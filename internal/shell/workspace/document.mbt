@@ -51,7 +51,7 @@ pub fn DocumentError::DocumentError(
   uri? : @base_common.Uri,
 ) -> DocumentError {
   let message = if message == "" { code.to_string() } else { message }
-  { code, message, uri }
+  { code, message, uri, }
 }
 
 ///|
@@ -59,7 +59,7 @@ pub fn DocumentError::DocumentError(
 pub fn DocumentError::from_file_system_error(
   error : FileSystemProviderError,
 ) -> DocumentError {
-  { code: error.code, message: error.message, uri: error.uri }
+  { code: error.code, message: error.message, uri: error.uri, }
 }
 
 ///|
@@ -68,7 +68,7 @@ pub fn DocumentError::from_file_system_error(
 pub fn DocumentError::to_file_system_error(
   self : DocumentError,
 ) -> FileSystemProviderError {
-  { code: self.code, message: self.message, uri: self.uri }
+  { code: self.code, message: self.message, uri: self.uri, }
 }
 
 ///|
@@ -214,7 +214,7 @@ pub fn DocumentSnapshot::position_at_offset(
 ) -> @base_common.Position {
   let offset = @base_common.clamp_int(offset, 0, self.length())
   let line = self.line_at_offset(offset)
-  { line_number: line + 1, column: offset - self.line_starts[line] + 1 }
+  { line_number: line + 1, column: offset - self.line_starts[line] + 1, }
 }
 
 ///|

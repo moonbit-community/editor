@@ -65,7 +65,7 @@ priv struct BitField {
 
 ///|
 fn BitField::new(size : Int) -> BitField {
-  { states: FixedArray::make((size + 31) / 32, 0U) }
+  { states: FixedArray::make((size + 31) / 32, 0U), }
 }
 
 ///|
@@ -285,7 +285,7 @@ pub fn FoldingRegions::to_region(
   self : FoldingRegions,
   index : Int,
 ) -> FoldingRegion {
-  { ranges: self, index }
+  { ranges: self, index, }
 }
 
 ///|

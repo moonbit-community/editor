@@ -12,7 +12,7 @@ test "comment configuration defaults and normalized records round trip" {
   assert_true(no_indent.no_indent)
   let comments : CommentRule = {
     line_comment: Some(line),
-    block_comment: Some({ open: "/*", close: "*/" }),
+    block_comment: Some({ open: "/*", close: "*/", }),
   }
   languages.set_language_configuration("moonbit", {
     comments: Some(comments),
@@ -36,25 +36,25 @@ test "comment configuration accepts line-only block-only and empty rules" {
   languages.set_language_configuration("block", {
     comments: Some({
       line_comment: None,
-      block_comment: Some({ open: "/*", close: "*/" }),
+      block_comment: Some({ open: "/*", close: "*/", }),
     }),
     folding_rules: None,
   })
   languages.set_language_configuration("empty", {
-    comments: Some({ line_comment: None, block_comment: None }),
+    comments: Some({ line_comment: None, block_comment: None, }),
     folding_rules: None,
   })
   assert_true(
     languages.get_language_configuration("line").comments
-    is Some({ line_comment: Some(_), block_comment: None }),
+    is Some({ line_comment: Some(_), block_comment: None, }),
   )
   assert_true(
     languages.get_language_configuration("block").comments
-    is Some({ line_comment: None, block_comment: Some(_) }),
+    is Some({ line_comment: None, block_comment: Some(_), }),
   )
   assert_true(
     languages.get_language_configuration("empty").comments
-    is Some({ line_comment: None, block_comment: None }),
+    is Some({ line_comment: None, block_comment: None, }),
   )
 }
 
@@ -74,7 +74,7 @@ test "panic comment configuration rejects an empty block opening delimiter" {
   Languages().set_language_configuration("invalid", {
     comments: Some({
       line_comment: None,
-      block_comment: Some({ open: "", close: "*/" }),
+      block_comment: Some({ open: "", close: "*/", }),
     }),
     folding_rules: None,
   })
@@ -85,7 +85,7 @@ test "panic comment configuration rejects an empty block closing delimiter" {
   Languages().set_language_configuration("invalid", {
     comments: Some({
       line_comment: None,
-      block_comment: Some({ open: "/*", close: "" }),
+      block_comment: Some({ open: "/*", close: "", }),
     }),
     folding_rules: None,
   })

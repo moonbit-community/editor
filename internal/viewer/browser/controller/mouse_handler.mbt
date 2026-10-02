@@ -287,7 +287,7 @@ pub fn MouseHandler::get_target_at_client_point(
   client_x : Double,
   client_y : Double,
 ) -> @editor_browser.MouseTarget? {
-  let client_pos : @editor_browser.ClientCoordinates = { client_x, client_y }
+  let client_pos : @editor_browser.ClientCoordinates = { client_x, client_y, }
   let pos = client_pos.to_page_coordinates()
   let editor_pos = @editor_browser.create_editor_page_position(
     self.view_helper.view_dom_node,

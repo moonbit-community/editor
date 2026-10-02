@@ -34,7 +34,7 @@ pub fn ModelLineProjectionData::ModelLineProjectionData(
   projected_line : ProjectedTextLine,
   segments : Array[ModelLineProjectionSegment],
 ) -> ModelLineProjectionData {
-  { model_line_number, line_length, projected_line, segments }
+  { model_line_number, line_length, projected_line, segments, }
 }
 
 ///|

@@ -32,7 +32,7 @@ fn projection_expected_line(
   token_ends : Array[Int],
   inline_ranges? : Array[(Int, Int)] = [],
 ) -> ProjectionExpectedLine {
-  { content, min_column, max_column, token_ends, inline_ranges }
+  { content, min_column, max_column, token_ends, inline_ranges, }
 }
 
 ///|

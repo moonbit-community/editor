@@ -32,7 +32,6 @@ async test "content hover computer separates sync markers from async markdown" {
     },
   ])
   languages.register_hover_provider(LanguageId("moonbit"), ComputerHoverProvider::{
-
   })
   |> ignore
   let services : HoverParticipantServices = {
@@ -195,13 +194,16 @@ test "line-decoration selector covers whole strict relaxed and crossing ranges" 
       range: Range(2, 8, 2, 8),
       options: ModelDecorationOptions("whole", is_whole_line=true),
     },
-    { range: Range(2, 3, 2, 6), options: ModelDecorationOptions("ordinary") },
+    { range: Range(2, 3, 2, 6), options: ModelDecorationOptions("ordinary"), },
     {
       range: Range(2, 3, 2, 6),
       options: ModelDecorationOptions("relaxed", show_if_collapsed=true),
     },
-    { range: Range(1, 9, 2, 4), options: ModelDecorationOptions("cross-start") },
-    { range: Range(2, 6, 3, 2), options: ModelDecorationOptions("cross-end") },
+    {
+      range: Range(1, 9, 2, 4),
+      options: ModelDecorationOptions("cross-start"),
+    },
+    { range: Range(2, 6, 3, 2), options: ModelDecorationOptions("cross-end"), },
   ])
   |> ignore
   let at = column => {
@@ -262,7 +264,7 @@ priv struct ParticipantProbe {
 
 ///|
 fn ParticipantProbe::new() -> ParticipantProbe {
-  { async_calls: Ref(0), sync_sources: [], async_sources: [] }
+  { async_calls: Ref(0), sync_sources: [], async_sources: [], }
 }
 
 ///|
@@ -311,7 +313,7 @@ fn controlled_participant_with_probe(
   text : String,
   probe : ParticipantProbe,
 ) -> HoverParticipantHandle {
-  ControlledHoverParticipant::{ ordinal_value, text, probe }.hover_participant_handle()
+  ControlledHoverParticipant::{ ordinal_value, text, probe, }.hover_participant_handle()
 }
 
 ///|
@@ -655,7 +657,7 @@ test "participant loading-message contract is explicit" {
   let marker = MarkerHoverParticipant(services.marker_decorations).hover_participant_handle()
   assert_true(marker.create_loading_message is None)
 
-  let absent : ContentHoverComputer = { participants: [] }
+  let absent : ContentHoverComputer = { participants: [], }
   assert_true(absent.create_loading_message(anchor) is None)
   let first_present : ContentHoverComputer = {
     participants: [

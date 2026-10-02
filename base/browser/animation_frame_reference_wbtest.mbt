@@ -13,7 +13,7 @@ priv struct TestAnimationFrameDriver {
 
 ///|
 fn TestAnimationFrameDriver::TestAnimationFrameDriver() -> TestAnimationFrameDriver {
-  { callbacks: [], request_count: 0, frame: 0 }
+  { callbacks: [], request_count: 0, frame: 0, }
 }
 
 ///|

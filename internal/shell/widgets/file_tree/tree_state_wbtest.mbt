@@ -5,12 +5,12 @@ fn uri(raw : String) -> @base_common.Uri {
 
 ///|
 fn dir_stat(raw : String, name : String) -> @workspace.WorkspaceStat {
-  { uri: uri(raw), name, kind: Directory, children: None }
+  { uri: uri(raw), name, kind: Directory, children: None, }
 }
 
 ///|
 fn file_stat(raw : String, name : String) -> @workspace.WorkspaceStat {
-  { uri: uri(raw), name, kind: File, children: None }
+  { uri: uri(raw), name, kind: File, children: None, }
 }
 
 ///|

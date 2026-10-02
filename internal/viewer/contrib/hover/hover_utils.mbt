@@ -81,7 +81,7 @@ pub(all) struct EventModifiers {
 
 ///|
 pub fn EventModifiers::none() -> EventModifiers {
-  { ctrl: false, meta: false, alt: false }
+  { ctrl: false, meta: false, alt: false, }
 }
 
 ///|

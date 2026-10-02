@@ -109,7 +109,7 @@ priv struct ViewOverlayLine {
 fn ViewOverlayLine::ViewOverlayLine(
   dynamic_overlays : Array[DynamicViewOverlayHandle],
 ) -> ViewOverlayLine {
-  { dynamic_overlays, dom_node: None, rendered_content: None }
+  { dynamic_overlays, dom_node: None, rendered_content: None, }
 }
 
 ///|
@@ -198,7 +198,7 @@ fn ViewOverlays::ViewOverlays(
     dom_node: CachedDomNode(dom_element),
     dynamic_overlays: [],
     lines: [],
-    window: { start: 0, end: 0 },
+    window: { start: 0, end: 0, },
     is_focused: false,
   }
 }

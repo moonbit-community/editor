@@ -83,7 +83,7 @@ priv struct ViewLine {
 fn ViewLine::ViewLine(
   options? : ViewLineOptions = ViewLineOptions(),
 ) -> ViewLine {
-  { options, rendered_view_line: None, is_maybe_invalid: true }
+  { options, rendered_view_line: None, is_maybe_invalid: true, }
 }
 
 ///|
@@ -556,10 +556,10 @@ fn foreign_element_facts(
   foreign_elements : @view_layout.ForeignElementType,
 ) -> ForeignElementFacts {
   match foreign_elements {
-    None => { before: false, after: false }
-    Before => { before: true, after: false }
-    After => { before: false, after: true }
-    BeforeAndAfter => { before: true, after: true }
+    None => { before: false, after: false, }
+    Before => { before: true, after: false, }
+    After => { before: false, after: true, }
+    BeforeAndAfter => { before: true, after: true, }
   }
 }
 
@@ -591,7 +591,7 @@ fn get_column_of_node_offset(
   let span_node_text_content_length = element_text_content_length(span_node)
   let span_index = count_previous_siblings(span_node)
   character_mapping.get_column(
-    { part_index: span_index, char_index: offset },
+    { part_index: span_index, char_index: offset, },
     span_node_text_content_length,
   )
 }

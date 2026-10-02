@@ -20,11 +20,9 @@ async test "provider failures are logged and isolated" {
   let log_service = @log.LogService(logger=memory)
   let languages = Languages()
   languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
-
   })
   |> ignore
   languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
-
   })
   |> ignore
   let model = test_model()
@@ -42,14 +40,12 @@ async test "language handle prebinds logging and forwards the exact capability" 
   let languages = Languages()
   languages.set_language_configuration("moonbit", {
     comments: None,
-    folding_rules: Some({ off_side: true, markers: None }),
+    folding_rules: Some({ off_side: true, markers: None, }),
   })
   languages.register_hover_provider(LanguageId("moonbit"), FailingHoverProvider::{
-
   })
   |> ignore
   languages.register_hover_provider(LanguageId("moonbit"), TestHoverProvider::{
-
   })
   |> ignore
   let handle = languages.language_handle(
@@ -57,7 +53,7 @@ async test "language handle prebinds logging and forwards the exact capability" 
   )
   assert_true(
     handle.get_language_configuration("moonbit").folding_rules
-    is Some({ off_side: true, markers: None }),
+    is Some({ off_side: true, markers: None, }),
   )
   assert_hover_text(handle.hover_at(test_model(), 3), "provider hover")
   let entries = memory.entries()
@@ -120,7 +116,7 @@ test "markdown comment providers preserve order disposal and authoritative empty
   let empty_calls = Ref(0)
   let empty = languages.register_markdown_comment_provider(
     LanguageId("moonbit"),
-    RecordingMarkdownCommentProvider::{ blocks: [], calls: empty_calls },
+    RecordingMarkdownCommentProvider::{ blocks: [], calls: empty_calls, },
   )
   let second_calls = Ref(0)
   let second = languages.register_markdown_comment_provider(
@@ -160,7 +156,7 @@ test "language handle logs failed markdown provider as authoritative empty" {
   let languages = Languages()
   let failed = languages.register_markdown_comment_provider(
     LanguageId("moonbit"),
-    FailingMarkdownCommentProvider::{  },
+    FailingMarkdownCommentProvider::{ },
   )
   let later_calls = Ref(0)
   let later = languages.register_markdown_comment_provider(
@@ -211,7 +207,7 @@ priv struct NamedHoverProvider {
 
 ///|
 fn markdown_comment_block(markdown : String) -> @language.MarkdownCommentBlock {
-  { line_range: LineRange(1, 2), markdown }
+  { line_range: LineRange(1, 2), markdown, }
 }
 
 ///|

@@ -103,7 +103,7 @@ fn TokenizerSyntaxTokenBackend::handle_attached_view_state_change(
           () => self.model_state.scheduler.val,
         )
         holder.val = Some(handler)
-        self.attached_view_states.push({ view: change.view, handler })
+        self.attached_view_states.push({ view: change.view, handler, })
         handler
       }
       handler.handle_state_change(state)

@@ -18,7 +18,7 @@ priv struct MarkdownCommentContributionState {
 
 ///|
 fn MarkdownCommentContributionState::MarkdownCommentContributionState() -> MarkdownCommentContributionState {
-  { generation: 0, rendered: Map([]), listeners: [] }
+  { generation: 0, rendered: Map([]), listeners: [], }
 }
 
 ///|

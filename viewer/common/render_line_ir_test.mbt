@@ -4,7 +4,7 @@ test "viewport data exposes one-based inclusive line data" {
   let view_model = view_model_for(doc)
   let viewport = @view_model.viewport_data_from_view_model(
     view_model,
-    { start: 2, end: 4 },
+    { start: 2, end: 4, },
     line_height=18,
   )
   assert_eq(viewport.start_line_number, 2)

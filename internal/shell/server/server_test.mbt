@@ -52,7 +52,7 @@ async test "resolves one directory level through the host" {
   let server = test_remote_server("/workspace", host)
 
   let root_uri = expect_uri("readonly-remote://workspace")
-  match server.resolve_directory({ id: "resolve-1", uri: root_uri }) {
+  match server.resolve_directory({ id: "resolve-1", uri: root_uri, }) {
     DirectoryResolved(payload) => {
       assert_eq(payload.id, "resolve-1")
       assert_eq(payload.stat.uri.to_string(), "readonly-remote://workspace")
@@ -71,7 +71,7 @@ async test "resolves one directory level through the host" {
   }
 
   match
-    server.resolve_directory({ id: "resolve-2", uri: expect_remote_uri("src") }) {
+    server.resolve_directory({ id: "resolve-2", uri: expect_remote_uri("src"), }) {
     DirectoryResolved(payload) => {
       assert_eq(payload.stat.name, "src")
       match payload.stat.children {
@@ -102,7 +102,7 @@ async test "maps host read errors to protocol provider errors" {
   let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("missing.mbt")
 
-  match server.open_document({ id: "open-1", uri }) {
+  match server.open_document({ id: "open-1", uri, }) {
     RemoteError(error) => {
       assert_true(error.code == ProtocolProviderError)
       assert_eq(error.provider_code, "FileNotFound")
@@ -122,7 +122,7 @@ async test "routes watch events to document changed packets" {
 
   match
     server.watch_document(
-      { id: "watch-1", uri },
+      { id: "watch-1", uri, },
       packet => emitted.push(packet),
       noop_watch_spawner,
     ) {
@@ -157,12 +157,12 @@ async test "notifies the document sync listener on open and watch change" {
   server.set_document_sync_listener(
     Some(document => synced.push(document.text)),
   )
-  ignore(server.open_document({ id: "open-1", uri }))
+  ignore(server.open_document({ id: "open-1", uri, }))
   assert_eq(synced.length(), 1)
   assert_eq(synced[0], "pub fn main {}\n")
   ignore(
     server.watch_document(
-      { id: "watch-1", uri },
+      { id: "watch-1", uri, },
       _packet => (),
       noop_watch_spawner,
     ),
@@ -180,9 +180,10 @@ async test "answers hover and definition from cached provider state" {
   host.files.set("main.mbt", "pub fn main {}\n")
   let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("main.mbt")
-  ignore(server.open_document({ id: "open-1", uri }))
+  ignore(server.open_document({ id: "open-1", uri, }))
 
-  match server.hover({ id: "hover-1", uri, document_revision: "", offset: 7 }) {
+  match
+    server.hover({ id: "hover-1", uri, document_revision: "", offset: 7, }) {
     HoverResult(payload) =>
       match payload.hover {
         Some(hover) => assert_plaintext_hover(hover, "Configured hover")
@@ -192,7 +193,7 @@ async test "answers hover and definition from cached provider state" {
   }
 
   match
-    server.definition({ id: "def-1", uri, document_revision: "", offset: 7 }) {
+    server.definition({ id: "def-1", uri, document_revision: "", offset: 7, }) {
     DefinitionResult(payload) =>
       match payload.location {
         Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
@@ -202,7 +203,7 @@ async test "answers hover and definition from cached provider state" {
   }
 
   match
-    server.references({ id: "refs-1", uri, document_revision: "", offset: 7 }) {
+    server.references({ id: "refs-1", uri, document_revision: "", offset: 7, }) {
     ReferencesResult(payload) => {
       assert_eq(payload.id, "refs-1")
       assert_eq(payload.references.length(), 2)
@@ -224,9 +225,9 @@ async test "answers symbols from cached provider state" {
   host.files.set("main.mbt", "pub fn main { // TODO }\n")
   let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("main.mbt")
-  ignore(server.open_document({ id: "open-1", uri }))
+  ignore(server.open_document({ id: "open-1", uri, }))
   match
-    server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
+    server.document_symbols({ id: "symbols-1", uri, document_revision: "", }) {
     DocumentSymbolsResult(payload) => {
       assert_eq(payload.symbols.length(), 1)
       assert_eq(payload.symbols[0].name, "configured")
@@ -241,9 +242,10 @@ async test "dispatches language requests through configured providers" {
   host.files.set("configured.mbt", "pub fn configured {}\n")
   let server = test_remote_server("/workspace", host)
   let uri = expect_remote_uri("configured.mbt")
-  ignore(server.open_document({ id: "open-1", uri }))
+  ignore(server.open_document({ id: "open-1", uri, }))
 
-  match server.hover({ id: "hover-1", uri, document_revision: "", offset: 7 }) {
+  match
+    server.hover({ id: "hover-1", uri, document_revision: "", offset: 7, }) {
     HoverResult(payload) =>
       match payload.hover {
         Some(hover) => assert_plaintext_hover(hover, "Configured hover")
@@ -253,7 +255,7 @@ async test "dispatches language requests through configured providers" {
   }
 
   match
-    server.definition({ id: "def-1", uri, document_revision: "", offset: 7 }) {
+    server.definition({ id: "def-1", uri, document_revision: "", offset: 7, }) {
     DefinitionResult(payload) =>
       match payload.location {
         Some(location) => assert_eq(location.uri.to_string(), uri.to_string())
@@ -263,7 +265,7 @@ async test "dispatches language requests through configured providers" {
   }
 
   match
-    server.document_symbols({ id: "symbols-1", uri, document_revision: "" }) {
+    server.document_symbols({ id: "symbols-1", uri, document_revision: "", }) {
     DocumentSymbolsResult(payload) =>
       assert_eq(payload.symbols[0].name, "configured")
     _ => fail("expected document symbols result")
@@ -288,7 +290,7 @@ fn test_remote_server(
   root : String,
   host : &@server.ServerHost,
 ) -> @server.RemoteServer {
-  let provider = FakeLanguageProvider::{  }
+  let provider = FakeLanguageProvider::{ }
   @server.RemoteServer::with_language_providers(
     root, host, provider, provider, provider, provider,
   )
@@ -451,5 +453,5 @@ impl @language.DocumentSymbolProvider for FakeLanguageProvider with fn provide_d
   _model,
   _token,
 ) {
-  [{ name: "configured", kind: "function", range: Range(1, 8, 1, 18) }]
+  [{ name: "configured", kind: "function", range: Range(1, 8, 1, 18), }]
 }

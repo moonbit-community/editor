@@ -23,7 +23,7 @@ impl @syntax.LineTokenizer for RenderInvalidationTokenizer with fn tokenize_line
 ) {
   let tokens : Array[@syntax.LineToken] = []
   if line_text.length() > 0 {
-    tokens.push({ start: 0, end: 1, tag: Keyword })
+    tokens.push({ start: 0, end: 1, tag: Keyword, })
     if line_text.length() > 1 {
       tokens.push({
         start: line_text.length() - 1,
@@ -117,7 +117,6 @@ fn run_render_invalidation_test() -> Unit {
   )
   let languages = @languages.Languages()
   languages.register_hover_provider(LanguageId("plaintext"), RenderInvalidationHoverProvider::{
-
   })
   |> ignore
   let log_service = @log.LogService()
@@ -345,7 +344,6 @@ fn run_render_invalidation_test() -> Unit {
       }
       token_registration.val = Some(
         languages.set_tokens_provider("plaintext", RenderInvalidationTokenizer::{
-
         }),
       )
     },

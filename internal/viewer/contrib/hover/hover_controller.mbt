@@ -120,7 +120,7 @@ pub fn HoverOperationOptions::HoverOperationOptions(
   source? : HoverStartSource = HoverStartMouse,
   insist_on_keeping_hover_visible? : Bool = false,
 ) -> HoverOperationOptions {
-  { should_focus, anchor, source, insist_on_keeping_hover_visible }
+  { should_focus, anchor, source, insist_on_keeping_hover_visible, }
 }
 
 ///|
@@ -253,7 +253,7 @@ pub fn HoverOperation::idle() -> HoverOperation {
 ///|
 /// Creates an idle operation retaining the supplied monotonic generation.
 pub fn HoverOperation::idle_at(token : Int) -> HoverOperation {
-  { state: HoverOpIdle, token, parts: [], async_done: false, options: None }
+  { state: HoverOpIdle, token, parts: [], async_done: false, options: None, }
 }
 
 ///|
@@ -295,7 +295,7 @@ pub fn HoverOperation::start(
         HoverOpSecondWait =>
           (
             HoverOperationRunSync(self.token),
-            { ..self, options: Some(options) },
+            { ..self, options: Some(options), },
           )
         _ => (HoverOperationNoStart, self)
       }
@@ -365,7 +365,7 @@ pub fn HoverDebouncer::schedule(
   let delay_ms = if delay_ms < 0 { self.default_delay_ms } else { delay_ms }
   (
     generation,
-    { ..self, generation, scheduled: true, delay_ms, options: Some(options) },
+    { ..self, generation, scheduled: true, delay_ms, options: Some(options), },
   )
 }
 
@@ -373,7 +373,7 @@ pub fn HoverDebouncer::schedule(
 /// Cancels the scheduled generation while retaining the latest options, as
 /// Monaco's debouncer does.
 pub fn HoverDebouncer::cancel(self : HoverDebouncer) -> HoverDebouncer {
-  { ..self, generation: self.generation + 1, scheduled: false }
+  { ..self, generation: self.generation + 1, scheduled: false, }
 }
 
 ///|
@@ -386,7 +386,7 @@ pub fn HoverDebouncer::take(
   if !self.scheduled || generation != self.generation {
     return (None, self)
   }
-  (self.options, { ..self, scheduled: false })
+  (self.options, { ..self, scheduled: false, })
 }
 
 ///|
@@ -483,7 +483,7 @@ pub fn HoverController::cancel_operation_preserving_view(
   if self.current_complete && self.view is Some(_) {
     cancelled
   } else {
-    { ..cancelled, view: None, current_anchor: None, current_complete: false }
+    { ..cancelled, view: None, current_anchor: None, current_complete: false, }
   }
 }
 
@@ -639,7 +639,7 @@ pub fn HoverController::start_hover_operation_if_necessary(
   }
   (
     effect,
-    { ..self, anchor: Some(anchor), operation, insist_on_keeping: insist },
+    { ..self, anchor: Some(anchor), operation, insist_on_keeping: insist, },
   )
 }
 
@@ -688,7 +688,7 @@ pub fn HoverController::op_trigger_sync(
   } else {
     HoverOpWaitingForAsync
   }
-  { ..self, operation: { ..self.operation, parts, state } }.emit()
+  { ..self, operation: { ..self.operation, parts, state, }, }.emit()
 }
 
 ///|
@@ -727,7 +727,7 @@ pub fn HoverController::op_async_item(
   }
   let merged = self.operation.parts.copy()
   merged.append(parts)
-  { ..self, operation: { ..self.operation, parts: merged } }.emit()
+  { ..self, operation: { ..self.operation, parts: merged, }, }.emit()
 }
 
 ///|
@@ -740,13 +740,13 @@ pub fn HoverController::op_async_done(
   if token != self.operation.token {
     return self
   }
-  let done = { ..self.operation, async_done: true }
+  let done = { ..self.operation, async_done: true, }
   let advanced = match done.state {
     HoverOpWaitingForAsync | HoverOpWaitingForAsyncShowingLoading =>
-      { ..done, state: HoverOpIdle }
+      { ..done, state: HoverOpIdle, }
     _ => done
   }
-  { ..self, operation: advanced }.emit()
+  { ..self, operation: advanced, }.emit()
 }
 
 ///|
@@ -897,7 +897,7 @@ pub fn HoverController::set_current_result(
     return match self.view {
       None => self
       Some(_) =>
-        { ..self, view: None, current_anchor: None, current_complete: false }
+        { ..self, view: None, current_anchor: None, current_complete: false, }
     }
   }
   let sorted = sort_hover_parts_stably(parts)
@@ -912,7 +912,7 @@ pub fn HoverController::set_current_result(
     None => ()
   }
   let range = hover_parts_range(sorted, result_anchor.range())
-  let new_view : HoverView = { range, parts: sorted }
+  let new_view : HoverView = { range, parts: sorted, }
   {
     ..self,
     view: Some(new_view),
@@ -1005,14 +1005,17 @@ pub fn HoverController::widget_view_with_loading(
           None => ()
         }
       }
-      Some({ anchor_range: hover.range, parts })
+      Some({ anchor_range: hover.range, parts, })
     }
     None =>
       match self.operation.state {
         HoverOpWaitingForAsyncShowingLoading =>
           match loading_message {
             Some(message) =>
-              Some({ anchor_range: hover_part_range(message), parts: [message] })
+              Some({
+                anchor_range: hover_part_range(message),
+                parts: [message],
+              })
             None => None
           }
         _ => None

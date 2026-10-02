@@ -53,7 +53,7 @@ test "issue #46314: ViewModel is out of sync with Model!" {
     // range, while preserving the synchronous reentrant tokenization seam.
     let demand_view = model.on_before_attached()
     demand_view.set_visible_lines(
-      [{ start_line_number: 1, end_line_number: 2 }],
+      [{ start_line_number: 1, end_line_number: 2, }],
       true,
     )
     model.on_before_detached(demand_view)

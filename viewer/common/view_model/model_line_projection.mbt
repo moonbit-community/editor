@@ -607,7 +607,7 @@ fn ResolvedInjectedTextOptions::ResolvedInjectedTextOptions(
   inline_class_name? : String,
   inline_class_name_affects_letter_spacing? : Bool = false,
 ) -> ResolvedInjectedTextOptions {
-  { content, inline_class_name, inline_class_name_affects_letter_spacing }
+  { content, inline_class_name, inline_class_name_affects_letter_spacing, }
 }
 
 ///|
@@ -755,7 +755,7 @@ fn prepare_projected_line_demand(
   let line_with_injections = line_tokens.with_inserted(
     inserted_tokens_from_injection_data(injection_options, injection_offsets),
   )
-  { line_inline_decorations, line_with_injections }
+  { line_inline_decorations, line_with_injections, }
 }
 
 ///|

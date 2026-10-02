@@ -438,7 +438,7 @@ test "addWidget reads layout before handle getters in source constructor order" 
     },
     position => Some(position),
   )
-  let widget : GetterOrderWidget = { dom_node: document.create_element("div") }
+  let widget : GetterOrderWidget = { dom_node: document.create_element("div"), }
   content_widgets_test_clear_events()
   widgets.add_widget(widget.content_widget_handle())
   let events = content_widgets_test_events()
@@ -929,7 +929,7 @@ test "all position affinity values forward distinctly and only LeftOfInjectedTex
     None,
     before_enabled=true,
   )
-  widget.before_dimension = Some({ width: 10.0, height: 10.0 })
+  widget.before_dimension = Some({ width: 10.0, height: 10.0, })
   let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
@@ -987,7 +987,7 @@ test "anchor queries keep same-line secondary and use measured x at later affini
     Some(Position(4, 8)),
     before_enabled=true,
   )
-  same_line.before_dimension = Some({ width: 40.0, height: 10.0 })
+  same_line.before_dimension = Some({ width: 40.0, height: 10.0, })
   same_line.position = Some({
     position: Some(Position(4, 3)),
     secondary_position: Some(Position(4, 8)),
@@ -1001,7 +1001,7 @@ test "anchor queries keep same-line secondary and use measured x at later affini
     Some(Position(7, 9)),
     before_enabled=true,
   )
-  different_line.before_dimension = Some({ width: 40.0, height: 10.0 })
+  different_line.before_dimension = Some({ width: 40.0, height: 10.0, })
   let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
@@ -1073,7 +1073,7 @@ test "display ownership and read phase preserve source ordering and caches" {
     after_enabled=true,
     throw_after=true,
   )
-  first.before_dimension = Some({ width: 40.0, height: 18.0 })
+  first.before_dimension = Some({ width: 40.0, height: 18.0, })
   let second = new_test_content_widget(
     document,
     "second",
@@ -1082,7 +1082,7 @@ test "display ownership and read phase preserve source ordering and caches" {
     before_enabled=true,
     after_enabled=true,
   )
-  second.before_dimension = Some({ width: 50.0, height: 19.0 })
+  second.before_dimension = Some({ width: 50.0, height: 19.0, })
   widgets.add_widget(first.content_widget_handle())
   widgets.set_widget_position(first.content_widget_handle())
   widgets.add_widget(second.content_widget_handle())
@@ -1120,7 +1120,7 @@ test "display ownership and read phase preserve source ordering and caches" {
   let first_state = widgets.widgets["first"]
   first_state.cached_dom_node_offset_width = -1.0
   first_state.cached_dom_node_offset_height = 99.0
-  first.before_dimension = Some({ width: 7.0, height: 8.0 })
+  first.before_dimension = Some({ width: 7.0, height: 8.0, })
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 40.0,
     line_height_for_line: _ => 20.0,
@@ -1138,7 +1138,7 @@ test "display ownership and read phase preserve source ordering and caches" {
   // retaining the otherwise-valid width.
   first_state.cached_dom_node_offset_width = 88.0
   first_state.cached_dom_node_offset_height = -1.0
-  first.before_dimension = Some({ width: 9.0, height: 11.0 })
+  first.before_dimension = Some({ width: 9.0, height: 11.0, })
   widgets.prepare_render_widgets({
     vertical_offset_for_line: _ => 40.0,
     line_height_for_line: _ => 20.0,
@@ -1154,7 +1154,7 @@ test "display ownership and read phase preserve source ordering and caches" {
 
   // With both axes valid, prepare skips both beforeRender and the DOM rect.
   // This is the source OR gate's fully cached arm.
-  first.before_dimension = Some({ width: 999.0, height: 999.0 })
+  first.before_dimension = Some({ width: 999.0, height: 999.0, })
   content_widgets_test_clear_events()
   content_widgets_test_clear_rect_reads()
   widgets.prepare_render_widgets({
@@ -1411,7 +1411,7 @@ test "preference traversal uses first-pass fit then second-pass first option" {
     None,
     before_enabled=true,
   )
-  widget.before_dimension = Some({ width: 60.0, height: 50.0 })
+  widget.before_dimension = Some({ width: 60.0, height: 50.0, })
   widget.position = Some({
     position: Some(Position(1, 2)),
     secondary_position: None,
@@ -1497,7 +1497,7 @@ test "empty single and mixed preferences preserve source order" {
     None,
     before_enabled=true,
   )
-  widget.before_dimension = Some({ width: 10.0, height: 10.0 })
+  widget.before_dimension = Some({ width: 10.0, height: 10.0, })
   let widgets = ContentWidgets::ContentWidgets(
     document,
     document.create_element("section"),
@@ -1616,7 +1616,7 @@ test "ABOVE and BELOW write visible coordinates before afterRender callbacks" {
     before_enabled=true,
     after_enabled=true,
   )
-  above.before_dimension = Some({ width: 10.0, height: 10.0 })
+  above.before_dimension = Some({ width: 10.0, height: 10.0, })
   above.position = Some({
     position: Some(Position(1, 2)),
     secondary_position: None,
@@ -1631,7 +1631,7 @@ test "ABOVE and BELOW write visible coordinates before afterRender callbacks" {
     before_enabled=true,
     after_enabled=true,
   )
-  below.before_dimension = Some({ width: 10.0, height: 10.0 })
+  below.before_dimension = Some({ width: 10.0, height: 10.0, })
   below.position = Some({
     position: Some(Position(1, 2)),
     secondary_position: None,
@@ -1685,7 +1685,7 @@ fn assert_anchor_coordinate(
 
 ///|
 test "secondary anchor reduction preserves primary contact boundaries" {
-  let primary : AnchorCoordinate = { top: 10.0, left: 100.0, height: 20.0 }
+  let primary : AnchorCoordinate = { top: 10.0, left: 100.0, height: 20.0, }
   assert_anchor_coordinate(
     reduce_anchor_coordinates(primary, None, 80.0, 16.0),
     10.0,
@@ -1695,7 +1695,7 @@ test "secondary anchor reduction preserves primary contact boundaries" {
   assert_anchor_coordinate(
     reduce_anchor_coordinates(
       primary,
-      Some({ top: 10.0, left: 0.0, height: 20.0 }),
+      Some({ top: 10.0, left: 0.0, height: 20.0, }),
       80.0,
       16.0,
     ),
@@ -1706,7 +1706,7 @@ test "secondary anchor reduction preserves primary contact boundaries" {
   assert_anchor_coordinate(
     reduce_anchor_coordinates(
       primary,
-      Some({ top: 10.0, left: 100.0, height: 20.0 }),
+      Some({ top: 10.0, left: 100.0, height: 20.0, }),
       80.0,
       16.0,
     ),
@@ -1717,7 +1717,7 @@ test "secondary anchor reduction preserves primary contact boundaries" {
   assert_anchor_coordinate(
     reduce_anchor_coordinates(
       primary,
-      Some({ top: 10.0, left: 200.0, height: 20.0 }),
+      Some({ top: 10.0, left: 200.0, height: 20.0, }),
       80.0,
       16.0,
     ),
@@ -1730,7 +1730,7 @@ test "secondary anchor reduction preserves primary contact boundaries" {
   assert_anchor_coordinate(
     reduce_anchor_coordinates(
       primary,
-      Some({ top: 10.0, left: 50.0, height: 20.0 }),
+      Some({ top: 10.0, left: 50.0, height: 20.0, }),
       16.0,
       16.0,
     ),
@@ -1741,7 +1741,7 @@ test "secondary anchor reduction preserves primary contact boundaries" {
   assert_anchor_coordinate(
     reduce_anchor_coordinates(
       primary,
-      Some({ top: 10.0, left: 150.0, height: 20.0 }),
+      Some({ top: 10.0, left: 150.0, height: 20.0, }),
       16.0,
       16.0,
     ),
@@ -1764,7 +1764,7 @@ test "viewport layout clamps a nonzero scroll window at inclusive edges" {
     viewport_height: 50.0,
   }
   let vertical_equality = layout_box_in_viewport(
-    { top: 20.0, left: 60.0, height: 10.0 },
+    { top: 20.0, left: 60.0, height: 10.0, },
     20.0,
     20.0,
     ctx,
@@ -1777,14 +1777,14 @@ test "viewport layout clamps a nonzero scroll window at inclusive edges" {
 
   // Equality at either horizontal edge does not enter a strict clamp.
   let left_equality = layout_box_in_viewport(
-    { top: 20.0, left: 40.0, height: 10.0 },
+    { top: 20.0, left: 40.0, height: 10.0, },
     20.0,
     10.0,
     ctx,
   )
   assert_eq(left_equality.left, 40.0)
   let right_equality = layout_box_in_viewport(
-    { top: 20.0, left: 120.0, height: 10.0 },
+    { top: 20.0, left: 120.0, height: 10.0, },
     20.0,
     10.0,
     ctx,
@@ -1792,14 +1792,14 @@ test "viewport layout clamps a nonzero scroll window at inclusive edges" {
   assert_eq(right_equality.left, 120.0)
 
   let left_underflow = layout_box_in_viewport(
-    { top: 20.0, left: 39.0, height: 10.0 },
+    { top: 20.0, left: 39.0, height: 10.0, },
     20.0,
     10.0,
     ctx,
   )
   assert_eq(left_underflow.left, 40.0)
   let right_overflow = layout_box_in_viewport(
-    { top: 20.0, left: 121.0, height: 10.0 },
+    { top: 20.0, left: 121.0, height: 10.0, },
     20.0,
     10.0,
     ctx,
@@ -1809,7 +1809,7 @@ test "viewport layout clamps a nonzero scroll window at inclusive edges" {
   // Source order is right clamp then left clamp. A wider-than-viewport box
   // first moves left of the window and is then pinned back to scrollLeft.
   let wider = layout_box_in_viewport(
-    { top: 20.0, left: 100.0, height: 10.0 },
+    { top: 20.0, left: 100.0, height: 10.0, },
     120.0,
     10.0,
     ctx,
@@ -1942,7 +1942,7 @@ test "detached owner scroll helpers and page layout use explicit zero fallbacks"
     viewport_height: 600.0,
   }
   let placement = layout_box_in_page(
-    { top: -171.0, left: 290.0, height: 20.0 },
+    { top: -171.0, left: 290.0, height: 20.0, },
     80.0,
     30.0,
     ctx,
@@ -1984,7 +1984,11 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
 
   // Make the page's 15px right clearance, rather than the editor-width
   // allowance, the active maximum.
-  let right_page : DomNodePagePosition = { top: 0.0, left: 100.0, width: 350.0 }
+  let right_page : DomNodePagePosition = {
+    top: 0.0,
+    left: 100.0,
+    width: 350.0,
+  }
   let (right_equal, right_absolute_equal) = layout_horizontal_segment_in_page(
     500.0, right_page, 0.0, 305.0, 80.0,
   )
@@ -1999,7 +2003,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
   // A widget wider than both the editor and page cannot fit. The source's
   // right-then-left sequence leaves its left edge at the 15px minimum while
   // preserving the relative/absolute offset.
-  let wide_page : DomNodePagePosition = { top: 0.0, left: 100.0, width: 200.0 }
+  let wide_page : DomNodePagePosition = { top: 0.0, left: 100.0, width: 200.0, }
   let (wide_left, wide_absolute) = layout_horizontal_segment_in_page(
     500.0, wide_page, 0.0, 0.0, 600.0,
   )
@@ -2017,7 +2021,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
     viewport_height: 700.0,
   }
   let top_equal = layout_box_in_page(
-    { top: -48.0, left: 0.0, height: 20.0 },
+    { top: -48.0, left: 0.0, height: 20.0, },
     80.0,
     30.0,
     ctx,
@@ -2028,7 +2032,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
   assert_true(top_equal.fits_below)
   assert_eq(top_equal.above_top, -78.0)
   let top_outside = layout_box_in_page(
-    { top: -49.0, left: 0.0, height: 20.0 },
+    { top: -49.0, left: 0.0, height: 20.0, },
     80.0,
     30.0,
     ctx,
@@ -2039,7 +2043,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
   assert_true(top_outside.fits_below)
 
   let bottom_equal = layout_box_in_page(
-    { top: 528.0, left: 0.0, height: 20.0 },
+    { top: 528.0, left: 0.0, height: 20.0, },
     80.0,
     30.0,
     ctx,
@@ -2050,7 +2054,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
   assert_true(bottom_equal.fits_below)
   assert_eq(bottom_equal.below_top, 548.0)
   let bottom_outside = layout_box_in_page(
-    { top: 529.0, left: 0.0, height: 20.0 },
+    { top: 529.0, left: 0.0, height: 20.0, },
     80.0,
     30.0,
     ctx,
@@ -2061,7 +2065,7 @@ test "page layout keeps 15px and 22px equality boundaries and wide boxes" {
   assert_false(bottom_outside.fits_below)
 
   let neither = layout_box_in_page(
-    { top: 0.0, left: 0.0, height: 20.0 },
+    { top: 0.0, left: 0.0, height: 20.0, },
     80.0,
     700.0,
     ctx,

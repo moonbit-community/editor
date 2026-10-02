@@ -23,8 +23,8 @@ pub fn StandardWheelEvent::StandardWheelEvent(
   e : @rdom.WheelEvent,
 ) -> StandardWheelEvent {
   if e.get_delta_mode() == DOM_DELTA_LINE {
-    { delta_x: -e.get_delta_x(), delta_y: -e.get_delta_y() }
+    { delta_x: -e.get_delta_x(), delta_y: -e.get_delta_y(), }
   } else {
-    { delta_x: -e.get_delta_x() / 40.0, delta_y: -e.get_delta_y() / 40.0 }
+    { delta_x: -e.get_delta_x() / 40.0, delta_y: -e.get_delta_y() / 40.0, }
   }
 }

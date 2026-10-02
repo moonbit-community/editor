@@ -21,7 +21,7 @@ fn feedback_at(
   replies? : Array[String] = [],
   state? : @agent_feedback_api.AgentFeedbackState = Accepted,
 ) -> @agent_feedback_api.AgentFeedback {
-  { id, text, resource, range: Range(line, 1, line, 1), kind, replies, state }
+  { id, text, resource, range: Range(line, 1, line, 1), kind, replies, state, }
 }
 
 ///|
@@ -255,7 +255,7 @@ test "agent_feedback_handle adapts the concrete service and preserves defaults" 
   handle.set_navigation_anchor(resource, Some(explicit.id))
   assert_eq(
     handle.get_navigation_bearing(resource, [defaulted.id, explicit.id]),
-    { active_idx: 1, total_count: 2 },
+    { active_idx: 1, total_count: 2, },
   )
   handle.mark_feedback_submitted(resource)
   handle.remove_feedback(resource, defaulted.id)

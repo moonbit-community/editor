@@ -37,7 +37,7 @@ pub fn LineRangeMapping::LineRangeMapping(
   original_range : @base_common.LineRange,
   modified_range : @base_common.LineRange,
 ) -> LineRangeMapping {
-  { original: original_range, modified: modified_range }
+  { original: original_range, modified: modified_range, }
 }
 
 ///|
@@ -123,7 +123,7 @@ pub fn DetailedLineRangeMapping::DetailedLineRangeMapping(
   modified_range : @base_common.LineRange,
   inner_changes : Array[RangeMapping]?,
 ) -> DetailedLineRangeMapping {
-  { original: original_range, modified: modified_range, inner_changes }
+  { original: original_range, modified: modified_range, inner_changes, }
 }
 
 ///|
@@ -164,7 +164,7 @@ pub fn RangeMapping::RangeMapping(
   original_range : @base_common.Range,
   modified_range : @base_common.Range,
 ) -> RangeMapping {
-  { original_range, modified_range }
+  { original_range, modified_range, }
 }
 
 ///|

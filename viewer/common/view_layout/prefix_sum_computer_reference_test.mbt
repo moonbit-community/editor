@@ -80,7 +80,7 @@ fn for_both(values : Array[Int], cb : (AnyPsc) -> Unit raise) -> Unit raise {
 
 ///|
 fn res(index : Int, remainder : Int) -> @view_layout.PrefixSumIndexOfResult {
-  { index, remainder }
+  { index, remainder, }
 }
 
 ///|

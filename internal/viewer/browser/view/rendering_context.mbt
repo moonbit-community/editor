@@ -209,7 +209,7 @@ fn line_visible_ranges_from_raw(
   for raw in raw_lines {
     let horizontal_ranges : Array[HorizontalRange] = []
     for range in raw.1 {
-      horizontal_ranges.push({ left: range.0, width: range.1 })
+      horizontal_ranges.push({ left: range.0, width: range.1, })
     }
     result.push(LineVisibleRanges(raw.0, horizontal_ranges))
   }
@@ -252,7 +252,7 @@ pub struct HorizontalPosition {
 
 ///|
 fn HorizontalPosition::HorizontalPosition(left : Double) -> HorizontalPosition {
-  { left: (left + 0.5).floor().to_int() }
+  { left: (left + 0.5).floor().to_int(), }
 }
 
 ///|
@@ -269,7 +269,7 @@ fn LineVisibleRanges::LineVisibleRanges(
   line_number : Int,
   ranges : Array[HorizontalRange],
 ) -> LineVisibleRanges {
-  { line_number, ranges }
+  { line_number, ranges, }
 }
 
 ///|

@@ -23,7 +23,7 @@ test "hasRanges" {
   ])
   let folding_model = FoldingModel(
     text_model,
-    TestDecorationProvider::{ model: text_model }.access(),
+    TestDecorationProvider::{ model: text_model, }.access(),
   )
   let hidden_range_model = HiddenRangeModel(folding_model)
   assert_false(hidden_range_model.has_ranges())
@@ -86,7 +86,7 @@ test "adjustSelections moves endpoints out of hidden ranges" {
   ])
   let folding_model = FoldingModel(
     text_model,
-    TestDecorationProvider::{ model: text_model }.access(),
+    TestDecorationProvider::{ model: text_model, }.access(),
   )
   let hidden_range_model = HiddenRangeModel(folding_model)
   folding_model.update(compute_ranges(text_model, false))

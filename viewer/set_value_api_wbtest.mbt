@@ -49,7 +49,7 @@ extern "js" fn same_test_model_browser_data(
 test "set_value marks mounted rendered content stale on the same browser data" {
   with_mounted_test_viewer("one\ntwo", viewer => {
     let browser = viewer.current_browser_data().unwrap()
-    browser.rendered_window = Some({ start: 1, end: 2 })
+    browser.rendered_window = Some({ start: 1, end: 2, })
     viewer.set_value("a")
     assert_true(browser.rendered_window is None)
     assert_true(

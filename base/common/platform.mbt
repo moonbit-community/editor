@@ -35,7 +35,7 @@ pub let is_linux : Bool = host_platform == Linux
 
 ///|
 /// D8 test seam for the URI/path stack: `None` reads the host platform.
-let is_windows_override : Ref[Bool?] = { val: None }
+let is_windows_override : Ref[Bool?] = { val: None, }
 
 ///|
 /// Debug-only override so non-Windows CI exercises the win32 branches that

@@ -32,7 +32,7 @@ fn dispatcher_model_tokens_event(
 ) -> @model.ModelTokensChangedEvent {
   {
     semantic_tokens_applied: false,
-    ranges: [{ from_line_number, to_line_number }],
+    ranges: [{ from_line_number, to_line_number, }],
   }
 }
 

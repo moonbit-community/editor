@@ -267,8 +267,8 @@ test "touch DOM listeners consume boundary moves, reveal, and dispose" {
     content=lines_content,
   )
   editor_scrollable.update_from_model(
-    { width: 100.0, scroll_width: 400.0, height: 100.0, scroll_height: 4000.0 },
-    { scroll_left: 0.0, scroll_top: 0.0 },
+    { width: 100.0, scroll_width: 400.0, height: 100.0, scroll_height: 4000.0, },
+    { scroll_left: 0.0, scroll_top: 0.0, },
   )
   let layout = @view_layout.ViewLayout(line_height=20, line_count=200)
   layout.set_viewport_size(width=100.0, height=100.0) |> ignore

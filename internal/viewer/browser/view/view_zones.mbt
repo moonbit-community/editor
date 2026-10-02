@@ -21,7 +21,7 @@ priv struct FastViewZoneDomNode {
 fn FastViewZoneDomNode::FastViewZoneDomNode(
   element : @rdom.Element,
 ) -> FastViewZoneDomNode {
-  { element, position: "", top: "", height: "", display: "", width: "" }
+  { element, position: "", top: "", height: "", display: "", width: "", }
 }
 
 ///|

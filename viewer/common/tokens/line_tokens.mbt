@@ -190,7 +190,7 @@ pub fn InsertedToken::InsertedToken(
   text : String,
   token_metadata : UInt,
 ) -> InsertedToken {
-  { offset, text, token_metadata }
+  { offset, text, token_metadata, }
 }
 
 ///|

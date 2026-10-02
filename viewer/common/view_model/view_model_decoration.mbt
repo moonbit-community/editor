@@ -16,7 +16,7 @@ fn ViewModelDecoration::ViewModelDecoration(
   range : @base_common.Range,
   options : @model.ModelDecorationOptions,
 ) -> ViewModelDecoration {
-  { range, options }
+  { range, options, }
 }
 
 ///|

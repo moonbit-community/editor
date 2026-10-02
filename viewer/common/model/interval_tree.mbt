@@ -417,7 +417,7 @@ pub struct IntervalTree {
 ///|
 #alias(new, deprecated)
 pub fn IntervalTree::IntervalTree() -> IntervalTree {
-  { root: sentinel, request_normalize_delta: false }
+  { root: sentinel, request_normalize_delta: false, }
 }
 
 ///|

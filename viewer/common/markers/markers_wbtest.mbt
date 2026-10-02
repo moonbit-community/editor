@@ -61,10 +61,15 @@ test "marker service replaces owner resource and supports limits" {
       message: "first",
       tags: None,
     },
-    { range: Range(1, 3, 1, 4), severity: Error, message: "second", tags: None },
+    {
+      range: Range(1, 3, 1, 4),
+      severity: Error,
+      message: "second",
+      tags: None,
+    },
   ])
   service.set_diagnostics("owner-b", uri, [
-    { range: Range(1, 5, 1, 6), severity: Info, message: "third", tags: None },
+    { range: Range(1, 5, 1, 6), severity: Info, message: "third", tags: None, },
   ])
   assert_eq(service.markers_for_resource(uri).length(), 3)
   service.set_diagnostics("owner-a", uri, [

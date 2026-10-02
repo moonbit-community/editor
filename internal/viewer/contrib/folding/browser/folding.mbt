@@ -39,7 +39,7 @@ pub struct SelectedLines {
 /// `toSelectedLines` (`folding.ts:591`).
 pub fn to_selected_lines(selections : Array[@core.Selection]) -> SelectedLines {
   if selections.length() == 0 {
-    return { starts_inside: (_start_line, _end_line) => false }
+    return { starts_inside: (_start_line, _end_line) => false, }
   }
   {
     starts_inside: (start_line, end_line) => {

@@ -51,7 +51,7 @@ pub fn MovedText::MovedText(
   line_range_mapping : LineRangeMapping,
   changes : Array[DetailedLineRangeMapping],
 ) -> MovedText {
-  { line_range_mapping, changes }
+  { line_range_mapping, changes, }
 }
 
 ///|

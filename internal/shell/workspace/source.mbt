@@ -64,7 +64,7 @@ pub fn SourcePath::normalize_root_relative_path(
   for i in 1..<segments.length() {
     normalized = normalized + "/" + segments[i]
   }
-  ParsedSourcePath({ value: normalized })
+  ParsedSourcePath({ value: normalized, })
 }
 
 ///|

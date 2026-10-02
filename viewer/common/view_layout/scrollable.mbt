@@ -219,7 +219,7 @@ pub fn ScrollState::create_scroll_event(
   let scroll_height_changed = self.scroll_height != previous.scroll_height
   let scroll_top_changed = self.scroll_top != previous.scroll_top
   {
-    position: { scroll_left: self.scroll_left, scroll_top: self.scroll_top },
+    position: { scroll_left: self.scroll_left, scroll_top: self.scroll_top, },
     delta_left: self.scroll_left - previous.scroll_left,
     delta_top: self.scroll_top - previous.scroll_top,
     left_changed: scroll_left_changed,
@@ -264,7 +264,7 @@ pub fn SmoothScrollingUpdate::SmoothScrollingUpdate(
   scroll_top : Double,
   is_done : Bool,
 ) -> SmoothScrollingUpdate {
-  { scroll_left, scroll_top, is_done }
+  { scroll_left, scroll_top, is_done, }
 }
 
 ///|
@@ -502,7 +502,7 @@ pub fn Scrollable::validate_scroll_position(
   update : ScrollPositionUpdate,
 ) -> ScrollPosition {
   let state = self.state.with_scroll_position(update)
-  { scroll_left: state.scroll_left, scroll_top: state.scroll_top }
+  { scroll_left: state.scroll_left, scroll_top: state.scroll_top, }
 }
 
 ///|
@@ -565,7 +565,7 @@ pub fn Scrollable::future_position(self : Scrollable) -> ScrollPosition {
 
 ///|
 pub fn Scrollable::position(self : Scrollable) -> ScrollPosition {
-  { scroll_left: self.state.scroll_left, scroll_top: self.state.scroll_top }
+  { scroll_left: self.state.scroll_left, scroll_top: self.state.scroll_top, }
 }
 
 ///|

@@ -77,13 +77,13 @@ fn region_marker(
 ///|
 /// The exact `/^#region$/` matchers of foldingRanges.test.ts.
 fn exact_markers() -> @languages.FoldingMarkers {
-  { start: line => line == "#region", end: line => line == "#endregion" }
+  { start: line => line == "#region", end: line => line == "#endregion", }
 }
 
 ///|
 /// The `/^\s*#region\b/` markers of indentRangeProvider.test.ts.
 fn word_markers() -> @languages.FoldingMarkers {
-  { start: region_marker("#region"), end: region_marker("#endregion") }
+  { start: region_marker("#region"), end: region_marker("#endregion"), }
 }
 
 ///|
@@ -100,7 +100,7 @@ fn er(
   end_line_number : Int,
   parent_index : Int,
 ) -> ExpectedIndentRange {
-  { start_line_number, end_line_number, parent_index }
+  { start_line_number, end_line_number, parent_index, }
 }
 
 ///|
@@ -516,7 +516,7 @@ test "Limit by indent" {
     expected_ranges : Array[(Int, Int)],
     message : String,
   ) => {
-    let reported : Ref[Int?] = { val: None }
+    let reported : Ref[Int?] = { val: None, }
     let indent_ranges = compute_ranges(model, true, folding_ranges_limit={
       limit: () => max_entries,
       update: (_computed, limited) => reported.val = limited,

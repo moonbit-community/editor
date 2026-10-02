@@ -64,7 +64,7 @@ test "emitter batches one event per deferred bracket; fire() sets all flags" {
   let _ = emitter.actual.event(e => events.push(e))
   emitter.begin_deferred_emit()
   emitter.check_affected_and_fire(
-    wb_options("a", overview_ruler={ color: Some("red"), position: Center }),
+    wb_options("a", overview_ruler={ color: Some("red"), position: Center, }),
   )
   emitter.check_affected_and_fire(wb_options("b"))
   assert_eq(events.length(), 0)
@@ -102,16 +102,16 @@ test "emitter batches one event per deferred bracket; fire() sets all flags" {
 test "delta semantics: unknown old ids skipped, node reuse keeps the id" {
   let model = wb_model("alpha beta\ngamma")
   let first = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 3), options: wb_options("one") },
+    { range: Range(1, 1, 1, 3), options: wb_options("one"), },
   ])
   // unknown old ids are skipped
   let second = model.delta_decorations(["not-a-real-id"], [
-    { range: Range(2, 1, 2, 3), options: wb_options("two") },
+    { range: Range(2, 1, 2, 3), options: wb_options("two"), },
   ])
   assert_eq(model.get_all_decorations().length(), 2)
   // node reuse: replacing via the old id returns the same id
   let third = model.delta_decorations(first, [
-    { range: Range(1, 4, 1, 6), options: wb_options("three") },
+    { range: Range(1, 4, 1, 6), options: wb_options("three"), },
   ])
   if third != first {
     fail("expected node reuse to keep ids")
@@ -137,12 +137,12 @@ test "re-entrant deltaDecorations still lands both decorations" {
     if !re_entered.val {
       re_entered.val = true
       let _ = model.delta_decorations([], [
-        { range: Range(1, 2, 1, 3), options: wb_options("nested") },
+        { range: Range(1, 2, 1, 3), options: wb_options("nested"), },
       ])
     }
   })
   let _ = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 2), options: wb_options("outer") },
+    { range: Range(1, 1, 1, 2), options: wb_options("outer"), },
   ])
   assert_eq(model.get_all_decorations().length(), 2)
 }
@@ -151,13 +151,13 @@ test "re-entrant deltaDecorations still lands both decorations" {
 test "search filters: ownerId, filterOutValidation, margin, overview-ruler routing" {
   let model = wb_model("alpha beta gamma\ndelta")
   let _ = model.delta_decorations([], [
-    { range: Range(1, 1, 1, 3), options: wb_options("plain-owner0") },
+    { range: Range(1, 1, 1, 3), options: wb_options("plain-owner0"), },
   ])
   let _ = model.delta_decorations(
     [],
     [
-      { range: Range(1, 4, 1, 6), options: wb_options("owner1") },
-      { range: Range(1, 7, 1, 9), options: wb_options("squiggly-error") },
+      { range: Range(1, 4, 1, 6), options: wb_options("owner1"), },
+      { range: Range(1, 7, 1, 9), options: wb_options("squiggly-error"), },
       {
         range: Range(1, 10, 1, 12),
         options: wb_options("margin", glyph_margin_class_name="glyph"),
@@ -223,7 +223,7 @@ test "options normalization: cleanClassName, defaults, relaxed range clamp" {
   assert_true(options.stickiness is AlwaysGrowsWhenTypingAtEdges)
   let model = wb_model("short")
   let ids = model.delta_decorations([], [
-    { range: Range(1, 1, 100, 42), options },
+    { range: Range(1, 1, 100, 42), options, },
   ])
   // _validateRangeRelaxedNoAllocations clamps to the document end
   assert_range_opt_eq(

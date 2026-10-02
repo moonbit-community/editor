@@ -35,7 +35,7 @@ pub struct NullLogger {}
 #alias(new, deprecated)
 #warnings("-unnecessary_annotation")
 pub fn NullLogger::NullLogger() -> NullLogger {
-  NullLogger::{  }
+  NullLogger::{ }
 }
 
 ///|
@@ -61,7 +61,7 @@ pub struct MemoryLogger {
 /// Creates an empty in-memory log sink.
 #alias(new, deprecated)
 pub fn MemoryLogger::MemoryLogger() -> MemoryLogger {
-  { entries: [], flush_count: Ref(0) }
+  { entries: [], flush_count: Ref(0), }
 }
 
 ///|
@@ -143,7 +143,7 @@ pub fn LogService::LogService(
   level? : LogLevel = Info,
   logger? : &Logger = NullLogger(),
 ) -> LogService {
-  { level, logger }
+  { level, logger, }
 }
 
 ///|
@@ -199,7 +199,7 @@ pub fn LogService::trace(
   message : String,
   details? : Array[(String, String)] = [],
 ) -> Unit {
-  self.log({ level: Trace, category, message, details })
+  self.log({ level: Trace, category, message, details, })
 }
 
 ///|
@@ -210,7 +210,7 @@ pub fn LogService::debug(
   message : String,
   details? : Array[(String, String)] = [],
 ) -> Unit {
-  self.log({ level: Debug, category, message, details })
+  self.log({ level: Debug, category, message, details, })
 }
 
 ///|
@@ -221,7 +221,7 @@ pub fn LogService::info(
   message : String,
   details? : Array[(String, String)] = [],
 ) -> Unit {
-  self.log({ level: Info, category, message, details })
+  self.log({ level: Info, category, message, details, })
 }
 
 ///|
@@ -232,7 +232,7 @@ pub fn LogService::warn(
   message : String,
   details? : Array[(String, String)] = [],
 ) -> Unit {
-  self.log({ level: Warning, category, message, details })
+  self.log({ level: Warning, category, message, details, })
 }
 
 ///|
@@ -243,7 +243,7 @@ pub fn LogService::error(
   message : String,
   details? : Array[(String, String)] = [],
 ) -> Unit {
-  self.log({ level: Error, category, message, details })
+  self.log({ level: Error, category, message, details, })
 }
 
 ///|

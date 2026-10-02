@@ -63,7 +63,7 @@ pub struct QuickDiffService {
 ///|
 #alias(new, deprecated)
 pub fn QuickDiffService::QuickDiffService() -> QuickDiffService {
-  { originals: Map([]), did_change_original: Emitter() }
+  { originals: Map([]), did_change_original: Emitter(), }
 }
 
 ///|

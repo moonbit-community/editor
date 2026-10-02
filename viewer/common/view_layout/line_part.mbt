@@ -40,7 +40,7 @@ pub fn LinePart::LinePart(
   metadata? : Int = 0,
   contains_rtl? : Bool = false,
 ) -> LinePart {
-  { end_index, class_name, metadata, contains_rtl }
+  { end_index, class_name, metadata, contains_rtl, }
 }
 
 ///|

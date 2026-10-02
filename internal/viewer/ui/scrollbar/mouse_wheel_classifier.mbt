@@ -16,7 +16,7 @@ fn MouseWheelClassifierItem::new(
   delta_x : Double,
   delta_y : Double,
 ) -> MouseWheelClassifierItem {
-  { timestamp, delta_x, delta_y, score: 0.0 }
+  { timestamp, delta_x, delta_y, score: 0.0, }
 }
 
 ///|
@@ -30,7 +30,7 @@ pub struct MouseWheelClassifier {
 ///|
 #alias(new, deprecated)
 pub fn MouseWheelClassifier::MouseWheelClassifier() -> MouseWheelClassifier {
-  { capacity: 5, memory: [], front: -1, rear: -1 }
+  { capacity: 5, memory: [], front: -1, rear: -1, }
 }
 
 ///|

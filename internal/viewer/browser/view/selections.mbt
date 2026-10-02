@@ -13,7 +13,7 @@ priv struct SelectionsOverlay {
 
 ///|
 fn SelectionsOverlay::SelectionsOverlay() -> SelectionsOverlay {
-  { render_result: [] }
+  { render_result: [], }
 }
 
 ///|
@@ -76,7 +76,7 @@ fn prepare_selections_render_from_visible_ranges(
       ranges.push(new_styled_range(range.0, range.1))
     }
     if !ranges.is_empty() {
-      lines.push({ line_number: visible_line.0, ranges })
+      lines.push({ line_number: visible_line.0, ranges, })
     }
   }
   render_selection_lines(viewport, lines, space_width)

@@ -8,7 +8,6 @@ priv struct RemoteDocumentProvider {}
 
 ///|
 let document_provider : &@workspace.DocumentProvider = RemoteDocumentProvider::{
-
 }
 
 ///|
@@ -36,7 +35,7 @@ impl @workspace.DocumentProvider for RemoteDocumentProvider with fn read(
   _self,
   uri,
 ) {
-  let response = protocol_request("open", id => OpenDocument({ id, uri }))
+  let response = protocol_request("open", id => OpenDocument({ id, uri, }))
   match response {
     DocumentLoaded(payload) => DocumentLoaded(payload.document)
     RemoteError(error) =>
@@ -70,7 +69,7 @@ impl @workspace.DocumentProvider for RemoteDocumentProvider with fn watch(
   let id = next_request_id("watch")
   watch_listeners[key] = listener
   watch_request_uris[id] = key
-  send_protocol_packet(WatchDocument({ id, uri }))
+  send_protocol_packet(WatchDocument({ id, uri, }))
   @base_common.Disposable::from(() => {
     watch_listeners.remove(key)
     watch_request_uris.remove(id)
@@ -82,7 +81,7 @@ impl @workspace.DocumentProvider for RemoteDocumentProvider with fn close(
   _self,
   uri,
 ) {
-  send_protocol_packet(CloseDocument({ id: next_request_id("close"), uri }))
+  send_protocol_packet(CloseDocument({ id: next_request_id("close"), uri, }))
 }
 
 ///|

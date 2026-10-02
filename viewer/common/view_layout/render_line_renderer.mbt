@@ -102,7 +102,7 @@ pub fn render_view_line(
       html.write_string("</span>")
       let character_mapping = CharacterMapping(1)
       character_mapping.set_column_info(1, before_count, 0, 0)
-      return { character_mapping, contains_foreign_elements: contains_foreign }
+      return { character_mapping, contains_foreign_elements: contains_foreign, }
     }
     // Completely empty line.
     if input.render_new_line_when_empty {
@@ -950,7 +950,7 @@ fn render_line(
     html.write_string("</span>")
   }
   html.write_string("</span>")
-  { character_mapping, contains_foreign_elements }
+  { character_mapping, contains_foreign_elements, }
 }
 
 ///|

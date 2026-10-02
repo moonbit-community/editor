@@ -86,7 +86,7 @@ test "squiggly_theme_css omits a rule when its color is absent (theme.getColor u
 ///|
 test "squiggly_theme_css with no colors is empty" {
   assert_eq(
-    squiggly_theme_css({ error: None, warning: None, info: None, hint: None }),
+    squiggly_theme_css({ error: None, warning: None, info: None, hint: None, }),
     "",
   )
 }

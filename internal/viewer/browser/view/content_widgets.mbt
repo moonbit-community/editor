@@ -258,8 +258,8 @@ pub fn ContentWidgets::add_widget(
     allow_editor_overflow,
     content_width,
     content_left,
-    primary_anchor: { model_position: None, view_position: None },
-    secondary_anchor: { model_position: None, view_position: None },
+    primary_anchor: { model_position: None, view_position: None, },
+    secondary_anchor: { model_position: None, view_position: None, },
     affinity: None,
     preference: Some([]),
     cached_dom_node_offset_width: -1.0,
@@ -525,7 +525,7 @@ fn position_pair(
         model_position: Some(position),
         view_position: model_position_to_valid_view_position(position, affinity),
       }
-    None => { model_position: None, view_position: None }
+    None => { model_position: None, view_position: None, }
   }
 }
 
@@ -657,7 +657,7 @@ fn Widget::prepare_render_widget(
           if pass == 2 || placement.fits_above {
             return Some(
               InViewport(
-                coordinate={ top: placement.above_top, left: placement.left },
+                coordinate={ top: placement.above_top, left: placement.left, },
                 position=Above,
               ),
             )
@@ -666,7 +666,7 @@ fn Widget::prepare_render_widget(
           if pass == 2 || placement.fits_below {
             return Some(
               InViewport(
-                coordinate={ top: placement.below_top, left: placement.left },
+                coordinate={ top: placement.below_top, left: placement.left, },
                 position=Below,
               ),
             )
@@ -688,7 +688,7 @@ fn Widget::prepare_render_widget(
           } else {
             return Some(
               InViewport(
-                coordinate={ top: anchor.top, left: anchor.left },
+                coordinate={ top: anchor.top, left: anchor.left, },
                 position=Exact,
               ),
             )
@@ -768,7 +768,7 @@ fn reduce_anchor_coordinates(
       primary.left + width - typical_fullwidth_character_width,
     )
   }
-  { top: primary.top, left, height: primary.height }
+  { top: primary.top, left, height: primary.height, }
 }
 
 ///|
@@ -804,7 +804,7 @@ fn layout_box_in_viewport(
   if left < ctx.scroll_left {
     left = ctx.scroll_left
   }
-  { fits_above, above_top, fits_below, below_top, left }
+  { fits_above, above_top, fits_below, below_top, left, }
 }
 
 ///|
@@ -908,7 +908,7 @@ fn layout_box_in_page(
   let bottom_padding = 22.0
   let fits_above = absolute_above_top >= top_padding
   let fits_below = absolute_below_top + height <= window_height - bottom_padding
-  { fits_above, above_top, fits_below, below_top, left }
+  { fits_above, above_top, fits_below, below_top, left, }
 }
 
 ///|

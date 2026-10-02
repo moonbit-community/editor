@@ -21,7 +21,7 @@ pub fn LineRange::LineRange(
   start_line_number : Int,
   end_line_number_exclusive : Int,
 ) -> LineRange {
-  { start_line_number, end_line_number_exclusive }
+  { start_line_number, end_line_number_exclusive, }
 }
 
 ///|

@@ -15,7 +15,7 @@ pub fn MoonWorkspaceLanguageProvider::MoonWorkspaceLanguageProvider(
   root : String,
   moon_command? : String = "moon",
 ) -> MoonWorkspaceLanguageProvider {
-  { root: normalize_host_path(root), moon_command }
+  { root: normalize_host_path(root), moon_command, }
 }
 
 ///|
@@ -126,5 +126,5 @@ pub fn parse_moon_hover_output(
         position.column + 1,
       )
   }
-  Some({ range, contents })
+  Some({ range, contents, })
 }

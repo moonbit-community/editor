@@ -14,7 +14,7 @@ priv struct LinesDecorationsOverlay {
 
 ///|
 fn LinesDecorationsOverlay::LinesDecorationsOverlay() -> LinesDecorationsOverlay {
-  { render_result: [] }
+  { render_result: [], }
 }
 
 ///|

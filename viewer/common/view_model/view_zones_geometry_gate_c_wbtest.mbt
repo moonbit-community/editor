@@ -29,7 +29,7 @@ test "viewport carrier keeps ToInt32 start then advances later offsets as Double
 
   let viewport = viewport_data_from_view_model(
     view_model,
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     line_height=10,
     layout~,
   )
@@ -52,7 +52,7 @@ test "viewport carrier keeps ToInt32 start then advances later offsets as Double
   let partial = rail.get_lines_viewport_data_at_scroll_top(500000.0)
   let carried = viewport_data_from_view_model(
     view_model,
-    { start: partial.start_line_number, end: partial.end_line_number + 1 },
+    { start: partial.start_line_number, end: partial.end_line_number + 1, },
     line_height=999,
     layout=rail,
     partial_viewport=partial,
@@ -74,7 +74,7 @@ test "viewport carrier keeps ToInt32 start then advances later offsets as Double
   assert_eq(carried.relative_vertical_offset[0], 14.0)
   let carried_without_layout = viewport_data_from_view_model(
     view_model,
-    { start: 2, end: 3 },
+    { start: 2, end: 3, },
     line_height=999,
     partial_viewport=partial,
   )

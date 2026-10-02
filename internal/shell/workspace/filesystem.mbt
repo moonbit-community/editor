@@ -84,7 +84,7 @@ pub fn DocumentContent::DocumentContent(
   language_id? : String = "",
   revision? : String = "",
 ) -> DocumentContent {
-  { text, display_name, language_id, revision }
+  { text, display_name, language_id, revision, }
 }
 
 ///|
@@ -96,13 +96,13 @@ pub fn FileSystemProviderError::FileSystemProviderError(
   uri? : @base_common.Uri,
 ) -> FileSystemProviderError {
   let message = if message == "" { code.to_string() } else { message }
-  { code, message, uri }
+  { code, message, uri, }
 }
 
 ///|
 /// Default non-recursive watch with no excludes.
 pub fn WatchOptions::default() -> WatchOptions {
-  { recursive: false, excludes: [] }
+  { recursive: false, excludes: [], }
 }
 
 ///|
@@ -148,7 +148,7 @@ pub fn watch_file(
   if uri.scheme == provider.scheme() {
     provider.watch(uri, WatchOptions::default(), listener)
   } else {
-    { dispose: () => () }
+    { dispose: () => (), }
   }
 }
 

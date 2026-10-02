@@ -50,7 +50,7 @@ pub struct ContiguousTokensStore {
 pub fn ContiguousTokensStore::ContiguousTokensStore(
   language_id_codec : @services.LanguageIdCodec,
 ) -> ContiguousTokensStore {
-  { line_tokens: [], len: 0, language_id_codec }
+  { line_tokens: [], len: 0, language_id_codec, }
 }
 
 ///|
@@ -231,7 +231,7 @@ pub fn ContiguousTokensStore::set_multiline_tokens(
   get_line_length : (Int) -> Int,
 ) -> ContiguousTokensStoreUpdate {
   if tokens.length() == 0 {
-    return { changes: [] }
+    return { changes: [], }
   }
   let ranges : Array[ContiguousTokensStoreChange] = []
   for element in tokens {
@@ -274,5 +274,5 @@ pub fn ContiguousTokensStore::set_multiline_tokens(
       })
     }
   }
-  { changes: ranges }
+  { changes: ranges, }
 }

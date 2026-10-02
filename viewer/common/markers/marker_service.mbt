@@ -22,7 +22,7 @@ struct DoubleResourceMap {
 
 ///|
 fn DoubleResourceMap::new() -> DoubleResourceMap {
-  { by_resource: Map([]), by_owner: Map([]) }
+  { by_resource: Map([]), by_owner: Map([]), }
 }
 
 ///|
@@ -316,7 +316,7 @@ pub fn MarkerService::statistics(self : MarkerService) -> MarkerStatistics {
         infos: stats.infos,
         unknowns: stats.unknowns,
       }
-    None => { errors: 0, warnings: 0, infos: 0, unknowns: 0 }
+    None => { errors: 0, warnings: 0, infos: 0, unknowns: 0, }
   }
 }
 

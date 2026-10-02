@@ -26,7 +26,7 @@ fn AttachedViewState::AttachedViewState(
   visible_line_ranges : Array[@base_common.LineRange],
   stabilized : Bool,
 ) -> AttachedViewState {
-  { visible_line_ranges, stabilized }
+  { visible_line_ranges, stabilized, }
 }
 
 ///|
@@ -105,7 +105,7 @@ priv struct AttachedViews {
 ///|
 /// Creates an empty attached-view manager.
 fn AttachedViews::AttachedViews() -> AttachedViews {
-  { views: [], next_id: Ref(0), did_change_visible_ranges: Emitter() }
+  { views: [], next_id: Ref(0), did_change_visible_ranges: Emitter(), }
 }
 
 ///|
@@ -126,7 +126,7 @@ fn AttachedViews::attach_view(self : AttachedViews) -> AttachedViewImpl {
     id,
     state_value: None,
     handle_state_change: (view, state) => {
-      self.did_change_visible_ranges.fire({ view, state: Some(state) })
+      self.did_change_visible_ranges.fire({ view, state: Some(state), })
     },
   }
   self.views.push(view)
@@ -149,7 +149,7 @@ fn AttachedViews::detach_view(
   if found >= 0 {
     self.views.remove(found) |> ignore
   }
-  self.did_change_visible_ranges.fire({ view, state: None })
+  self.did_change_visible_ranges.fire({ view, state: None, })
 }
 
 ///|
@@ -271,7 +271,7 @@ priv struct AbstractSyntaxTokenBackend {
 ///|
 /// Creates the shared backend contract.
 fn AbstractSyntaxTokenBackend::AbstractSyntaxTokenBackend() -> AbstractSyntaxTokenBackend {
-  { did_change_tokens: Emitter() }
+  { did_change_tokens: Emitter(), }
 }
 
 ///|

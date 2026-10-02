@@ -169,7 +169,7 @@ pub fn LineBreaksComputer::add_request(
   line_text : String,
   injected_text : Array[InjectedText],
 ) -> Unit {
-  self.requests.push({ model_line_number, line_text, injected_text })
+  self.requests.push({ model_line_number, line_text, injected_text, })
 }
 
 ///|

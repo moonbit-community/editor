@@ -18,7 +18,7 @@ fn startup_sub(cmd : @cmd.Cmd) -> @sub.Sub {
     StartupSubscription,
     SubLoader((_, scheduler) => {
       scheduler.add(cmd)
-      Some({ unload: _ => (), update_tagger: _ => () })
+      Some({ unload: _ => (), update_tagger: _ => (), })
     }),
   )
 }
@@ -88,7 +88,7 @@ fn memory_workspace() -> MemoryWorkspace {
     #|}
     #|
   )
-  { root_uri: memory_uri(memory_root), directories, documents }
+  { root_uri: memory_uri(memory_root), directories, documents, }
 }
 
 ///|
@@ -265,9 +265,9 @@ fn update_embed(
         model,
       )
     }
-    OpenFile(uri) => (open_embed_document_cmd(uri), { status: "loading" })
-    ViewerReady(uri) => (embed_tree().set_active(uri), { status: "ready" })
-    ViewerFailed => (@rabbita.none, { status: "error" })
+    OpenFile(uri) => (open_embed_document_cmd(uri), { status: "loading", })
+    ViewerReady(uri) => (embed_tree().set_active(uri), { status: "ready", })
+    ViewerFailed => (@rabbita.none, { status: "error", })
   }
 }
 
@@ -330,7 +330,7 @@ fn main {
   )
   |> ignore
   let (_, cell) = @rabbita.cell_with_emit(
-    model={ status: "loading" },
+    model={ status: "loading", },
     update=update_embed,
     view=view_embed,
     subscriptions=(emit, _model) => {

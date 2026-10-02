@@ -7,8 +7,8 @@ fn simulate_smooth_scroll(from : Double, to : Double) -> Array[(Int, Int)] {
   let viewport_height = 800.0
   let line_height = 20.0
   let operation = @view_layout.SmoothScrollingOperation(
-    { scroll_left: 0.0, scroll_top: from, width: 0.0, height: viewport_height },
-    { scroll_left: 0.0, scroll_top: to, width: 0.0, height: viewport_height },
+    { scroll_left: 0.0, scroll_top: from, width: 0.0, height: viewport_height, },
+    { scroll_left: 0.0, scroll_top: to, width: 0.0, height: viewport_height, },
     -10.0,
     135.0,
   )
@@ -117,7 +117,7 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
   let clock = [0.0]
   let frames : Array[TestAnimationFrame] = []
   let scheduler = fn(callback) {
-    let frame : TestAnimationFrame = { callback, active: true }
+    let frame : TestAnimationFrame = { callback, active: true, }
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
@@ -142,7 +142,7 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
   })
   assert_true(scrollable.has_pending_scroll_animation())
   assert_true(
-    scrollable.future_position() == { scroll_left: 400.0, scroll_top: 900.0 },
+    scrollable.future_position() == { scroll_left: 400.0, scroll_top: 900.0, },
   )
   assert_eq(frames.length(), 1)
   // Same-target is an exact early return: it neither replaces nor schedules.
@@ -154,9 +154,9 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
   assert_true(frames[0].active)
   // A second axis-partial request combines with the outstanding target and
   // disposes the first scheduled frame.
-  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(700.0) })
+  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(700.0), })
   assert_true(
-    scrollable.future_position() == { scroll_left: 400.0, scroll_top: 700.0 },
+    scrollable.future_position() == { scroll_left: 400.0, scroll_top: 700.0, },
   )
   assert_false(frames[0].active)
   assert_true(frames[1].active)
@@ -172,14 +172,14 @@ test "scrollable smooth state tracks future, combines, revalidates and cancels" 
   )
   |> ignore
   assert_true(
-    scrollable.future_position() == { scroll_left: 200.0, scroll_top: 300.0 },
+    scrollable.future_position() == { scroll_left: 200.0, scroll_top: 300.0, },
   )
   clock[0] = 25.0
   run_test_animation_frame(frames[1])
   assert_true(changes.last().unwrap().in_smooth_scrolling)
   assert_true(scrollable.position().scroll_top > 0.0)
   let scheduled_after_tick = frames.last().unwrap()
-  scrollable.set_position_now({ scroll_left: None, scroll_top: Some(20.0) })
+  scrollable.set_position_now({ scroll_left: None, scroll_top: Some(20.0), })
   |> ignore
   assert_false(scrollable.has_pending_scroll_animation())
   assert_false(scheduled_after_tick.active)
@@ -195,7 +195,7 @@ test "reuse animation replaces the target on the original timeline" {
   let clock = [0.0]
   let frames : Array[TestAnimationFrame] = []
   let scheduler = fn(callback) {
-    let frame : TestAnimationFrame = { callback, active: true }
+    let frame : TestAnimationFrame = { callback, active: true, }
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
@@ -212,10 +212,10 @@ test "reuse animation replaces the target on the original timeline" {
     scroll_height: 2000.0,
   })
   |> ignore
-  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0) })
+  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0), })
   clock[0] = 30.0
   scrollable.set_position_smooth(
-    { scroll_left: None, scroll_top: Some(600.0) },
+    { scroll_left: None, scroll_top: Some(600.0), },
     reuse_animation=true,
   )
   assert_false(frames[0].active)
@@ -237,7 +237,7 @@ test "scroll event listener cancellation stops animation rescheduling" {
   let clock = [0.0]
   let frames : Array[TestAnimationFrame] = []
   let scheduler = fn(callback) {
-    let frame : TestAnimationFrame = { callback, active: true }
+    let frame : TestAnimationFrame = { callback, active: true, }
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }
@@ -256,11 +256,11 @@ test "scroll event listener cancellation stops animation rescheduling" {
   |> ignore
   let listener = scrollable.on_scroll(change => {
     if change.in_smooth_scrolling {
-      scrollable.set_position_now({ scroll_left: None, scroll_top: Some(10.0) })
+      scrollable.set_position_now({ scroll_left: None, scroll_top: Some(10.0), })
       |> ignore
     }
   })
-  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0) })
+  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0), })
   clock[0] = 25.0
   run_test_animation_frame(frames[0])
   assert_false(scrollable.has_pending_scroll_animation())
@@ -289,7 +289,7 @@ test "smooth duration zero falls back to immediate without scheduling" {
     scroll_height: 1000.0,
   })
   |> ignore
-  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0) })
+  scrollable.set_position_smooth({ scroll_left: None, scroll_top: Some(500.0), })
   assert_eq(scrollable.position().scroll_top, 500.0)
   assert_eq(scheduled.val, 0)
   assert_false(scrollable.has_pending_scroll_animation())
@@ -300,7 +300,7 @@ test "smooth duration zero falls back to immediate without scheduling" {
 test "view layout smooth option reconfigures the 125ms duration live" {
   let frames : Array[TestAnimationFrame] = []
   let scheduler = fn(callback) {
-    let frame : TestAnimationFrame = { callback, active: true }
+    let frame : TestAnimationFrame = { callback, active: true, }
     frames.push(frame)
     @base_common.Disposable::from(() => frame.active = false)
   }

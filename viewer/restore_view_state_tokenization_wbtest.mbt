@@ -66,7 +66,7 @@ test "restore view state commits scroll before stabilized visible lines" {
   })
   defer listener.dispose()
 
-  viewer.restore_view_state(Some({ scroll_top: 180.0, scroll_left: 120.0 }))
+  viewer.restore_view_state(Some({ scroll_top: 180.0, scroll_left: 120.0, }))
 
   assert_eq(scroll_positions.length(), 1)
   assert_eq(scroll_positions[0].0, 180.0)
@@ -135,7 +135,7 @@ test "restore view state is a no-op without a model" {
 
   viewer.set_model(None)
   assert_eq(model.get_attached_editor_count(), 0)
-  viewer.restore_view_state(Some({ scroll_top: 360.0, scroll_left: 70.0 }))
+  viewer.restore_view_state(Some({ scroll_top: 360.0, scroll_left: 70.0, }))
   viewer.flush_render()
   viewer.flush_render()
 

@@ -12,7 +12,7 @@ test "create_decoration_option severity matrix" {
   let hint = option_for(Hint)
   assert_true(hint.class_name == "squiggly-hint")
   assert_eq(hint.z_index, 0)
-  assert_true(hint.overview_ruler == Some({ color: None, position: Right }))
+  assert_true(hint.overview_ruler == Some({ color: None, position: Right, }))
   assert_true(hint.minimap is None)
   assert_true(hint.inline_class_name is None)
   // constant option fields (markerDecorationsService.ts:284-296)
@@ -24,27 +24,29 @@ test "create_decoration_option severity matrix" {
   assert_eq(info.z_index, 10)
   assert_true(
     info.overview_ruler ==
-    Some({ color: Some(overview_ruler_info), position: Right }),
+    Some({ color: Some(overview_ruler_info), position: Right, }),
   )
-  assert_true(info.minimap == Some({ color: minimap_info, position: Inline }))
+  assert_true(info.minimap == Some({ color: minimap_info, position: Inline, }))
   let warning = option_for(Warning)
   assert_true(warning.class_name == "squiggly-warning")
   assert_eq(warning.z_index, 20)
   assert_true(
     warning.overview_ruler ==
-    Some({ color: Some(overview_ruler_warning), position: Right }),
+    Some({ color: Some(overview_ruler_warning), position: Right, }),
   )
   assert_true(
-    warning.minimap == Some({ color: minimap_warning, position: Inline }),
+    warning.minimap == Some({ color: minimap_warning, position: Inline, }),
   )
   let error = option_for(Error)
   assert_true(error.class_name == "squiggly-error")
   assert_eq(error.z_index, 30)
   assert_true(
     error.overview_ruler ==
-    Some({ color: Some(overview_ruler_error), position: Right }),
+    Some({ color: Some(overview_ruler_error), position: Right, }),
   )
-  assert_true(error.minimap == Some({ color: minimap_error, position: Inline }))
+  assert_true(
+    error.minimap == Some({ color: minimap_error, position: Inline, }),
+  )
 }
 
 ///|

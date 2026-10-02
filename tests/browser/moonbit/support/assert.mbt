@@ -12,7 +12,7 @@ pub struct BrowserTestContext {
 pub fn BrowserTestContext::BrowserTestContext(
   suite : String,
 ) -> BrowserTestContext {
-  { suite, failures: [], metrics: Map([]) }
+  { suite, failures: [], metrics: Map([]), }
 }
 
 ///|

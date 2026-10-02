@@ -160,7 +160,7 @@ pub fn TokenizationRegistry::register(
 ) -> @base_common.Disposable {
   let id = self.next_id.val
   self.next_id.val = id + 1
-  self.tokenizers[language_id] = { id, tokenizer }
+  self.tokenizers[language_id] = { id, tokenizer, }
   // The pinned source installs before notification; the disposer returns
   // immediately when a newer registration owns the key.
   self.handle_change([language_id])
@@ -222,7 +222,7 @@ pub fn TokenizationRegistry::set_color_map(
   let changed_languages = [
     for language_id in self.tokenizers.keys() => language_id
   ]
-  self.did_change.fire({ changed_languages, changed_color_map: true })
+  self.did_change.fire({ changed_languages, changed_color_map: true, })
 }
 
 ///|

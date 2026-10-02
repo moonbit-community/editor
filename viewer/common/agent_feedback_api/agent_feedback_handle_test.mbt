@@ -24,7 +24,7 @@ test "AgentFeedbackHandle forwards its exact callback floor" {
   let handle = @agent_feedback_api.AgentFeedbackHandle(
     on_did_change_feedback=listener => {
       calls.push("subscribe-feedback")
-      listener({ resource, feedback_items: [feedback] })
+      listener({ resource, feedback_items: [feedback], })
       @base_common.Disposable::from(() => calls.push("dispose-feedback"))
     },
     on_did_change_navigation=listener => {
@@ -42,7 +42,7 @@ test "AgentFeedbackHandle forwards its exact callback floor" {
     },
     get_navigation_bearing=(_, item_ids) => {
       calls.push("bearing:" + item_ids.join(","))
-      { active_idx: 1, total_count: item_ids.length() }
+      { active_idx: 1, total_count: item_ids.length(), }
     },
     add_feedback=(_, _, _, kind, state) => {
       let kind_label = match kind {
@@ -124,7 +124,7 @@ test "agent-feedback DTO events are public value contracts" {
     feedback,
     has_existing_feedback_for_file: true,
   }
-  let reply : AgentFeedbackReplyAddedEvent = { feedback, reply_count: 2 }
+  let reply : AgentFeedbackReplyAddedEvent = { feedback, reply_count: 2, }
   let submitted : AgentFeedbackSubmittedEvent = {
     resource,
     items: [feedback],

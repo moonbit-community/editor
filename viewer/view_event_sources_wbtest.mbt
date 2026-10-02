@@ -30,7 +30,7 @@ fn test_configuration_changed_event(
       },
     }
   } else {
-    { ..current_snapshot, layout: previous_snapshot.layout }
+    { ..current_snapshot, layout: previous_snapshot.layout, }
   }
   previous_snapshot.changed_event(current_snapshot)
 }
@@ -179,7 +179,7 @@ test "view configuration source separates layout font line-height and wrapping" 
   assert_true(test_view_configuration_has_changed(font_event, FontInfo))
   assert_false(test_view_configuration_has_changed(font_event, LineHeight))
 
-  let taller = { ..font_info, line_height: font_info.line_height + 1 }
+  let taller = { ..font_info, line_height: font_info.line_height + 1, }
   let height_event = test_configuration_changed_event(
     previous,
     previous,
@@ -193,7 +193,7 @@ test "view configuration source separates layout font line-height and wrapping" 
   assert_true(test_view_configuration_has_changed(height_event, FontInfo))
   assert_true(test_view_configuration_has_changed(height_event, LineHeight))
 
-  let tabbed = { ..previous, tab_size: previous.tab_size + 1 }
+  let tabbed = { ..previous, tab_size: previous.tab_size + 1, }
   let wrapping_event = test_configuration_changed_event(
     previous,
     tabbed,

@@ -595,7 +595,7 @@ test "reentrant provider reserves the nested content generation before returning
   let reenter : Ref[(() -> Unit)?] = Ref(None)
   let registration = registry.register_markdown_comment_provider(
     LanguageId("plaintext"),
-    ReentrantMarkdownContributionProvider::{ blocks: provider_blocks, reenter },
+    ReentrantMarkdownContributionProvider::{ blocks: provider_blocks, reenter, },
   )
   defer registration.dispose()
   let services = ViewerServices(
@@ -702,7 +702,7 @@ test "headless Markdown contribution never hides source without replacement DOM"
   ])
   let registration = registry.register_markdown_comment_provider(
     LanguageId("plaintext"),
-    MutableMarkdownContributionProvider::{ blocks: provider_blocks },
+    MutableMarkdownContributionProvider::{ blocks: provider_blocks, },
   )
   defer registration.dispose()
   let services = ViewerServices(

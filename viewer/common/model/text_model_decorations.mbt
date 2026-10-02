@@ -558,7 +558,7 @@ fn[T] TextModel::change_decorations_impl(
 ) -> T {
   let accessor : ModelDecorationsChangeAccessor = {
     add_decoration: (range, options) => {
-      self.delta_decorations_impl(owner_id, [], [{ range, options }])[0]
+      self.delta_decorations_impl(owner_id, [], [{ range, options, }])[0]
     },
     change_decoration: (id, new_range) => {
       self.change_decoration_impl(owner_id, id, new_range)

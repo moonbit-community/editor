@@ -14,7 +14,10 @@ fn text_target(
     mouse_column=column,
     position=Position(line, column),
     range=Range(line, column, line, column),
-    detail={ might_be_foreign_element: injected_text is Some(_), injected_text },
+    detail={
+      might_be_foreign_element: injected_text is Some(_),
+      injected_text,
+    },
   )
 }
 
@@ -30,7 +33,7 @@ fn empty_target(
     mouse_column=column,
     position=Position(line, column),
     range=Range(line, column, line, column),
-    detail={ is_after_lines, horizontal_distance_to_text },
+    detail={ is_after_lines, horizontal_distance_to_text, },
   )
 }
 

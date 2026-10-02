@@ -54,7 +54,7 @@ priv struct GeometryTimerSpy {
 
 ///|
 fn GeometryTimerSpy::new() -> GeometryTimerSpy {
-  { next_handle: 0, tasks: [], cleared: [] }
+  { next_handle: 0, tasks: [], cleared: [], }
 }
 
 ///|
@@ -65,7 +65,7 @@ fn GeometryTimerSpy::set_timeout(
 ) -> Double {
   self.next_handle += 1
   let handle = self.next_handle.to_double()
-  self.tasks.push({ handle, delay_ms, callback, active: true })
+  self.tasks.push({ handle, delay_ms, callback, active: true, })
   handle
 }
 
@@ -116,7 +116,7 @@ test "ViewLines configuration resets widths from exact event bits" {
   let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   let view_lines = geometry_view_lines(
     [],
-    { start: 1, end: 1 },
+    { start: 1, end: 1, },
     Range(1, 1, 1, 1),
     layout,
     fixture,
@@ -132,7 +132,7 @@ test "ViewLines configuration resets widths from exact event bits" {
   inspect(view_lines.max_line_width, content="99")
   view_lines.flush_retained_lines()
   inspect(view_lines.max_line_width, content="0")
-  assert_true(view_lines.window == { start: 1, end: 1 })
+  assert_true(view_lines.window == { start: 1, end: 1, })
 }
 
 ///|
@@ -154,7 +154,7 @@ test "ViewLines raw multi-line query intersects rounds and adds only model newli
   let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let view_lines = geometry_view_lines(
     [first, second],
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     Range(1, 1, 2, 3),
     layout,
     first_fixture,
@@ -208,7 +208,7 @@ test "ViewLines newline width skips wraps and shifts RTL left" {
   let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let wrapped = geometry_view_lines(
     [wrapped_line, tail],
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     Range(1, 1, 2, 3),
     layout,
     wrapped_fixture,
@@ -233,7 +233,7 @@ test "ViewLines newline width skips wraps and shifts RTL left" {
   )
   let rtl = geometry_view_lines(
     [rtl_line, tail],
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     Range(1, 1, 2, 3),
     layout,
     rtl_fixture,
@@ -261,7 +261,7 @@ test "ViewLines converter progression covers first middle final and partial wind
   let layout = @view_layout.ViewLayout(line_height=20, line_count=3)
   let view_lines = geometry_view_lines(
     [first, middle, last_line],
-    { start: 1, end: 4 },
+    { start: 1, end: 4, },
     Range(1, 1, 3, 3),
     layout,
     first_fixture,
@@ -310,7 +310,7 @@ test "ViewLines converter progression covers first middle final and partial wind
 
   let partial = geometry_view_lines(
     [middle, last_line],
-    { start: 2, end: 4 },
+    { start: 2, end: 4, },
     Range(1, 1, 3, 3),
     layout,
     middle_fixture,
@@ -343,7 +343,7 @@ test "ViewLines width sweep preserves one ceil monotonic and full-document reset
   let layout = @view_layout.ViewLayout(line_height=20, line_count=2)
   let view_lines = geometry_view_lines(
     [first, second],
-    { start: 1, end: 3 },
+    { start: 1, end: 3, },
     Range(1, 1, 2, 2),
     layout,
     first_fixture,
@@ -357,12 +357,12 @@ test "ViewLines width sweep preserves one ceil monotonic and full-document reset
   view_line_fixture_set_width(second_fixture, 20.0)
   let first_narrow = mapped_fixture_line(first_input, first_fixture, 2)
   let second_narrow = mapped_fixture_line(second_input, second_fixture, 2)
-  view_lines.window = { start: 1, end: 2 }
+  view_lines.window = { start: 1, end: 2, }
   view_lines.lines = [first_narrow]
   view_lines.update_line_widths_slow()
   inspect(view_lines.max_line_width, content="56")
 
-  view_lines.window = { start: 1, end: 3 }
+  view_lines.window = { start: 1, end: 3, }
   view_lines.lines = [first_narrow, second_narrow]
   view_lines.update_line_widths_slow()
   inspect(view_lines.max_line_width, content="20")
@@ -417,7 +417,7 @@ test "ViewLines 200ms scheduler guards and cancel-before-slow ordering" {
   let layout = @view_layout.ViewLayout(line_height=20, line_count=1)
   let view_lines = geometry_view_lines(
     [line],
-    { start: 1, end: 2 },
+    { start: 1, end: 2, },
     Range(1, 1, 1, 2),
     layout,
     fixture,

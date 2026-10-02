@@ -58,7 +58,7 @@ test "digit-band transition preserves outer width and reset stays model-scoped" 
   let options = ViewerOptions(line_numbers_min_chars=1, folding=false)
   let state = test_configuration_state(options~)
   let initial_font = state.snapshot().font_info
-  state.commit_font_info({ ..initial_font, max_digit_width: 10.0 }) |> ignore
+  state.commit_font_info({ ..initial_font, max_digit_width: 10.0, }) |> ignore
   state.commit_measured_size(360.0, 180.0)
   state.set_line_counts(9, 9)
   state.request_measure()

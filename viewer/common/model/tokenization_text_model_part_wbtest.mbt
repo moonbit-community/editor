@@ -32,7 +32,7 @@ impl @syntax.LineTokenizer for BlockCommentToy with fn tokenize_line(
     line_text[0] == 'l' &&
     line_text[1] == 'e' &&
     line_text[2] == 't' {
-    tokens.push({ start: 0, end: 3, tag: Keyword })
+    tokens.push({ start: 0, end: 3, tag: Keyword, })
     at = 3
   }
   while at < line_text.length() {
@@ -42,7 +42,7 @@ impl @syntax.LineTokenizer for BlockCommentToy with fn tokenize_line(
         Some(index) => index + 2
         None => line_text.length()
       }
-      tokens.push({ start: at, end, tag: Comment })
+      tokens.push({ start: at, end, tag: Comment, })
       in_comment = close is None
       at = end
     } else {
@@ -79,7 +79,7 @@ fn toy_part(
   text : String,
   language_id : String,
 ) -> (TokenizationTextModelPart, AttachedViewImpl) {
-  @syntax.tokenization_registry.register(language_id, BlockCommentToy::{  })
+  @syntax.tokenization_registry.register(language_id, BlockCommentToy::{ })
   |> ignore
   let lines : Array[String] = []
   let mut start = 0
@@ -153,7 +153,7 @@ test "the sweep threads state across lines and encodes every line" {
     ),
     "part-toy",
   )
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 4 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 4, }], true)
 
   // Every line's stored `LineTokens` reproduces the line text.
   assert_eq(part.get_line_tokens(1).get_line_content(), "let a = 1")
@@ -222,7 +222,7 @@ test "registry changes reset the part and fire on_did_change_tokens" {
   assert_eq(part.get_line_tokens(1).get_count(), 1)
   let registration = @syntax.tokenization_registry.register(
     "part-registry-sub",
-    BlockCommentToy::{  },
+    BlockCommentToy::{ },
   )
   // The part observed the registration itself: memo dropped, whole-document
   // change announced.
@@ -233,12 +233,12 @@ test "registry changes reset the part and fire on_did_change_tokens" {
   assert_eq(events[0].ranges[0].to_line_number, 2)
   // Re-read remains passive; a stable attached range drives production lexing.
   assert_eq(part.get_line_tokens(1).get_count(), 1)
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   assert_eq(part.get_line_tokens(1).get_count(), 2)
   // Other languages' registrations do not touch the part.
   let other = @syntax.tokenization_registry.register(
     "part-registry-sub-other",
-    BlockCommentToy::{  },
+    BlockCommentToy::{ },
   )
   assert_eq(events.length(), 2)
   other.dispose()
@@ -267,7 +267,7 @@ test "token_count is a passive stored/default read" {
   assert_eq(part.token_count(), 3)
   assert_true(calls.is_empty())
   let view = attached_views.attach_view()
-  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2 }], true)
+  view.set_visible_lines([{ start_line_number: 1, end_line_number: 2, }], true)
   let before = calls.length()
   assert_eq(part.token_count(), 3)
   assert_eq(calls.length(), before)

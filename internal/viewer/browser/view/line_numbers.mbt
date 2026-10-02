@@ -18,7 +18,7 @@ priv struct LineNumbersOverlay {
 
 ///|
 fn LineNumbersOverlay::LineNumbersOverlay() -> LineNumbersOverlay {
-  { render_result: [] }
+  { render_result: [], }
 }
 
 ///|

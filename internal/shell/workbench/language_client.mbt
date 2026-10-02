@@ -9,7 +9,7 @@ priv struct RemoteLanguageClient {
 
 ///|
 fn register_remote_language_providers(services : WorkbenchServices) -> Unit {
-  let client = RemoteLanguageClient::{ log_service: services.log_service }
+  let client = RemoteLanguageClient::{ log_service: services.log_service, }
   let selector = @language.LanguageSelector::LanguageFilter(
     LanguageFilter(scheme="readonly-remote"),
   )
@@ -53,7 +53,7 @@ impl @language.HoverProvider for RemoteLanguageClient with fn provide_hover(
 ) {
   let offset = model.get_offset_at(position)
   let response = protocol_request("hover", id => {
-    Hover({ id, uri: model.uri, document_revision: model.revision, offset })
+    Hover({ id, uri: model.uri, document_revision: model.revision, offset, })
   })
   match response {
     HoverResult(payload) => payload.hover
@@ -87,7 +87,7 @@ impl @language.DocumentSymbolProvider for RemoteLanguageClient with fn provide_d
   _token,
 ) {
   let response = protocol_request("symbols", id => {
-    DocumentSymbols({ id, uri: model.uri, document_revision: model.revision })
+    DocumentSymbols({ id, uri: model.uri, document_revision: model.revision, })
   })
   match response {
     DocumentSymbolsResult(payload) => payload.symbols

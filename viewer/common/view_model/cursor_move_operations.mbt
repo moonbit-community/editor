@@ -418,7 +418,7 @@ fn cursor_vertical(
     }
     None => ()
   }
-  { line_number, column, leftover_visible_columns }
+  { line_number, column, leftover_visible_columns, }
 }
 
 ///|

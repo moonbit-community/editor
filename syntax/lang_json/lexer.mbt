@@ -65,7 +65,7 @@ priv enum StepOp {
 
 ///|
 fn normal_step(view : StringView) -> (StepOp, StringView) {
-  lexscan view with longest {
+  lexmatch view with longest {
     (re"^[ \t]+", after=rest) => (Blank, rest)
     (re"^//.*", after=rest) => (Emit(Comment), rest)
     (re"^/\*", after=rest) => (EnterComment, rest)
@@ -98,7 +98,7 @@ fn normal_step(view : StringView) -> (StepOp, StringView) {
 
 ///|
 fn comment_step(view : StringView) -> (StepOp, StringView) {
-  lexscan view with longest {
+  lexmatch view with longest {
     (re"^\*/", after=rest) => (LeaveComment, rest)
     (re"^[^*]+", after=rest) => (Emit(Comment), rest)
     (re"^\*", after=rest) => (Emit(Comment), rest)

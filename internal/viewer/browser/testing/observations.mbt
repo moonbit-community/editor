@@ -11,6 +11,9 @@ pub(all) struct ViewModelBuiltObservation {
 } derive(Debug)
 
 ///|
+pub extend ViewModelBuiltObservation with Debug::{to_repr}
+
+///|
 /// Test/workbench telemetry emitted after a viewer patches model content into
 /// the DOM. Diagnostics remain owned by the marker service and deliberately do
 /// not cross this testing boundary.
@@ -23,11 +26,20 @@ pub(all) struct ModelRenderedObservation {
 } derive(Debug)
 
 ///|
+pub extend ModelRenderedObservation with Debug::{to_repr}
+
+///|
 /// Test/workbench telemetry emitted when one hover resolution completes.
 pub(all) struct HoverResolvedObservation {
   ok : Bool
   revision : String
 } derive(Debug, Eq)
+
+///|
+pub extend HoverResolvedObservation with Debug::{to_repr}
+
+///|
+pub extend HoverResolvedObservation with Eq::{not_equal, equal}
 
 ///|
 /// Internal phases used to correlate an accepted scroll position with its
@@ -39,6 +51,12 @@ pub(all) enum ScrollFramePhase {
 } derive(Debug, Eq)
 
 ///|
+pub extend ScrollFramePhase with Debug::{to_repr}
+
+///|
+pub extend ScrollFramePhase with Eq::{not_equal, equal}
+
+///|
 /// Viewer-scoped scroll/render telemetry. The registry constructs this record
 /// only while a listener is installed, so ordinary product execution does not
 /// allocate trace observations.
@@ -48,3 +66,9 @@ pub(all) struct ScrollFrameObservation {
   scroll_top : Double
   scroll_left : Double
 } derive(Debug, Eq)
+
+///|
+pub extend ScrollFrameObservation with Debug::{to_repr}
+
+///|
+pub extend ScrollFrameObservation with Eq::{not_equal, equal}

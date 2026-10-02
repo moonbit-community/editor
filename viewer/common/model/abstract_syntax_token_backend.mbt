@@ -14,6 +14,12 @@ pub(all) struct VisibleLineRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend VisibleLineRange with Eq::{not_equal, equal}
+
+///|
+pub extend VisibleLineRange with Debug::{to_repr}
+
+///|
 /// Immutable normalized visible ranges plus stabilization state.
 priv struct AttachedViewState {
   visible_line_ranges : Array[@base_common.LineRange]

@@ -22,3 +22,9 @@ pub(all) struct Change {
   modified_start_line_number : Int
   modified_end_line_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend Change with Eq::{not_equal, equal}
+
+///|
+pub extend Change with Debug::{to_repr}

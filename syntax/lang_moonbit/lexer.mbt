@@ -30,6 +30,12 @@ pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn initial_state(_self)
 }
 
 ///|
+pub extend MoonbitTokenizer with @syntax.LineTokenizer::{
+  initial_state,
+  tokenize_line,
+}
+
+///|
 /// Tokenizes one MoonBit source line and resets to normal mode at line end.
 pub impl @syntax.LineTokenizer for MoonbitTokenizer with fn tokenize_line(
   _self,

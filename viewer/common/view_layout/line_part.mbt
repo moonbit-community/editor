@@ -6,6 +6,12 @@ pub(all) enum TextDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend TextDirection with Eq::{not_equal, equal}
+
+///|
+pub extend TextDirection with Debug::{to_repr}
+
+///|
 /// Inline decoration placement relative to source text.
 pub(all) enum InlineDecorationType {
   Regular
@@ -13,6 +19,12 @@ pub(all) enum InlineDecorationType {
   After
   RegularAffectingLetterSpacing
 } derive(Eq, Debug)
+
+///|
+pub extend InlineDecorationType with Eq::{not_equal, equal}
+
+///|
+pub extend InlineDecorationType with Debug::{to_repr}
 
 ///|
 /// Whether a rendered line contains pseudo-elements before or after text.
@@ -24,6 +36,12 @@ pub(all) enum ForeignElementType {
 } derive(Eq, Debug)
 
 ///|
+pub extend ForeignElementType with Eq::{not_equal, equal}
+
+///|
+pub extend ForeignElementType with Debug::{to_repr}
+
+///|
 /// Tokenized segment ending at `end_index` with CSS and metadata flags.
 pub struct LinePart {
   end_index : Int
@@ -31,6 +49,12 @@ pub struct LinePart {
   metadata : Int
   contains_rtl : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend LinePart with Eq::{not_equal, equal}
+
+///|
+pub extend LinePart with Debug::{to_repr}
 
 ///|
 /// Builds a line part.

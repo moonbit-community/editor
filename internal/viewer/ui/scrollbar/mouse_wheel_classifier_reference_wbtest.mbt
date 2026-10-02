@@ -70,7 +70,9 @@ test "upstream classifier trace: Linux Wayland - Logitech G Pro Wireless" {
 }
 
 ///|
-extern "js" fn load_classifier_trace(label : String) -> Array[Array[Double]] =
+extern "js" fn load_classifier_trace(
+  label : String,
+) -> FixedArray[FixedArray[Double]] =
   #| (label) => {
   #|   const fs = process.getBuiltinModule('fs');
   #|   const path = process.getBuiltinModule('path');

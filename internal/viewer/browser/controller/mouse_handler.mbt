@@ -47,6 +47,12 @@ pub(all) enum NavigationCommandRevealType {
 } derive(Eq, Debug)
 
 ///|
+pub extend NavigationCommandRevealType with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationCommandRevealType with Debug::{to_repr}
+
+///|
 /// `IMouseDispatchData` (`viewController.ts:21-40`): the resolved pointer
 /// intent the handler hands to the viewer's `ViewController.dispatchMouse`
 /// analog. `position` is a 1-based **view** position (the view→model conversion

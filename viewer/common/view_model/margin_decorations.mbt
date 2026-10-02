@@ -20,6 +20,12 @@ pub struct DecorationToRender {
 } derive(Eq, Debug)
 
 ///|
+pub extend DecorationToRender with Eq::{not_equal, equal}
+
+///|
+pub extend DecorationToRender with Debug::{to_repr}
+
+///|
 /// `LinesDecorationsOverlay._getDecorations`: the viewport decorations that
 /// carry a `linesDecorationsClassName` — plus, on their first line only, a
 /// `firstLineDecorationClassName` (the folding chevron's lane) — as render

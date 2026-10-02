@@ -8,6 +8,12 @@ pub(all) enum SelectionDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend SelectionDirection with Eq::{not_equal, equal}
+
+///|
+pub extend SelectionDirection with Debug::{to_repr}
+
+///|
 /// A selection in the editor: a range that carries an orientation. Mirrors
 /// Monaco's `core/selection.ts` `Selection`. Both endpoints are model
 /// positions (one-based `line_number`, UTF-16 `column`); `selection_start` is
@@ -22,6 +28,12 @@ pub struct Selection {
   selection_start : @base_common.Position
   position : @base_common.Position
 } derive(Eq, Debug)
+
+///|
+pub extend Selection with Eq::{not_equal, equal}
+
+///|
+pub extend Selection with Debug::{to_repr}
 
 ///|
 /// Builds a selection from its anchor (`selection_start`) and active

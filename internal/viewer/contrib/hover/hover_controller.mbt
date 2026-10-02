@@ -5,6 +5,9 @@ pub struct HoverView {
 } derive(Eq)
 
 ///|
+pub extend HoverView with Eq::{not_equal, equal}
+
+///|
 /// Monaco `IHoverPart.isValidForHoverAnchor` (markdown + marker participants):
 /// the part still applies to the new anchor when the anchor is a range anchor
 /// and the part's range contains the anchor range (`anchor.type ===
@@ -66,6 +69,12 @@ pub struct HoverTiming {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverTiming with Eq::{not_equal, equal}
+
+///|
+pub extend HoverTiming with Debug::{to_repr}
+
+///|
 /// Derives the exact half/full/triple-delay schedule for one configured delay.
 pub fn HoverTiming::from_delay(delay_ms : Int) -> HoverTiming {
   let hover_time_ms = delay_ms.to_double()
@@ -95,12 +104,24 @@ pub(all) enum HoverStartMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverStartMode with Eq::{not_equal, equal}
+
+///|
+pub extend HoverStartMode with Debug::{to_repr}
+
+///|
 /// Typed origin of a hover start from Monaco's `HoverStartSource`.
 pub(all) enum HoverStartSource {
   HoverStartMouse
   HoverStartClick
   HoverStartKeyboard
 } derive(Eq, Debug)
+
+///|
+pub extend HoverStartSource with Eq::{not_equal, equal}
+
+///|
+pub extend HoverStartSource with Debug::{to_repr}
 
 ///|
 /// Source-shaped options retained by one hover operation.
@@ -110,6 +131,12 @@ pub struct HoverOperationOptions {
   source : HoverStartSource
   insist_on_keeping_hover_visible : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend HoverOperationOptions with Eq::{not_equal, equal}
+
+///|
+pub extend HoverOperationOptions with Debug::{to_repr}
 
 ///|
 /// Builds one immutable operation-options snapshot with source defaults.
@@ -204,6 +231,12 @@ pub struct HoverResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverResult with Eq::{not_equal, equal}
+
+///|
+pub extend HoverResult with Debug::{to_repr}
+
+///|
 /// Host work selected by `HoverOperation::start`. Timers and computation stay
 /// host-owned; this value makes every valid start-mode/state branch explicit
 /// and deterministic.
@@ -213,6 +246,12 @@ pub enum HoverOperationStartEffect {
   HoverOperationRunAsyncAndSync(Int)
   HoverOperationRunSync(Int)
 } derive(Eq, Debug)
+
+///|
+pub extend HoverOperationStartEffect with Eq::{not_equal, equal}
+
+///|
+pub extend HoverOperationStartEffect with Debug::{to_repr}
 
 ///|
 /// Monaco `HoverOperationState` (`hoverOperation.ts`). `FirstWait` / `SecondWait`
@@ -229,6 +268,9 @@ pub enum HoverOpState {
 } derive(Eq)
 
 ///|
+pub extend HoverOpState with Eq::{not_equal, equal}
+
+///|
 /// Monaco `HoverOperation`: the fine-tuned hover timing / aggregation core. It
 /// is a pure state container; the viewer drives the three debounced schedulers
 /// and the sync / async computes (through the browser-host timers and the
@@ -243,6 +285,9 @@ pub struct HoverOperation {
   async_done : Bool
   options : HoverOperationOptions?
 } derive(Eq)
+
+///|
+pub extend HoverOperation with Eq::{not_equal, equal}
 
 ///|
 /// Creates the initial idle operation at generation zero.
@@ -338,6 +383,12 @@ pub struct HoverDebouncer {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverDebouncer with Eq::{not_equal, equal}
+
+///|
+pub extend HoverDebouncer with Debug::{to_repr}
+
+///|
 /// Creates an idle latest-options debouncer with a caller-selected fallback
 /// delay. Browser timer ownership remains outside this pure value.
 #alias(new, deprecated)
@@ -429,6 +480,9 @@ pub struct HoverController {
   current_anchor : HoverAnchor?
   current_complete : Bool
 } derive(Eq)
+
+///|
+pub extend HoverController with Eq::{not_equal, equal}
 
 ///|
 /// Creates an idle controller with generation zero and no shown result.
@@ -962,6 +1016,9 @@ pub struct HoverWidgetView {
   anchor_range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)
+
+///|
+pub extend HoverWidgetView with Eq::{not_equal, equal}
 
 ///|
 /// Whether a hover widget is currently on screen (resolved content or the

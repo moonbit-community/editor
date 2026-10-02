@@ -28,7 +28,6 @@ import {
   "moonbit-community/editor/internal/viewer/contrib/quick_diff/browser" @quick_diff_browser,
   "moonbit-community/editor/viewer/common/languages",
   "moonbit-community/editor/viewer/common/markers",
-  "moonbit-community/editor/internal/viewer/ui/scrollbar",
   "moonbit-community/editor/viewer/common/view_layout",
   "moonbit-community/editor/viewer/common/view_model",
   "moonbit-community/rabbita/dom" @rdom,

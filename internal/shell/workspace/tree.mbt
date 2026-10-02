@@ -7,6 +7,12 @@ pub(all) enum WorkspaceEntryKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend WorkspaceEntryKind with Eq::{not_equal, equal}
+
+///|
+pub extend WorkspaceEntryKind with Debug::{to_repr}
+
+///|
 /// One node of the workspace tree, mirroring VS Code's `IFileStat`: every
 /// stat carries its full provider-minted `uri`, and `children` is `None`
 /// until a provider resolves that directory level (the
@@ -20,11 +26,17 @@ pub(all) struct WorkspaceStat {
 } derive(Debug)
 
 ///|
+pub extend WorkspaceStat with Debug::{to_repr}
+
+///|
 /// Result of resolving a workspace tree node through a tree provider.
 pub(all) enum WorkspaceResolveResult {
   WorkspaceResolved(WorkspaceStat)
   WorkspaceResolveError(FileSystemProviderError)
 } derive(Debug)
+
+///|
+pub extend WorkspaceResolveResult with Debug::{to_repr}
 
 ///|
 /// The `IFileService.resolve` analog. `root` names the workspace root URI;

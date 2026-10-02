@@ -206,7 +206,7 @@ fn to_lower_js(s : String) -> String {
   }
   // Copy unchanged runs as substring chunks: every mapped unit is a BMP
   // non-surrogate, so chunk boundaries never split a surrogate pair.
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut chunk_start = 0
   for i in 0..<s.length() {
     let code = s[i].to_int()
@@ -347,7 +347,7 @@ pub fn starts_with_ignore_case(str : String, candidate : String) -> Bool {
 /// HTML-escapes `&`, `<`, `>`. Mirrors `strings.escape` (note: unlike the view's
 /// `escape_html`, it does not escape `"`, matching Monaco's `_tokenizeToString`).
 pub fn escape(text : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for ch in text {
     match ch {
       '&' => sb.write_string("&amp;")

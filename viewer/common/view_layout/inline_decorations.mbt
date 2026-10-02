@@ -7,6 +7,12 @@ pub struct InlineDecoration {
 } derive(Eq, Debug)
 
 ///|
+pub extend InlineDecoration with Eq::{not_equal, equal}
+
+///|
+pub extend InlineDecoration with Debug::{to_repr}
+
+///|
 /// Builds an inline decoration.
 pub fn InlineDecoration::InlineDecoration(
   range : @base_common.OffsetRange,

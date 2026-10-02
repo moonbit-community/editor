@@ -37,7 +37,7 @@ fn create_test_line_tokens() -> LineTokens {
 
 ///|
 fn render_line_tokens(tokens : LineTokens) -> String {
-  let result = StringBuilder::new()
+  let result = StringBuilder()
   let str = tokens.get_line_content()
   let mut last_offset = 0
   for i in 0..<tokens.get_count() {

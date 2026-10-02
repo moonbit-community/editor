@@ -20,6 +20,12 @@ pub impl @syntax.LineTokenizer for JsonTokenizer with fn initial_state(_self) {
 }
 
 ///|
+pub extend JsonTokenizer with @syntax.LineTokenizer::{
+  initial_state,
+  tokenize_line,
+}
+
+///|
 /// Tokenizes one JSON/JSONC line while carrying block-comment state.
 pub impl @syntax.LineTokenizer for JsonTokenizer with fn tokenize_line(
   _self,

@@ -383,7 +383,7 @@ fn is_blank(text : String) -> Bool {
 
 ///|
 fn input_escape_html(text : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for ch in text {
     match ch {
       '&' => out.write_string("&amp;")

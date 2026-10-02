@@ -11,11 +11,23 @@ pub(all) enum HoverPart {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverPart with Eq::{not_equal, equal}
+
+///|
+pub extend HoverPart with Debug::{to_repr}
+
+///|
 /// Complete hover result after participant parts have been merged and sorted.
 pub struct ComputedHover {
   range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
+
+///|
+pub extend ComputedHover with Eq::{not_equal, equal}
+
+///|
+pub extend ComputedHover with Debug::{to_repr}
 
 ///|
 /// Inputs shared by synchronous and asynchronous hover participants. Mirrors

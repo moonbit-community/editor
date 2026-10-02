@@ -48,6 +48,12 @@ pub(all) enum RawContentChangedType {
 } derive(Eq, Debug)
 
 ///|
+pub extend RawContentChangedType with Eq::{not_equal, equal}
+
+///|
+pub extend RawContentChangedType with Debug::{to_repr}
+
+///|
 /// The `ModelRawChange` union (`textModelEvents.ts:451`): `ModelRawFlush`
 /// (`:233`), `ModelRawLineChanged` (`:308`), `ModelRawLinesDeleted` (`:380`),
 /// `ModelRawLinesInserted` (`:406`), `ModelRawEOLChanged` (`:444`), with each
@@ -68,6 +74,9 @@ pub enum ModelRawChange {
   )
   ModelRawEOLChanged
 } derive(Debug)
+
+///|
+pub extend ModelRawChange with Debug::{to_repr}
 
 ///|
 /// Each class's `changeType` member (`textModelEvents.ts:234,309,381,407,445`).
@@ -93,6 +102,9 @@ pub struct ModelRawContentChangedEvent {
   is_undoing : Bool
   is_redoing : Bool
 } derive(Debug)
+
+///|
+pub extend ModelRawContentChangedEvent with Debug::{to_repr}
 
 ///|
 /// `containsEvent` (`textModelEvents.ts:483-491`).
@@ -137,6 +149,9 @@ pub struct ModelContentChange {
 } derive(Debug)
 
 ///|
+pub extend ModelContentChange with Debug::{to_repr}
+
+///|
 /// The public `IModelContentChangedEvent` (`textModelEvents.ts:42-85`) minus
 /// `detailedReasons`/`detailedReasonsChangeLengths` (file-header deviation).
 /// The I-prefix drops per the repo naming policy.
@@ -155,11 +170,17 @@ pub struct ModelContentChangedEvent {
 } derive(Debug)
 
 ///|
+pub extend ModelContentChangedEvent with Debug::{to_repr}
+
+///|
 /// `InternalModelContentChangeEvent` (`textModelEvents.ts:562-594`).
 pub struct InternalModelContentChangeEvent {
   raw_content_changed_event : ModelRawContentChangedEvent
   content_changed_event : ModelContentChangedEvent
 } derive(Debug)
+
+///|
+pub extend InternalModelContentChangeEvent with Debug::{to_repr}
 
 ///|
 /// `InternalModelContentChangeEvent.merge` (`textModelEvents.ts:568-572`).

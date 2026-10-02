@@ -17,6 +17,9 @@ pub(all) struct LogEntry {
   message : String
   details : Array[(String, String)]
 } derive(Eq, @debug.Debug)
+pub fn LogEntry::equal(Self, Self) -> Bool
+pub fn LogEntry::not_equal(Self, Self) -> Bool
+pub fn LogEntry::to_repr(Self) -> @debug.Repr
 
 pub struct LogHandle {
   // private fields
@@ -32,8 +35,11 @@ pub(all) enum LogLevel {
   Warning
   Error
 } derive(Eq, @debug.Debug)
+pub fn LogLevel::equal(Self, Self) -> Bool
 pub fn LogLevel::is_warning_or_error(Self) -> Bool
 pub fn LogLevel::label(Self) -> String
+pub fn LogLevel::not_equal(Self, Self) -> Bool
+pub fn LogLevel::to_repr(Self) -> @debug.Repr
 
 pub struct LogService {
   level : LogLevel
@@ -57,7 +63,9 @@ pub struct MemoryLogger {
 #alias(new, deprecated)
 pub fn MemoryLogger::MemoryLogger() -> Self
 pub fn MemoryLogger::entries(Self) -> Array[LogEntry]
+pub fn MemoryLogger::flush(Self) -> Unit
 pub fn MemoryLogger::flush_count(Self) -> Int
+pub fn MemoryLogger::log(Self, LogEntry) -> Unit
 pub impl Logger for MemoryLogger
 
 pub struct MultiplexLogger {
@@ -65,12 +73,16 @@ pub struct MultiplexLogger {
 }
 #alias(new, deprecated)
 pub fn MultiplexLogger::MultiplexLogger(Array[&Logger]) -> Self
+pub fn MultiplexLogger::flush(Self) -> Unit
+pub fn MultiplexLogger::log(Self, LogEntry) -> Unit
 pub impl Logger for MultiplexLogger
 
 pub struct NullLogger {
 }
 #alias(new, deprecated)
 pub fn NullLogger::NullLogger() -> Self
+pub fn NullLogger::flush(Self) -> Unit
+pub fn NullLogger::log(Self, LogEntry) -> Unit
 pub impl Logger for NullLogger
 
 // Type aliases
@@ -80,4 +92,3 @@ pub(open) trait Logger {
   fn log(Self, LogEntry) -> Unit
   fn flush(Self) -> Unit
 }
-

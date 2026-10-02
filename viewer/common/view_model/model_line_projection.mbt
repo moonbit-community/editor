@@ -528,7 +528,7 @@ fn view_line_data_for_segment_with_injections(
 /// A run of `n` spaces — the leading indent prepended to a wrapped continuation
 /// line. Monaco's `spaces(count)`.
 fn spaces(n : Int) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<n {
     sb.write_char(' ')
   }

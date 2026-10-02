@@ -142,7 +142,7 @@ fn reveal_column() -> Int {
 /// 60 lines, each long enough that column 100 sits well to the right of the
 /// viewport.
 fn reveal_source_text() -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for i in 0..<60 {
     if i > 0 {
       out.write_char('\n')

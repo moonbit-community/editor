@@ -30,14 +30,14 @@ fn assert_indent_guides(
   lines : Array[(Int, Int, Int, Int, String)],
   indent_size : Int,
 ) -> Unit raise {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i, l in lines {
     if i > 0 {
       sb.write_string("\n")
     }
     sb.write_string(l.4)
   }
-  let snapshot = TextSnapshot::TextSnapshot(sb.to_string())
+  let snapshot = @model.TextSnapshot::TextSnapshot(sb.to_string())
   let guides = @model.GuidesTextModelPart(
     snapshot,
     tab_size=4,
@@ -270,7 +270,7 @@ test "issue #49173" {
       "\tpublic m3(): void {", "\t}", "\tpublic m4(): void {", "\t}", "\tpublic m5(): void {",
       "\t}", "}",
     ] : Array[String]).join("\n")
-  let snapshot = TextSnapshot::TextSnapshot(text)
+  let snapshot = @model.TextSnapshot::TextSnapshot(text)
   let guides = @model.GuidesTextModelPart(snapshot, tab_size=4, indent_size=4)
   let actual = guides.get_active_indent_guide(2, 4, 9)
   assert_eq(actual.start_line_number, 2)

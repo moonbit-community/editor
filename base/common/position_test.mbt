@@ -9,14 +9,14 @@
 
 ///|
 test "Position is one-based on both axes" {
-  let p = Position::Position(1, 1)
+  let p = @common.Position::Position(1, 1)
   assert_eq(p.line_number, 1)
   assert_eq(p.column, 1)
 }
 
 ///|
 test "with_ keeps unspecified axes" {
-  let p = Position::Position(3, 5)
+  let p = @common.Position::Position(3, 5)
   assert_true(p.with_(line_number=7).equals(Position(7, 5)))
   assert_true(p.with_(column=2).equals(Position(3, 2)))
   assert_true(p.with_(line_number=7, column=2).equals(Position(7, 2)))
@@ -25,7 +25,7 @@ test "with_ keeps unspecified axes" {
 
 ///|
 test "delta shifts and clamps to at least 1" {
-  let p = Position::Position(3, 5)
+  let p = @common.Position::Position(3, 5)
   assert_true(p.delta(delta_line_number=1).equals(Position(4, 5)))
   assert_true(p.delta(delta_column=-2).equals(Position(3, 3)))
   // Both axes clamp at 1, matching Monaco's Math.max(1, ...).
@@ -36,7 +36,7 @@ test "delta shifts and clamps to at least 1" {
 
 ///|
 test "equals compares both axes" {
-  let p = Position::Position(2, 4)
+  let p = @common.Position::Position(2, 4)
   assert_true(p.equals(Position(2, 4)))
   assert_false(p.equals(Position(2, 5)))
   assert_false(p.equals(Position(3, 4)))
@@ -44,9 +44,9 @@ test "equals compares both axes" {
 
 ///|
 test "is_before / is_before_or_equal order by line then column" {
-  let a = Position::Position(2, 2)
-  let b = Position::Position(2, 3)
-  let c = Position::Position(3, 1)
+  let a = @common.Position::Position(2, 2)
+  let b = @common.Position::Position(2, 3)
+  let c = @common.Position::Position(3, 1)
   assert_true(a.is_before(b))
   assert_true(a.is_before(c))
   assert_false(b.is_before(a))
@@ -58,22 +58,22 @@ test "is_before / is_before_or_equal order by line then column" {
 
 ///|
 test "compare returns sign by line then column" {
-  let a = Position::Position(2, 2)
-  let b = Position::Position(2, 5)
-  let c = Position::Position(4, 1)
-  assert_true(Position::compare(a, b) < 0)
-  assert_true(Position::compare(b, a) > 0)
-  assert_true(Position::compare(a, a) == 0)
-  assert_true(Position::compare(a, c) < 0)
+  let a = @common.Position::Position(2, 2)
+  let b = @common.Position::Position(2, 5)
+  let c = @common.Position::Position(4, 1)
+  assert_true(@common.Position::compare(a, b) < 0)
+  assert_true(@common.Position::compare(b, a) > 0)
+  assert_true(@common.Position::compare(a, a) == 0)
+  assert_true(@common.Position::compare(a, c) < 0)
 }
 
 ///|
 test "clone copies both axes" {
-  let p = Position::Position(6, 9)
+  let p = @common.Position::Position(6, 9)
   assert_true(p.clone().equals(p))
 }
 
 ///|
 test "to_string is (line,column)" {
-  assert_eq(Position::Position(3, 7).to_string(), "(3,7)")
+  assert_eq(@common.Position::Position(3, 7).to_string(), "(3,7)")
 }

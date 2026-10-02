@@ -21,6 +21,12 @@ pub(all) enum PartFingerprint {
 } derive(Eq, Debug)
 
 ///|
+pub extend PartFingerprint with Eq::{not_equal, equal}
+
+///|
+pub extend PartFingerprint with Debug::{to_repr}
+
+///|
 pub fn PartFingerprint::to_int(self : PartFingerprint) -> Int {
   match self {
     None => 0

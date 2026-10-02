@@ -1,10 +1,13 @@
 import {
   "moonbit-community/editor/base/browser" @base_browser,
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/viewer/common/agent_feedback_api",
   "moonbit-community/editor/internal/viewer/contrib/agent_feedback",
   "moonbit-community/editor/internal/viewer/browser/markdown" @browser_markdown,
   "moonbit-community/rabbita/dom" @rdom,
 }
+
+import {
+  "moonbit-community/editor/viewer/common/agent_feedback_api",
+} for "wbtest"
 
 supported_targets = "js"

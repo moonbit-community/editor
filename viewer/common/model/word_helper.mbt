@@ -19,6 +19,12 @@ pub struct WordAtPosition {
 } derive(Eq, Debug)
 
 ///|
+pub extend WordAtPosition with Eq::{not_equal, equal}
+
+///|
+pub extend WordAtPosition with Debug::{to_repr}
+
+///|
 fn is_ascii_digit(code : Int) -> Bool {
   48 <= code && code <= 57
 }

@@ -27,4 +27,3 @@ pub fn MarkdownCommentSizeObserver::request_measure(Self) -> Unit
 // Type aliases
 
 // Traits
-

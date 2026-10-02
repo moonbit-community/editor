@@ -75,7 +75,7 @@ fn assert_range(
 
 ///|
 fn join_lines(lines : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i, l in lines {
     if i > 0 {
       sb.write_string("\n")

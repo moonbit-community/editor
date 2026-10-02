@@ -19,6 +19,12 @@ pub struct ViewModelOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewModelOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ViewModelOptions with Debug::{to_repr}
+
+///|
 /// Builds options while clamping wrapping column and tab size.
 /// `wrapping_indent` defaults to `Same`, Monaco's default.
 pub fn ViewModelOptions::ViewModelOptions(

@@ -23,6 +23,12 @@ pub(all) enum WordBreak {
 } derive(Eq, Debug)
 
 ///|
+pub extend WordBreak with Eq::{not_equal, equal}
+
+///|
+pub extend WordBreak with Debug::{to_repr}
+
+///|
 /// Monaco `CharacterClass` (`monospaceLineBreaksComputer.ts`), as the small
 /// integers the shared `CharacterClassifier` stores.
 const CHARACTER_CLASS_NONE : Int = 0

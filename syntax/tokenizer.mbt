@@ -7,6 +7,12 @@
 pub(all) struct TokenizerState(String) derive(Eq, Debug)
 
 ///|
+pub extend TokenizerState with Eq::{not_equal, equal}
+
+///|
+pub extend TokenizerState with Debug::{to_repr}
+
+///|
 /// Highlight classification, widened toward Monaco's standard token
 /// types. Existing tags and class names are stable for specs; new tags
 /// extend the set for the per-language lexers.
@@ -31,6 +37,12 @@ pub(all) enum HighlightTag {
   Attribute
   Invalid
 } derive(Eq, Debug)
+
+///|
+pub extend HighlightTag with Eq::{not_equal, equal}
+
+///|
+pub extend HighlightTag with Debug::{to_repr}
 
 ///|
 /// Renders the tag's variant name. Used by the per-language lexer golden tests
@@ -63,6 +75,9 @@ pub impl Show for HighlightTag with fn output(self, logger) {
 }
 
 ///|
+pub extend HighlightTag with Show::{to_string, output}
+
+///|
 /// One highlighted span within a single line, in line-local UTF-16
 /// code-unit offsets. Token ranges must never split a surrogate pair: the
 /// viewer slices the document text at these offsets.
@@ -71,6 +86,12 @@ pub(all) struct LineToken {
   end : Int
   tag : HighlightTag
 } derive(Eq, Debug)
+
+///|
+pub extend LineToken with Eq::{not_equal, equal}
+
+///|
+pub extend LineToken with Debug::{to_repr}
 
 ///|
 /// Line-at-a-time tokenization, Monaco's `ITokenizationSupport`: the

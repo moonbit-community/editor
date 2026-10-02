@@ -80,6 +80,12 @@ pub struct EditorFontDefaults {
 } derive(Eq, Debug)
 
 ///|
+pub extend EditorFontDefaults with Eq::{not_equal, equal}
+
+///|
+pub extend EditorFontDefaults with Debug::{to_repr}
+
+///|
 pub let editor_font_defaults : EditorFontDefaults = editor_font_defaults_for_platform(
   current_font_platform(),
 )
@@ -117,6 +123,12 @@ pub struct BareFontInfo {
   line_height : Int
   letter_spacing : Double
 } derive(Eq, Debug)
+
+///|
+pub extend BareFontInfo with Eq::{not_equal, equal}
+
+///|
+pub extend BareFontInfo with Debug::{to_repr}
 
 ///|
 /// Monaco `BareFontInfo._create`: `lineHeight == 0` derives the golden-ratio
@@ -294,6 +306,12 @@ pub(all) struct FontInfo {
   wsmiddot_width : Double
   max_digit_width : Double
 } derive(Eq, Debug)
+
+///|
+pub extend FontInfo with Eq::{not_equal, equal}
+
+///|
+pub extend FontInfo with Debug::{to_repr}
 
 ///|
 /// An estimated `FontInfo` for a `BareFontInfo` that has not been measured

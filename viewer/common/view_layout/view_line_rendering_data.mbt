@@ -14,3 +14,9 @@ pub(all) struct ViewLineRenderingData {
   text_direction : TextDirection
   has_variable_fonts : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ViewLineRenderingData with Eq::{not_equal, equal}
+
+///|
+pub extend ViewLineRenderingData with Debug::{to_repr}

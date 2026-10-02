@@ -87,4 +87,3 @@ pub fn StandardMouseEvent::stop_propagation(Self) -> Unit
 // Type aliases
 
 // Traits
-

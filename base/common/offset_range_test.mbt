@@ -9,7 +9,7 @@
 /// Constructor shorthand: a bare `OffsetRange(...)` only resolves when the
 /// expected type is known, so build through a helper whose return type supplies
 /// it.
-fn or_(start : Int, end_exclusive : Int) -> OffsetRange {
+fn or_(start : Int, end_exclusive : Int) -> @common.OffsetRange {
   OffsetRange(start, end_exclusive)
 }
 
@@ -23,17 +23,17 @@ test "constructors and fields" {
   let swapped = or_(8, 3)
   assert_eq(swapped.start, 3)
   assert_eq(swapped.end_exclusive, 8)
-  assert_true(OffsetRange::from_to(3, 8).equals(r))
-  assert_true(OffsetRange::of_length(5).equals(or_(0, 5)))
-  assert_true(OffsetRange::of_start_and_length(3, 5).equals(r))
-  assert_true(OffsetRange::empty_at(4).equals(or_(4, 4)))
+  assert_true(@common.OffsetRange::from_to(3, 8).equals(r))
+  assert_true(@common.OffsetRange::of_length(5).equals(or_(0, 5)))
+  assert_true(@common.OffsetRange::of_start_and_length(3, 5).equals(r))
+  assert_true(@common.OffsetRange::empty_at(4).equals(or_(4, 4)))
 }
 
 ///|
 test "try_create returns None for inverted ranges" {
-  assert_true(OffsetRange::try_create(3, 8) is Some(_))
-  assert_true(OffsetRange::try_create(8, 3) is None)
-  assert_true(OffsetRange::try_create(5, 5) is Some(_))
+  assert_true(@common.OffsetRange::try_create(3, 8) is Some(_))
+  assert_true(@common.OffsetRange::try_create(8, 3) is None)
+  assert_true(@common.OffsetRange::try_create(5, 5) is Some(_))
 }
 
 ///|
@@ -74,11 +74,11 @@ test "join" {
 ///|
 test "intersect / intersection_length" {
   // Overlapping.
-  guard or_(3, 8).intersect(or_(5, 10)) is Some(i)
+  guard! or_(3, 8).intersect(or_(5, 10)) is Some(i)
   assert_true(i.equals(or_(5, 8)))
   assert_eq(or_(3, 8).intersection_length(or_(5, 10)), 3)
   // Touching: empty intersection, length 0.
-  guard or_(3, 5).intersect(or_(5, 9)) is Some(touch)
+  guard! or_(3, 5).intersect(or_(5, 9)) is Some(touch)
   assert_true(touch.is_empty())
   assert_eq(or_(3, 5).intersection_length(or_(5, 9)), 0)
   // Disjoint: None.

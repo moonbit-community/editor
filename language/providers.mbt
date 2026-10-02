@@ -7,11 +7,20 @@ pub(all) enum HoverContent {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverContent with Eq::{not_equal, equal}
+
+///|
+pub extend HoverContent with Debug::{to_repr}
+
+///|
 /// Hover result anchored to a line/column `Range`, matching Monaco's `Hover`.
 pub(all) struct Hover {
   range : @base_common.Range
   contents : Array[HoverContent]
 } derive(Debug)
+
+///|
+pub extend Hover with Debug::{to_repr}
 
 ///|
 /// One whole-line Markdown source-comment block. `line_range` uses the
@@ -20,6 +29,12 @@ pub(all) struct MarkdownCommentBlock {
   line_range : @base_common.LineRange
   markdown : String
 } derive(Eq, Debug)
+
+///|
+pub extend MarkdownCommentBlock with Eq::{not_equal, equal}
+
+///|
+pub extend MarkdownCommentBlock with Debug::{to_repr}
 
 ///|
 /// Diagnostic severity levels accepted from semantic providers. `Hint`
@@ -32,6 +47,12 @@ pub(all) enum DiagnosticSeverity {
 } derive(Eq, Debug)
 
 ///|
+pub extend DiagnosticSeverity with Eq::{not_equal, equal}
+
+///|
+pub extend DiagnosticSeverity with Debug::{to_repr}
+
+///|
 /// Diagnostic tag, mirroring Monaco's `MarkerTag` (`markers.ts:51`). Kept
 /// local to `language`
 /// rather than reusing `viewer/common/markers`'s `MarkerTag`, since `language`
@@ -40,6 +61,12 @@ pub(all) enum DiagnosticTag {
   Unnecessary
   Deprecated
 } derive(Eq, Debug)
+
+///|
+pub extend DiagnosticTag with Eq::{not_equal, equal}
+
+///|
+pub extend DiagnosticTag with Debug::{to_repr}
 
 ///|
 /// Problem marker over a source range. `range` is a line/column `Range`,
@@ -52,12 +79,18 @@ pub(all) struct Diagnostic {
 } derive(Debug)
 
 ///|
+pub extend Diagnostic with Debug::{to_repr}
+
+///|
 /// Cross-document location result for definition and reference providers.
 /// `range` is a line/column `Range`, matching Monaco's `Location`.
 pub(all) struct Location {
   uri : @base_common.Uri
   range : @base_common.Range
 } derive(Debug)
+
+///|
+pub extend Location with Debug::{to_repr}
 
 ///|
 /// Symbol outline item for the current document. `range` is a line/column
@@ -67,6 +100,9 @@ pub(all) struct DocumentSymbol {
   kind : String
   range : @base_common.Range
 } derive(Debug)
+
+///|
+pub extend DocumentSymbol with Debug::{to_repr}
 
 ///|
 /// Asynchronous hover provider for a readonly text model and

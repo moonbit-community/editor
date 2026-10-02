@@ -7,6 +7,12 @@ pub struct ViewTokensChangedRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewTokensChangedRange with Eq::{not_equal, equal}
+
+///|
+pub extend ViewTokensChangedRange with Debug::{to_repr}
+
+///|
 /// Keeps existing headless `ViewModel` callers source-compatible. The browser
 /// Viewer supplies the live callback through `with_options`.
 fn view_model_no_token_event_sink(

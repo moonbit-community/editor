@@ -17,6 +17,12 @@ pub(all) struct LineRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineRange with Eq::{not_equal, equal}
+
+///|
+pub extend LineRange with Debug::{to_repr}
+
+///|
 pub fn LineRange::LineRange(
   start_line_number : Int,
   end_line_number_exclusive : Int,

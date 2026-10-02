@@ -126,6 +126,7 @@ pub fn uri_to_fs_path(Uri, Bool) -> String
 pub suberror UriError {
   UriError(String)
 } derive(@debug.Debug)
+pub fn UriError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct CharacterClassifier {
@@ -196,6 +197,7 @@ pub fn LineRange::LineRange(Int, Int) -> Self
 pub fn LineRange::contains(Self, Int) -> Bool
 pub fn LineRange::contains_range(Self, Self) -> Bool
 pub fn LineRange::delta(Self, Int) -> Self
+pub fn LineRange::equal(Self, Self) -> Bool
 pub fn LineRange::equals(Self, Self) -> Bool
 pub fn LineRange::intersect(Self, Self) -> Self?
 pub fn LineRange::intersects_or_touches(Self, Self) -> Bool
@@ -204,7 +206,9 @@ pub fn LineRange::is_empty(Self) -> Bool
 pub fn LineRange::join(Self, Self) -> Self
 pub fn LineRange::join_many(Array[Array[Self]]) -> Array[Self]
 pub fn LineRange::length(Self) -> Int
+pub fn LineRange::not_equal(Self, Self) -> Bool
 pub fn LineRange::of_length(Int, Int) -> Self
+pub fn LineRange::to_repr(Self) -> @debug.Repr
 pub fn LineRange::to_string(Self) -> String
 
 pub struct LineRangeSet {
@@ -240,6 +244,7 @@ pub fn OffsetRange::delta(Self, Int) -> Self
 pub fn OffsetRange::delta_end(Self, Int) -> Self
 pub fn OffsetRange::delta_start(Self, Int) -> Self
 pub fn OffsetRange::empty_at(Int) -> Self
+pub fn OffsetRange::equal(Self, Self) -> Bool
 pub fn OffsetRange::equals(Self, Self) -> Bool
 pub fn OffsetRange::from_to(Int, Int) -> Self
 pub fn OffsetRange::intersect(Self, Self) -> Self?
@@ -251,8 +256,10 @@ pub fn OffsetRange::is_before(Self, Self) -> Bool
 pub fn OffsetRange::is_empty(Self) -> Bool
 pub fn OffsetRange::join(Self, Self) -> Self
 pub fn OffsetRange::length(Self) -> Int
+pub fn OffsetRange::not_equal(Self, Self) -> Bool
 pub fn OffsetRange::of_length(Int) -> Self
 pub fn OffsetRange::of_start_and_length(Int, Int) -> Self
+pub fn OffsetRange::to_repr(Self) -> @debug.Repr
 pub fn OffsetRange::to_string(Self) -> String
 pub fn OffsetRange::try_create(Int, Int) -> Self?
 
@@ -264,9 +271,12 @@ pub fn Position::Position(Int, Int) -> Self
 pub fn Position::clone(Self) -> Self
 pub fn Position::compare(Self, Self) -> Int
 pub fn Position::delta(Self, delta_line_number? : Int, delta_column? : Int) -> Self
+pub fn Position::equal(Self, Self) -> Bool
 pub fn Position::equals(Self, Self) -> Bool
 pub fn Position::is_before(Self, Self) -> Bool
 pub fn Position::is_before_or_equal(Self, Self) -> Bool
+pub fn Position::not_equal(Self, Self) -> Bool
+pub fn Position::to_repr(Self) -> @debug.Repr
 pub fn Position::to_string(Self) -> String
 pub fn Position::with_(Self, line_number? : Int, column? : Int) -> Self
 
@@ -301,6 +311,7 @@ pub fn Range::contains_position_in(Self, Position) -> Bool
 pub fn Range::contains_range(Self, Self) -> Bool
 pub fn Range::contains_range_in(Self, Self) -> Bool
 pub fn Range::delta(Self, Int) -> Self
+pub fn Range::equal(Self, Self) -> Bool
 pub fn Range::equals_range(Self, Self) -> Bool
 pub fn Range::from_positions(Position, Position) -> Self
 pub fn Range::get_end_position(Self) -> Position
@@ -310,6 +321,7 @@ pub fn Range::intersect_ranges_of(Self, Self) -> Self?
 pub fn Range::is_empty(Self) -> Bool
 pub fn Range::is_empty_range(Self) -> Bool
 pub fn Range::is_single_line(Self) -> Bool
+pub fn Range::not_equal(Self, Self) -> Bool
 pub fn Range::plus_range(Self, Self) -> Self
 pub fn Range::plus_range_of(Self, Self) -> Self
 pub fn Range::set_end_position(Self, Int, Int) -> Self
@@ -318,6 +330,7 @@ pub fn Range::spans_multiple_lines(Self) -> Bool
 pub fn Range::strict_contains_position(Self, Position) -> Bool
 pub fn Range::strict_contains_range(Self, Self) -> Bool
 pub fn Range::strict_contains_range_in(Self, Self) -> Bool
+pub fn Range::to_repr(Self) -> @debug.Repr
 pub fn Range::to_string(Self) -> String
 
 pub struct Uri {
@@ -328,11 +341,16 @@ pub struct Uri {
   fragment : String
   // private fields
 }
+pub fn Uri::equal(Self, Self) -> Bool
 pub fn Uri::file(String) -> Self
 pub fn Uri::from(scheme~ : String, authority? : String, path? : String, query? : String, fragment? : String, strict? : Bool) -> Self raise UriError
 pub fn Uri::fs_path(Self) -> String
+pub fn Uri::hash(Self) -> Int
+pub fn Uri::hash_combine(Self, Hasher) -> Unit
 pub fn Uri::join_path(Self, Array[String]) -> Self
+pub fn Uri::not_equal(Self, Self) -> Bool
 pub fn Uri::parse(String, strict? : Bool) -> Self raise UriError
+pub fn Uri::to_repr(Self) -> @debug.Repr
 pub fn Uri::to_string(Self, skip_encoding? : Bool) -> String
 pub fn Uri::with_(Self, scheme? : String, authority? : String, path? : String, query? : String, fragment? : String) -> Self raise UriError
 pub impl Eq for Uri
@@ -355,4 +373,3 @@ pub fn Win32::sep() -> String
 // Type aliases
 
 // Traits
-

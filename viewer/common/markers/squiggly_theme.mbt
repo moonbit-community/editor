@@ -89,6 +89,12 @@ pub(all) struct SquigglyThemeColors {
 } derive(Eq, Debug)
 
 ///|
+pub extend SquigglyThemeColors with Eq::{not_equal, equal}
+
+///|
+pub extend SquigglyThemeColors with Debug::{to_repr}
+
+///|
 /// The `registerThemingParticipant` callback body (`codeEditorWidget.ts:2532-
 /// 2554`), ported as a pure CSS-text builder: one `background: url(...)` rule
 /// per present color, omitted entirely when a color is absent (Monaco's `if

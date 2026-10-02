@@ -13,6 +13,9 @@ pub struct TextSnapshot {
 } derive(Debug)
 
 ///|
+pub extend TextSnapshot with Debug::{to_repr}
+
+///|
 /// Builds a snapshot by replacing every CRLF pair, lone CR, or LF with one LF
 /// before deriving line starts. U+FEFF, U+2028/U+2029, surrogate code units,
 /// and all other UTF-16 content are preserved verbatim.
@@ -114,7 +117,7 @@ pub fn TextSnapshot::get_value_in_range(
     let b = @base_common.clamp_int(range.end_column - 1, a, line.length())
     return code_unit_slice(line, a, b)
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let first = self.line_text(start_line)
   let a = @base_common.clamp_int(range.start_column - 1, 0, first.length())
   sb.write_string(code_unit_slice(first, a, first.length()))
@@ -325,7 +328,7 @@ pub fn TextSnapshot::might_contain_non_basic_ascii(self : TextSnapshot) -> Bool 
 /// beside an EOL are retained exactly once on both JS and native targets.
 fn normalize_eol(text : String) -> String {
   let len = text.length()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut segment_start = 0
   let mut i = 0
   let mut changed = false

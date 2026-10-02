@@ -6,11 +6,23 @@ pub struct SourcePath {
 } derive(Eq, Debug)
 
 ///|
+pub extend SourcePath with Eq::{not_equal, equal}
+
+///|
+pub extend SourcePath with Debug::{to_repr}
+
+///|
 /// Validation failures for user-facing source paths and document URIs.
 pub(all) enum SourceError {
   MissingPath
   InvalidPath
 } derive(Eq, Debug)
+
+///|
+pub extend SourceError with Eq::{not_equal, equal}
+
+///|
+pub extend SourceError with Debug::{to_repr}
 
 ///|
 /// Stable protocol/debug label for source validation failures.
@@ -27,6 +39,12 @@ pub enum SourcePathResult {
   ParsedSourcePath(SourcePath)
   SourcePathError(SourceError)
 } derive(Eq, Debug)
+
+///|
+pub extend SourcePathResult with Eq::{not_equal, equal}
+
+///|
+pub extend SourcePathResult with Debug::{to_repr}
 
 ///|
 /// Normalizes a user-provided workspace path into a safe root-relative path.

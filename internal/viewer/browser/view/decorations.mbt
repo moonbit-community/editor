@@ -33,6 +33,12 @@ struct DecorationOverlayPiece {
 } derive(Eq, Debug)
 
 ///|
+pub extend DecorationOverlayPiece with Eq::{not_equal, equal}
+
+///|
+pub extend DecorationOverlayPiece with Debug::{to_repr}
+
+///|
 /// `prepareRender`'s filter + sort (`decorations.ts:67-113`): keep only
 /// decorations with a `className`, then order by zIndex, className (JS `<`,
 /// i.e. code-unit lexicographic), and range starts.

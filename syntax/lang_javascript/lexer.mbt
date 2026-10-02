@@ -31,6 +31,12 @@ pub impl @syntax.LineTokenizer for JavascriptTokenizer with fn initial_state(
 }
 
 ///|
+pub extend JavascriptTokenizer with @syntax.LineTokenizer::{
+  initial_state,
+  tokenize_line,
+}
+
+///|
 /// Tokenizes one JavaScript line while carrying comment/template state.
 pub impl @syntax.LineTokenizer for JavascriptTokenizer with fn tokenize_line(
   _self,

@@ -5,7 +5,7 @@ fn pos(line : Int, column : Int) -> @base_common.Position {
 
 ///|
 test "collapsed cursor selects nothing" {
-  let state = SingleCursorState::collapsed(pos(1, 2))
+  let state = @cursor.SingleCursorState::collapsed(pos(1, 2))
   assert_true(state.selection().is_empty())
   assert_false(state.has_selection())
   assert_true(state.selection().start() == pos(1, 2))
@@ -13,7 +13,7 @@ test "collapsed cursor selects nothing" {
 
 ///|
 test "simple drag keeps the anchor and moves the active end" {
-  let start = SingleCursorState::collapsed(pos(0, 3))
+  let start = @cursor.SingleCursorState::collapsed(pos(0, 3))
   let dragged = start.moved(true, pos(0, 7))
   assert_false(dragged.selection().is_empty())
   assert_true(dragged.selection().start() == pos(0, 3))
@@ -24,7 +24,10 @@ test "simple drag keeps the anchor and moves the active end" {
 
 ///|
 test "out of selection mode collapses the whole state" {
-  let dragged = SingleCursorState::collapsed(pos(0, 3)).moved(true, pos(0, 7))
+  let dragged = @cursor.SingleCursorState::collapsed(pos(0, 3)).moved(
+    true,
+    pos(0, 7),
+  )
   let collapsed = dragged.moved(false, pos(1, 1))
   assert_true(collapsed.selection().is_empty())
   assert_true(collapsed.selection().start() == pos(1, 1))
@@ -60,7 +63,7 @@ test "selection movement preserves anchor residue and replaces active residue" {
 
 ///|
 test "collapsing movement applies one residue to both cursor ends" {
-  let state = SingleCursorState::collapsed(pos(1, 3)).moved(
+  let state = @cursor.SingleCursorState::collapsed(pos(1, 3)).moved(
     false,
     pos(2, 2),
     leftover_visible_columns=6,

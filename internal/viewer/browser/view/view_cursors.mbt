@@ -25,6 +25,12 @@ struct CursorRenderData {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorRenderData with Eq::{not_equal, equal}
+
+///|
+pub extend CursorRenderData with Debug::{to_repr}
+
+///|
 /// Public cursor owner for controller callers. Package-local lifecycle code
 /// reads/writes its private `should_render` / `render_data` state directly.
 pub struct ViewCursors {

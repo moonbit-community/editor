@@ -14,7 +14,7 @@ enum TransitionEolForm {
 
 ///|
 fn transition_text(lines : Array[String], form : TransitionEolForm) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i, line in lines {
     if i > 0 {
       match form {

@@ -15,6 +15,12 @@ pub(all) struct LineCommentRule {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineCommentRule with Eq::{not_equal, equal}
+
+///|
+pub extend LineCommentRule with Debug::{to_repr}
+
+///|
 /// Convenience construction corresponding to Monaco's string line-comment
 /// form, with the object form's `noIndent` flag available when needed.
 pub fn LineCommentRule::LineCommentRule(
@@ -32,11 +38,23 @@ pub(all) struct CharacterPair {
 } derive(Eq, Debug)
 
 ///|
+pub extend CharacterPair with Eq::{not_equal, equal}
+
+///|
+pub extend CharacterPair with Debug::{to_repr}
+
+///|
 /// Normalized comment rules for one language.
 pub(all) struct CommentRule {
   line_comment : LineCommentRule?
   block_comment : CharacterPair?
 } derive(Eq, Debug)
+
+///|
+pub extend CommentRule with Eq::{not_equal, equal}
+
+///|
+pub extend CommentRule with Debug::{to_repr}
 
 ///|
 /// Describes start/end markers of language-specific folding regions (e.g.

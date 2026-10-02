@@ -5,3 +5,9 @@ pub(all) struct LineWindow {
   start : Int
   end : Int
 } derive(Eq, Debug)
+
+///|
+pub extend LineWindow with Eq::{not_equal, equal}
+
+///|
+pub extend LineWindow with Debug::{to_repr}

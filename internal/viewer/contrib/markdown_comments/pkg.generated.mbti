@@ -24,4 +24,3 @@ pub fn resolve_markdown_comment_blocks(@model.TextModel, @languages.LanguageHand
 // Type aliases
 
 // Traits
-

@@ -29,6 +29,12 @@ pub struct ActiveIndentGuideInfo {
 } derive(Eq, Debug)
 
 ///|
+pub extend ActiveIndentGuideInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ActiveIndentGuideInfo with Debug::{to_repr}
+
+///|
 /// `model.guides` — indent-guide queries over a text snapshot.
 pub struct GuidesTextModelPart {
   text_model : TextSnapshot

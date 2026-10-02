@@ -10,6 +10,12 @@ pub(all) enum RenderWhitespace {
 } derive(Eq, Debug)
 
 ///|
+pub extend RenderWhitespace with Eq::{not_equal, equal}
+
+///|
+pub extend RenderWhitespace with Debug::{to_repr}
+
+///|
 /// Monaco's `renderLineHighlight` option.
 pub(all) enum RenderLineHighlight {
   None
@@ -17,6 +23,12 @@ pub(all) enum RenderLineHighlight {
   Line
   All
 } derive(Eq, Debug)
+
+///|
+pub extend RenderLineHighlight with Eq::{not_equal, equal}
+
+///|
+pub extend RenderLineHighlight with Debug::{to_repr}
 
 ///|
 /// Monaco's `WrappingIndent` option (`config/editorOptions.ts`). `None` is
@@ -30,6 +42,12 @@ pub(all) enum WrappingIndent {
 } derive(Eq, Debug)
 
 ///|
+pub extend WrappingIndent with Eq::{not_equal, equal}
+
+///|
+pub extend WrappingIndent with Debug::{to_repr}
+
+///|
 /// Monaco's `renderValidationDecorations` option (`editorOptions.ts`).
 /// `Editable` follows editor mutability, while `On` and `Off` are
 /// unconditional. Monaco defaults to `Editable`; the readonly Viewer chooses
@@ -41,9 +59,21 @@ pub(all) enum RenderValidationDecorations {
 } derive(Eq, Debug)
 
 ///|
+pub extend RenderValidationDecorations with Eq::{not_equal, equal}
+
+///|
+pub extend RenderValidationDecorations with Debug::{to_repr}
+
+///|
 /// Monaco's `showFoldingControls` option.
 pub(all) enum ShowFoldingControls {
   Always
   Never
   Mouseover
 } derive(Eq, Debug)
+
+///|
+pub extend ShowFoldingControls with Eq::{not_equal, equal}
+
+///|
+pub extend ShowFoldingControls with Debug::{to_repr}

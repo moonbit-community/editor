@@ -12,6 +12,12 @@ pub(all) enum AgentFeedbackKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend AgentFeedbackKind with Eq::{not_equal, equal}
+
+///|
+pub extend AgentFeedbackKind with Debug::{to_repr}
+
+///|
 /// Lifecycle state for one feedback item.
 pub(all) enum AgentFeedbackState {
   Created
@@ -19,6 +25,12 @@ pub(all) enum AgentFeedbackState {
   Submitted
   Resolved
 } derive(Eq, Debug)
+
+///|
+pub extend AgentFeedbackState with Eq::{not_equal, equal}
+
+///|
+pub extend AgentFeedbackState with Debug::{to_repr}
 
 ///|
 /// One file-scoped feedback item. `range` is expressed in model coordinates;
@@ -32,3 +44,6 @@ pub(all) struct AgentFeedback {
   replies : Array[String]
   state : AgentFeedbackState
 } derive(Debug)
+
+///|
+pub extend AgentFeedback with Debug::{to_repr}

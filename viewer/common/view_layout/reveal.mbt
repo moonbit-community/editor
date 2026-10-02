@@ -12,6 +12,12 @@ pub(all) enum VerticalRevealType {
 } derive(Eq, Debug)
 
 ///|
+pub extend VerticalRevealType with Eq::{not_equal, equal}
+
+///|
+pub extend VerticalRevealType with Debug::{to_repr}
+
+///|
 /// The minimal `scroll_top` that brings the 1-based **view**-line range
 /// `[start_line, end_line]` into the viewport, aligned per `vertical_type`.
 /// A 1:1 port of Monaco's `ViewLines._computeScrollTopToRevealRange`

@@ -10,6 +10,12 @@ pub(all) struct Position {
 } derive(Eq, Debug)
 
 ///|
+pub extend Position with Eq::{not_equal, equal}
+
+///|
+pub extend Position with Debug::{to_repr}
+
+///|
 /// A range of offsets (0-based), half-open `[start, end_exclusive)`. A 1:1 port
 /// of Monaco's `OffsetRange` (`core/ranges/offsetRange.ts`); field names use the
 /// repo's snake_case (`end_exclusive`). The name `Range` is reserved for
@@ -18,6 +24,12 @@ pub struct OffsetRange {
   start : Int
   end_exclusive : Int
 } derive(Eq, Debug)
+
+///|
+pub extend OffsetRange with Eq::{not_equal, equal}
+
+///|
+pub extend OffsetRange with Debug::{to_repr}
 
 ///|
 /// Builds a position without normalization; callers decide the coordinate

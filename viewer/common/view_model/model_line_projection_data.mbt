@@ -18,6 +18,12 @@ pub struct ModelLineProjectionSegment {
 } derive(Eq, Debug)
 
 ///|
+pub extend ModelLineProjectionSegment with Eq::{not_equal, equal}
+
+///|
+pub extend ModelLineProjectionSegment with Debug::{to_repr}
+
+///|
 /// Projection data for one model line.
 pub struct ModelLineProjectionData {
   model_line_number : Int
@@ -25,6 +31,12 @@ pub struct ModelLineProjectionData {
   projected_line : ProjectedTextLine
   segments : Array[ModelLineProjectionSegment]
 } derive(Eq, Debug)
+
+///|
+pub extend ModelLineProjectionData with Eq::{not_equal, equal}
+
+///|
+pub extend ModelLineProjectionData with Debug::{to_repr}
 
 ///|
 /// Builds projection data for one model line.

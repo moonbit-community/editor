@@ -24,6 +24,9 @@ pub struct SessionEditorComment {
 } derive(Debug)
 
 ///|
+pub extend SessionEditorComment with Debug::{to_repr}
+
+///|
 /// `toSessionEditorCommentId(source, sourceId)` with the source fixed to
 /// `agentFeedback` — kept so anchors stay distinct from raw feedback ids and
 /// stable if another source ever lands.

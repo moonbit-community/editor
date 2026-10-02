@@ -24,4 +24,3 @@ pub fn FileTree::view(Self) -> @html.Html
 // Type aliases
 
 // Traits
-

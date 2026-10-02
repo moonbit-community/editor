@@ -13,12 +13,21 @@ pub(all) enum FileSystemProviderErrorCode {
 } derive(Eq, Debug)
 
 ///|
+pub extend FileSystemProviderErrorCode with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemProviderErrorCode with Debug::{to_repr}
+
+///|
 /// File-provider failure with optional URI context.
 pub struct FileSystemProviderError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @base_common.Uri?
 } derive(Debug)
+
+///|
+pub extend FileSystemProviderError with Debug::{to_repr}
 
 ///|
 /// Raw file text plus metadata needed to construct a `DocumentSnapshot`.
@@ -30,12 +39,18 @@ pub struct DocumentContent {
 } derive(Debug)
 
 ///|
+pub extend DocumentContent with Debug::{to_repr}
+
+///|
 /// Provider read result without exceptions, so browser and native providers can
 /// share the same contract.
 pub(all) enum FileReadResult {
   FileReadOk(DocumentContent)
   FileReadError(FileSystemProviderError)
 } derive(Debug)
+
+///|
+pub extend FileReadResult with Debug::{to_repr}
 
 ///|
 /// File-watch event kind. Providers may coalesce events before delivering
@@ -47,6 +62,12 @@ pub(all) enum FileChangeType {
 } derive(Eq, Debug)
 
 ///|
+pub extend FileChangeType with Eq::{not_equal, equal}
+
+///|
+pub extend FileChangeType with Debug::{to_repr}
+
+///|
 /// One changed document URI reported by a file watch.
 pub(all) struct FileChange {
   uri : @base_common.Uri
@@ -54,11 +75,17 @@ pub(all) struct FileChange {
 } derive(Debug)
 
 ///|
+pub extend FileChange with Debug::{to_repr}
+
+///|
 /// Watch behavior requested from a provider.
 pub struct WatchOptions {
   recursive : Bool
   excludes : Array[String]
 } derive(Debug)
+
+///|
+pub extend WatchOptions with Debug::{to_repr}
 
 ///|
 /// Disposable watch handle. Calling `dispose` must stop future callbacks for
@@ -172,6 +199,9 @@ pub impl ToJson for FileSystemProviderError with fn to_json(self) {
 }
 
 ///|
+pub extend FileSystemProviderError with ToJson::{to_json}
+
+///|
 /// HTTP-like status used by the reference server when serializing provider
 /// failures.
 pub fn FileSystemProviderError::status(self : FileSystemProviderError) -> Int {
@@ -233,6 +263,9 @@ pub impl ToJson for FileChange with fn to_json(self) {
     "type": self.change_type.to_string().to_json(),
   }
 }
+
+///|
+pub extend FileChange with ToJson::{to_json}
 
 ///|
 /// Lowercase watch-event label used in JSON payloads.

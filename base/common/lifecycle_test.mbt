@@ -1,7 +1,7 @@
 ///|
 test "disposable is idempotent" {
   let count = Ref(0)
-  let disposable = Disposable::from(() => count.val = count.val + 1)
+  let disposable = @common.Disposable::from(() => count.val = count.val + 1)
   disposable.dispose()
   disposable.dispose()
   assert_eq(count.val, 1)
@@ -9,7 +9,7 @@ test "disposable is idempotent" {
 
 ///|
 test "emitter listener disposable removes only that listener" {
-  let emitter : Emitter[String] = Emitter()
+  let emitter : @common.Emitter[String] = Emitter()
   let first = Ref("")
   let second = Ref("")
   let first_subscription = emitter.event(value => first.val = first.val + value)
@@ -28,7 +28,7 @@ test "emitter listener disposable removes only that listener" {
 ///|
 test "microtask emitter merges queued events into one flush" {
   let scheduled : Array[() -> Unit] = []
-  let emitter : MicrotaskEmitter[Array[Int]] = MicrotaskEmitter(
+  let emitter : @common.MicrotaskEmitter[Array[Int]] = MicrotaskEmitter(
     merge=all => all.flatten(),
     schedule=run => scheduled.push(run),
   )
@@ -51,7 +51,7 @@ test "microtask emitter merges queued events into one flush" {
 ///|
 test "microtask emitter without listeners queues nothing" {
   let scheduled : Array[() -> Unit] = []
-  let emitter : MicrotaskEmitter[Int] = MicrotaskEmitter(schedule=run => {
+  let emitter : @common.MicrotaskEmitter[Int] = MicrotaskEmitter(schedule=run => {
     scheduled.push(run)
   })
   emitter.fire(1)
@@ -60,7 +60,7 @@ test "microtask emitter without listeners queues nothing" {
 
 ///|
 test "microtask emitter default schedule flushes inline" {
-  let emitter : MicrotaskEmitter[Int] = MicrotaskEmitter()
+  let emitter : @common.MicrotaskEmitter[Int] = MicrotaskEmitter()
   let fired : Array[Int] = []
   emitter.event(value => fired.push(value)) |> ignore
   emitter.fire(1)
@@ -70,7 +70,7 @@ test "microtask emitter default schedule flushes inline" {
 
 ///|
 test "emitter dispose stops active and later listeners" {
-  let emitter : Emitter[String] = Emitter()
+  let emitter : @common.Emitter[String] = Emitter()
   let seen = Ref("")
   emitter.event(value => seen.val = seen.val + value).dispose()
   emitter.event(value => seen.val = seen.val + value) |> ignore

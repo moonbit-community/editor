@@ -127,6 +127,9 @@ pub struct ViewerViewState {
 } derive(Debug)
 
 ///|
+pub extend ViewerViewState with Debug::{to_repr}
+
+///|
 /// Creates a viewer instance. An omitted service bundle is created and owned
 /// internally; an explicit bundle is borrowed and may be shared. Call
 /// `attach` before setting documents so the first render has a DOM view to

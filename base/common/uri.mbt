@@ -28,6 +28,9 @@ pub suberror UriError {
 } derive(Debug)
 
 ///|
+pub extend UriError with Debug::{to_repr}
+
+///|
 /// Uniform Resource Identifier (URI) http://tools.ietf.org/html/rfc3986.
 /// This class is a simple parser which creates the basic component parts
 /// (http://tools.ietf.org/html/rfc3986#section-3) with minimal validation
@@ -86,8 +89,17 @@ pub impl Hash for Uri with fn hash_combine(self, hasher) {
 /// Mirrors the `debug.description` label `URI(${this.toString()})`
 /// (uri.ts:421) without touching the `_formatted` cache.
 pub impl Debug for Uri with fn to_repr(self) {
-  to_repr("URI(\{as_formatted(self, false)})")
+  Repr("URI(\{as_formatted(self, false)})")
 }
+
+///|
+pub extend Uri with Eq::{not_equal, equal}
+
+///|
+pub extend Uri with Hash::{hash, hash_combine}
+
+///|
+pub extend Uri with Debug::{to_repr}
 
 ///|
 /// `_schemePattern` (uri.ts:11): `^\w[\w\d+.-]*$` where `\w` is
@@ -653,7 +665,7 @@ fn encode_uri_component_fast(
     } else {
       // encoding needed, we need to allocate a new string
       if res is None {
-        let sb = StringBuilder::new()
+        let sb = StringBuilder()
         sb.write_string(js_slice(uri_component, 0, end=pos))
         res = Some(sb)
       }
@@ -714,7 +726,7 @@ fn encode_uri_component_minimal(path : String) -> String {
     if code == '#'.to_int() || code == '?'.to_int() {
       let sb = match res {
         None => {
-          let sb = StringBuilder::new()
+          let sb = StringBuilder()
           res = Some(sb)
           sb
         }
@@ -907,7 +919,7 @@ fn read_percent_byte(s : String, at : Int) -> Int raise UriDecodeError {
 /// surrogate/out-of-range code points all fail, exactly the inputs that make
 /// the JS builtin throw `URIError`.
 fn decode_uri_component(str : String) -> String raise UriDecodeError {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let len = str.length()
   let mut i = 0
   let mut chunk_start = 0
@@ -1018,7 +1030,7 @@ fn percent_decode(str : String) -> String {
   if !found {
     return str
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut chunk_start = 0
   let mut i = 0
   while i < len {

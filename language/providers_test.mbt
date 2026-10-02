@@ -8,25 +8,28 @@ test "language selectors match language scheme and path" {
     "rev-1",
     "fn main {}\n",
   )
-  assert_true(LanguageSelector::LanguageId("moonbit").matches(model))
+  assert_true(@language.LanguageSelector::LanguageId("moonbit").matches(model))
   assert_true(
-    LanguageFilter::LanguageFilter(
+    @language.LanguageFilter::LanguageFilter(
       language="moonbit",
       scheme="file",
       pattern="src/*.mbt",
     ).matches(model),
   )
   assert_true(
-    LanguageSelector::LanguageSelectorList([
+    @language.LanguageSelector::LanguageSelectorList([
       LanguageId("javascript"),
       LanguageFilter(LanguageFilter(language="moonbit")),
     ]).matches(model),
   )
-  assert_true(!LanguageSelector::LanguageId("javascript").matches(model))
   assert_true(
-    !LanguageFilter::LanguageFilter(language="moonbit", scheme="memory").matches(
-      model,
-    ),
+    !@language.LanguageSelector::LanguageId("javascript").matches(model),
+  )
+  assert_true(
+    !@language.LanguageFilter::LanguageFilter(
+      language="moonbit",
+      scheme="memory",
+    ).matches(model),
   )
 }
 

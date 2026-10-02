@@ -21,6 +21,9 @@ pub(all) enum ContentWidgetPositionPreference {
 } derive(Eq)
 
 ///|
+pub extend ContentWidgetPositionPreference with Eq::{not_equal, equal}
+
+///|
 /// Monaco `IContentWidgetPosition` (`editorBrowser.ts`): the model-space
 /// anchors, nullable placement preference order, and affinity. Affinity is
 /// retained and fed back into model-to-view conversion whenever mappings
@@ -41,12 +44,24 @@ pub(all) struct ContentWidgetDimension {
 } derive(Eq, Debug)
 
 ///|
+pub extend ContentWidgetDimension with Eq::{not_equal, equal}
+
+///|
+pub extend ContentWidgetDimension with Debug::{to_repr}
+
+///|
 /// Monaco `IContentWidgetRenderedCoordinate`, passed to `afterRender` after
 /// the write phase has selected and applied a concrete placement.
 pub struct ContentWidgetRenderedCoordinate {
   top : Double
   left : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ContentWidgetRenderedCoordinate with Eq::{not_equal, equal}
+
+///|
+pub extend ContentWidgetRenderedCoordinate with Debug::{to_repr}
 
 ///|
 /// Value-level adapter for Monaco's `IContentWidget` (`editorBrowser.ts`).

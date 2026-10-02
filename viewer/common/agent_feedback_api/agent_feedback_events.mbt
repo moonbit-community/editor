@@ -6,6 +6,9 @@ pub(all) struct AgentFeedbackChangeEvent {
 } derive(Debug)
 
 ///|
+pub extend AgentFeedbackChangeEvent with Debug::{to_repr}
+
+///|
 /// Fired when a brand-new feedback item enters the accepted state.
 pub(all) struct AgentFeedbackAddedEvent {
   feedback : AgentFeedback
@@ -13,11 +16,17 @@ pub(all) struct AgentFeedbackAddedEvent {
 } derive(Debug)
 
 ///|
+pub extend AgentFeedbackAddedEvent with Debug::{to_repr}
+
+///|
 /// Fired when a reply is appended to an existing feedback thread.
 pub(all) struct AgentFeedbackReplyAddedEvent {
   feedback : AgentFeedback
   reply_count : Int
 } derive(Debug)
+
+///|
+pub extend AgentFeedbackReplyAddedEvent with Debug::{to_repr}
 
 ///|
 /// Accepted feedback submitted for one resource, including host-forwardable
@@ -31,9 +40,18 @@ pub(all) struct AgentFeedbackSubmittedEvent {
 } derive(Debug)
 
 ///|
+pub extend AgentFeedbackSubmittedEvent with Debug::{to_repr}
+
+///|
 /// The position of a navigation anchor in a caller-supplied item order.
 /// `active_idx` is `-1` when no live anchor exists.
 pub(all) struct AgentFeedbackNavigationBearing {
   active_idx : Int
   total_count : Int
 } derive(Eq, Debug)
+
+///|
+pub extend AgentFeedbackNavigationBearing with Eq::{not_equal, equal}
+
+///|
+pub extend AgentFeedbackNavigationBearing with Debug::{to_repr}

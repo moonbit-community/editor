@@ -8,6 +8,12 @@ pub struct LineDecoration {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineDecoration with Eq::{not_equal, equal}
+
+///|
+pub extend LineDecoration with Debug::{to_repr}
+
+///|
 /// Builds a line decoration.
 pub fn LineDecoration::LineDecoration(
   start_column : Int,
@@ -78,6 +84,12 @@ pub(all) struct DecorationSegment {
   class_name : String
   metadata : Int
 } derive(Eq, Debug)
+
+///|
+pub extend DecorationSegment with Eq::{not_equal, equal}
+
+///|
+pub extend DecorationSegment with Debug::{to_repr}
 
 ///|
 /// Normalizes overlapping line decorations into contiguous CSS segments.

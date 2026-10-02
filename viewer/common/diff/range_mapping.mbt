@@ -33,6 +33,12 @@ pub struct LineRangeMapping {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineRangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend LineRangeMapping with Debug::{to_repr}
+
+///|
 pub fn LineRangeMapping::LineRangeMapping(
   original_range : @base_common.LineRange,
   modified_range : @base_common.LineRange,
@@ -83,6 +89,9 @@ pub impl Show for LineRangeMapping with fn output(self, logger) {
 }
 
 ///|
+pub extend LineRangeMapping with Show::{output}
+
+///|
 pub fn LineRangeMapping::flip(self : LineRangeMapping) -> LineRangeMapping {
   LineRangeMapping(self.modified, self.original)
 }
@@ -118,6 +127,12 @@ pub struct DetailedLineRangeMapping {
 } derive(Eq, Debug)
 
 ///|
+pub extend DetailedLineRangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend DetailedLineRangeMapping with Debug::{to_repr}
+
+///|
 pub fn DetailedLineRangeMapping::DetailedLineRangeMapping(
   original_range : @base_common.LineRange,
   modified_range : @base_common.LineRange,
@@ -137,6 +152,9 @@ pub fn DetailedLineRangeMapping::to_string(
 pub impl Show for DetailedLineRangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
+
+///|
+pub extend DetailedLineRangeMapping with Show::{output}
 
 ///|
 pub fn DetailedLineRangeMapping::flip(
@@ -160,6 +178,12 @@ pub struct RangeMapping {
 } derive(Eq, Debug)
 
 ///|
+pub extend RangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend RangeMapping with Debug::{to_repr}
+
+///|
 pub fn RangeMapping::RangeMapping(
   original_range : @base_common.Range,
   modified_range : @base_common.Range,
@@ -180,6 +204,9 @@ pub fn RangeMapping::to_string(self : RangeMapping) -> String {
 pub impl Show for RangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
+
+///|
+pub extend RangeMapping with Show::{output}
 
 ///|
 pub fn RangeMapping::flip(self : RangeMapping) -> RangeMapping {

@@ -26,6 +26,12 @@ pub(all) enum ViewConfigurationOption {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewConfigurationOption with Eq::{not_equal, equal}
+
+///|
+pub extend ViewConfigurationOption with Debug::{to_repr}
+
+///|
 /// Source-shaped configuration payload.  `changed_options` is a typed bitset
 /// represented as a deduplicated array because the readonly viewer has a
 /// deliberately small option surface.

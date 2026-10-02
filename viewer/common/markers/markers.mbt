@@ -22,6 +22,12 @@ pub(all) enum MarkerSeverity {
 } derive(Eq, Debug)
 
 ///|
+pub extend MarkerSeverity with Eq::{not_equal, equal}
+
+///|
+pub extend MarkerSeverity with Debug::{to_repr}
+
+///|
 /// The marker severity's bit value (`Hint=1, Info=2, Warning=4, Error=8`),
 /// `markers.ts:56-61`.
 pub fn MarkerSeverity::value(self : MarkerSeverity) -> Int {
@@ -99,6 +105,12 @@ pub(all) enum MarkerTag {
 } derive(Eq, Debug)
 
 ///|
+pub extend MarkerTag with Eq::{not_equal, equal}
+
+///|
+pub extend MarkerTag with Debug::{to_repr}
+
+///|
 /// The tag's bit value (`Unnecessary=1, Deprecated=2`), `markers.ts:51`.
 pub fn MarkerTag::value(self : MarkerTag) -> Int {
   match self {
@@ -141,6 +153,12 @@ pub(all) struct RelatedInformation {
 } derive(Eq, Debug)
 
 ///|
+pub extend RelatedInformation with Eq::{not_equal, equal}
+
+///|
+pub extend RelatedInformation with Debug::{to_repr}
+
+///|
 /// Pre-sanitize marker input, `IMarkerData` (`markers.ts:109`). Monaco's
 /// `code?: string | { value; target }` object form (code links) is reduced to
 /// `String?` — the link target is out of scope (deviation).
@@ -158,6 +176,12 @@ pub(all) struct MarkerData {
   tags : Array[MarkerTag]?
   origin : String?
 } derive(Eq, Debug)
+
+///|
+pub extend MarkerData with Eq::{not_equal, equal}
+
+///|
+pub extend MarkerData with Debug::{to_repr}
 
 ///|
 /// Builds marker input from the required fields, leaving the optional metadata
@@ -249,6 +273,12 @@ pub(all) struct ResourceMarker {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceMarker with Eq::{not_equal, equal}
+
+///|
+pub extend ResourceMarker with Debug::{to_repr}
+
+///|
 /// A sanitized marker, `IMarker` (`markers.ts:129`). `range` is derived from the
 /// separate line/column fields (Monaco stores them flat). `start_column` is
 /// mutable because `_createDecorationRange` snaps it for full-line markers
@@ -269,6 +299,12 @@ pub struct Marker {
   tags : Array[MarkerTag]?
   origin : String?
 } derive(Eq, Debug)
+
+///|
+pub extend Marker with Eq::{not_equal, equal}
+
+///|
+pub extend Marker with Debug::{to_repr}
 
 ///|
 /// The marker's line/column span as a `Range` (Monaco's `Range.lift(marker)`).
@@ -301,6 +337,12 @@ pub struct MarkerStatistics {
 } derive(Eq, Debug)
 
 ///|
+pub extend MarkerStatistics with Eq::{not_equal, equal}
+
+///|
+pub extend MarkerStatistics with Debug::{to_repr}
+
+///|
 /// Read filter, `IMarkerReadOptions` (`markers.ts:13`).
 pub(all) struct MarkerReadOptions {
   owner : String?
@@ -309,6 +351,12 @@ pub(all) struct MarkerReadOptions {
   take : Int?
   ignore_resource_filters : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend MarkerReadOptions with Eq::{not_equal, equal}
+
+///|
+pub extend MarkerReadOptions with Debug::{to_repr}
 
 ///|
 /// Builds a read filter; every field is optional, `ignore_resource_filters`

@@ -6,6 +6,12 @@ pub(all) struct DomPosition {
 } derive(Eq, Debug)
 
 ///|
+pub extend DomPosition with Eq::{not_equal, equal}
+
+///|
+pub extend DomPosition with Debug::{to_repr}
+
+///|
 /// Mapping entry from one line column to rendered DOM coordinates and visible
 /// monospace column.
 pub struct CharacterMappingEntry {
@@ -15,11 +21,23 @@ pub struct CharacterMappingEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend CharacterMappingEntry with Eq::{not_equal, equal}
+
+///|
+pub extend CharacterMappingEntry with Debug::{to_repr}
+
+///|
 /// Column-to-DOM mapping produced while rendering a line.
 pub struct CharacterMapping {
   length : Int
   entries : Array[CharacterMappingEntry]
 } derive(Eq, Debug)
+
+///|
+pub extend CharacterMapping with Eq::{not_equal, equal}
+
+///|
+pub extend CharacterMapping with Debug::{to_repr}
 
 ///|
 /// Creates a mapping with `length` column slots.
@@ -182,9 +200,21 @@ pub struct RenderLineOutput {
 } derive(Eq, Debug)
 
 ///|
+pub extend RenderLineOutput with Eq::{not_equal, equal}
+
+///|
+pub extend RenderLineOutput with Debug::{to_repr}
+
+///|
 /// Render output including generated HTML.
 pub struct RenderLineOutput2 {
   html : String
   character_mapping : CharacterMapping
   contains_foreign_elements : ForeignElementType
 } derive(Eq, Debug)
+
+///|
+pub extend RenderLineOutput2 with Eq::{not_equal, equal}
+
+///|
+pub extend RenderLineOutput2 with Debug::{to_repr}

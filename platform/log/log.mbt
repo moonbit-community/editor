@@ -10,6 +10,12 @@ pub(all) enum LogLevel {
 } derive(Eq, Debug)
 
 ///|
+pub extend LogLevel with Eq::{not_equal, equal}
+
+///|
+pub extend LogLevel with Debug::{to_repr}
+
+///|
 /// Structured log event emitted by app and viewer services.
 pub(all) struct LogEntry {
   level : LogLevel
@@ -17,6 +23,12 @@ pub(all) struct LogEntry {
   message : String
   details : Array[(String, String)]
 } derive(Eq, Debug)
+
+///|
+pub extend LogEntry with Eq::{not_equal, equal}
+
+///|
+pub extend LogEntry with Debug::{to_repr}
 
 ///|
 /// Minimal logger sink abstraction. Methods are `noraise` so logging cannot
@@ -49,6 +61,9 @@ pub impl Logger for NullLogger with fn log(_self, _entry) {
 pub impl Logger for NullLogger with fn flush(_self) {
   ()
 }
+
+///|
+pub extend NullLogger with Logger::{flush, log}
 
 ///|
 /// In-memory logger used by tests and harness-facing diagnostics.
@@ -89,6 +104,9 @@ pub impl Logger for MemoryLogger with fn flush(self) {
 }
 
 ///|
+pub extend MemoryLogger with Logger::{flush, log}
+
+///|
 /// Logger sink that fans each entry and flush to multiple sinks.
 pub struct MultiplexLogger {
   loggers : Array[&Logger]
@@ -118,6 +136,9 @@ pub impl Logger for MultiplexLogger with fn flush(self) {
     logger.flush()
   }
 }
+
+///|
+pub extend MultiplexLogger with Logger::{flush, log}
 
 ///|
 /// Thresholded logging facade used by services that should not know the sink

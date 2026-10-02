@@ -14,6 +14,12 @@ pub(all) enum CursorChangeReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorChangeReason with Eq::{not_equal, equal}
+
+///|
+pub extend CursorChangeReason with Debug::{to_repr}
+
+///|
 /// Monaco's `ICursorPositionChangedEvent`. The viewer is single-cursor, so
 /// `secondary_positions` is always empty.
 pub(all) struct CursorPositionChangedEvent {
@@ -22,6 +28,9 @@ pub(all) struct CursorPositionChangedEvent {
   reason : CursorChangeReason
   source : String
 } derive(Debug)
+
+///|
+pub extend CursorPositionChangedEvent with Debug::{to_repr}
 
 ///|
 /// Monaco's `ICursorSelectionChangedEvent`, reduced to the viewer's
@@ -36,3 +45,6 @@ pub(all) struct CursorSelectionChangedEvent {
   source : String
   reason : CursorChangeReason
 } derive(Debug)
+
+///|
+pub extend CursorSelectionChangedEvent with Debug::{to_repr}

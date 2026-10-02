@@ -10,12 +10,18 @@ pub struct DocumentSnapshot {
 } derive(Debug)
 
 ///|
+pub extend DocumentSnapshot with Debug::{to_repr}
+
+///|
 /// Document-level failure with optional URI context.
 pub struct DocumentError {
   code : FileSystemProviderErrorCode
   message : String
   uri : @base_common.Uri?
 } derive(Debug)
+
+///|
+pub extend DocumentError with Debug::{to_repr}
 
 ///|
 /// Provider read result without exceptions.
@@ -26,6 +32,9 @@ pub(all) enum DocumentReadResult {
 } derive(Debug)
 
 ///|
+pub extend DocumentReadResult with Debug::{to_repr}
+
+///|
 /// Push notification from a provider watch or host-owned watcher.
 pub(all) enum DocumentChange {
   DocumentInvalidated(uri~ : @base_common.Uri, known_revision~ : String?)
@@ -33,6 +42,9 @@ pub(all) enum DocumentChange {
   DocumentDeleted(@base_common.Uri)
   DocumentChangeFailed(uri~ : @base_common.Uri, error~ : DocumentError)
 } derive(Debug)
+
+///|
+pub extend DocumentChange with Debug::{to_repr}
 
 ///|
 /// Document source contract for the readonly viewer. Providers may coalesce
@@ -247,6 +259,9 @@ pub impl ToJson for DocumentSnapshot with fn to_json(self) {
 }
 
 ///|
+pub extend DocumentSnapshot with ToJson::{to_json}
+
+///|
 /// JSON shape for document read results.
 pub impl ToJson for DocumentReadResult with fn to_json(self) {
   match self {
@@ -256,6 +271,9 @@ pub impl ToJson for DocumentReadResult with fn to_json(self) {
     DocumentReadFailed(error) => { "ok": false, "error": error.to_json() }
   }
 }
+
+///|
+pub extend DocumentReadResult with ToJson::{to_json}
 
 ///|
 /// JSON shape for document errors.
@@ -274,6 +292,9 @@ pub impl ToJson for DocumentError with fn to_json(self) {
   }
   Json::object(fields)
 }
+
+///|
+pub extend DocumentError with ToJson::{to_json}
 
 ///|
 /// HTTP-like status used by the reference server when serializing document

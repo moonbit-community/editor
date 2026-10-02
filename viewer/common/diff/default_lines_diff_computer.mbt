@@ -35,6 +35,12 @@
 pub struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
+pub extend DefaultLinesDiffComputer with Eq::{not_equal, equal}
+
+///|
+pub extend DefaultLinesDiffComputer with Debug::{to_repr}
+
+///|
 #warnings("-unnecessary_annotation")
 #alias(new, deprecated)
 pub fn DefaultLinesDiffComputer::DefaultLinesDiffComputer() -> DefaultLinesDiffComputer {

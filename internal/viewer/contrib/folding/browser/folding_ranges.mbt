@@ -13,12 +13,24 @@ pub(all) struct LineRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineRange with Eq::{not_equal, equal}
+
+///|
+pub extend LineRange with Debug::{to_repr}
+
+///|
 /// Where a fold range came from — `FoldSource` (`foldingRanges.ts:13`).
 pub enum FoldSource {
   Provider
   UserDefined
   Recovered
 } derive(Eq, Debug)
+
+///|
+pub extend FoldSource with Eq::{not_equal, equal}
+
+///|
+pub extend FoldSource with Debug::{to_repr}
 
 ///|
 /// `foldSourceAbbr` (`foldingRanges.ts:19`), the one-character source tag of
@@ -43,6 +55,12 @@ pub struct FoldRange {
   mut is_collapsed : Bool
   mut source : FoldSource
 } derive(Eq, Debug)
+
+///|
+pub extend FoldRange with Eq::{not_equal, equal}
+
+///|
+pub extend FoldRange with Debug::{to_repr}
 
 ///|
 /// `MAX_FOLDING_REGIONS` (`foldingRanges.ts:33`).
@@ -369,6 +387,9 @@ pub impl Show for FoldingRegions with fn output(self, logger) {
   }
   logger.write_string(parts.join(", "))
 }
+
+///|
+pub extend FoldingRegions with Show::{to_string, output}
 
 ///|
 /// `toFoldRange` (`foldingRanges.ts:250`).

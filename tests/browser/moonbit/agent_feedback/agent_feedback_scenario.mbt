@@ -176,7 +176,7 @@ fn mount_host() -> (@rdom.Element, @rdom.Element)? {
 fn feedback_source_text() -> String {
   // Filler pushes the content past the 360px host so the scroll-tracking
   // spec step has room to wheel; line 30 anchors the far bubble.
-  let filler = StringBuilder::new()
+  let filler = StringBuilder()
   for index in 1..<=34 {
     filler.write_string("// filler line " + index.to_string() + "\n")
   }

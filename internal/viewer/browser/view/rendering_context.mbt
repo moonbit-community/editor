@@ -251,6 +251,12 @@ pub struct HorizontalPosition {
 } derive(Eq, Debug)
 
 ///|
+pub extend HorizontalPosition with Eq::{not_equal, equal}
+
+///|
+pub extend HorizontalPosition with Debug::{to_repr}
+
+///|
 fn HorizontalPosition::HorizontalPosition(left : Double) -> HorizontalPosition {
   { left: (left + 0.5).floor().to_int(), }
 }

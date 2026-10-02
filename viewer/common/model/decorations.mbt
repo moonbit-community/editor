@@ -10,6 +10,12 @@ pub(all) enum TrackedRangeStickiness {
 } derive(Eq, Debug)
 
 ///|
+pub extend TrackedRangeStickiness with Eq::{not_equal, equal}
+
+///|
+pub extend TrackedRangeStickiness with Debug::{to_repr}
+
+///|
 /// Numeric value of the stickiness, matching Monaco's
 /// `TrackedRangeStickiness` enum values (`model.ts`) — the interval tree
 /// packs it into the node metadata byte.
@@ -44,11 +50,23 @@ pub(all) enum OverviewRulerLane {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverviewRulerLane with Eq::{not_equal, equal}
+
+///|
+pub extend OverviewRulerLane with Debug::{to_repr}
+
+///|
 /// Minimap decoration position, `MinimapPosition` (`model.ts`).
 pub(all) enum MinimapPosition {
   Inline
   Gutter
 } derive(Eq, Debug)
+
+///|
+pub extend MinimapPosition with Eq::{not_equal, equal}
+
+///|
+pub extend MinimapPosition with Debug::{to_repr}
 
 ///|
 /// Overview-ruler decoration options, `IModelDecorationOverviewRulerOptions`.
@@ -60,12 +78,24 @@ pub(all) struct ModelDecorationOverviewRulerOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ModelDecorationOverviewRulerOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationOverviewRulerOptions with Debug::{to_repr}
+
+///|
 /// Minimap decoration options, `IModelDecorationMinimapOptions`. `color` is a
 /// theme-color id, carried inert (plan D4).
 pub(all) struct ModelDecorationMinimapOptions {
   color : String
   position : MinimapPosition
 } derive(Eq, Debug)
+
+///|
+pub extend ModelDecorationMinimapOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationMinimapOptions with Debug::{to_repr}
 
 ///|
 /// `cleanClassName` (`textModel.ts:2355-2357`): `[^a-z0-9\-_]/gi → ' '`,
@@ -132,6 +162,9 @@ pub struct ModelDecorationOptions {
 } derive(Debug)
 
 ///|
+pub extend ModelDecorationOptions with Debug::{to_repr}
+
+///|
 /// `InjectedTextOptions` at the model tier (`model.ts`): the rendered
 /// content, its inline class, and the producer's attachment
 /// (`attachedData`, reduced to a source index for injected-text consumers).
@@ -145,6 +178,12 @@ pub(all) struct InjectedTextOptions {
   /// through the projection into hit-testing lookup.
   attached_index : Int
 } derive(Debug, Eq)
+
+///|
+pub extend InjectedTextOptions with Debug::{to_repr}
+
+///|
+pub extend InjectedTextOptions with Eq::{not_equal, equal}
 
 ///|
 /// Builds injected-text options.
@@ -165,6 +204,9 @@ pub(all) struct ModelDeltaDecoration {
 } derive(Debug)
 
 ///|
+pub extend ModelDeltaDecoration with Debug::{to_repr}
+
+///|
 /// A decoration query result — Monaco's `IModelDecoration` (id + ownerId +
 /// range + options). Monaco returns the tree's `IntervalNode`s cast to this
 /// interface; the port materializes value copies (same data, no aliasing).
@@ -174,6 +216,9 @@ pub(all) struct ModelDecoration {
   range : @base_common.Range
   options : ModelDecorationOptions
 } derive(Debug)
+
+///|
+pub extend ModelDecoration with Debug::{to_repr}
 
 ///|
 /// `IModelDecorationsChangedEvent` (`textModelEvents.ts`), fired by
@@ -189,6 +234,12 @@ pub struct ModelDecorationsChangedEvent {
   affects_injected_text : Bool
   affects_line_number : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ModelDecorationsChangedEvent with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationsChangedEvent with Debug::{to_repr}
 
 ///|
 /// The single decoration-options constructor. Monaco's `register`/

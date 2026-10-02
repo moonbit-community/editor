@@ -26,6 +26,12 @@ pub struct RenderLineInput {
 } derive(Eq, Debug)
 
 ///|
+pub extend RenderLineInput with Eq::{not_equal, equal}
+
+///|
+pub extend RenderLineInput with Debug::{to_repr}
+
+///|
 /// Builds line-renderer input from viewport line data plus runtime rendering
 /// options.
 pub fn RenderLineInput::from_view_line(

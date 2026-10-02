@@ -7,6 +7,9 @@ pub(all) struct ModelChangedEvent {
 } derive(Debug)
 
 ///|
+pub extend ModelChangedEvent with Debug::{to_repr}
+
+///|
 /// Monaco's `ScrollEvent`, reduced to position and extent facts plus their
 /// per-axis change flags.
 pub(all) struct ScrollEvent {
@@ -21,6 +24,9 @@ pub(all) struct ScrollEvent {
 } derive(Debug)
 
 ///|
+pub extend ScrollEvent with Debug::{to_repr}
+
+///|
 /// A model position projected to scrolled viewport pixels, matching Monaco's
 /// `getScrolledVisiblePosition` return shape.
 pub(all) struct ScrolledVisiblePosition {
@@ -28,3 +34,9 @@ pub(all) struct ScrolledVisiblePosition {
   left : Double
   height : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ScrolledVisiblePosition with Eq::{not_equal, equal}
+
+///|
+pub extend ScrolledVisiblePosition with Debug::{to_repr}

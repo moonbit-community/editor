@@ -70,6 +70,12 @@ pub struct ViewerOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewerOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ViewerOptions with Debug::{to_repr}
+
+///|
 /// Builds viewer options, normalizing `tab_size` to at least one column.
 /// `wrapping_indent` defaults to `Same`, Monaco's default, and applies only when
 /// `soft_wrap` is on. `render_whitespace` defaults to `Selection`, Monaco's

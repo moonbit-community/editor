@@ -49,6 +49,12 @@ pub(all) enum MouseTargetType {
 } derive(Eq, Debug)
 
 ///|
+pub extend MouseTargetType with Eq::{not_equal, equal}
+
+///|
+pub extend MouseTargetType with Debug::{to_repr}
+
+///|
 /// `IMouseTargetMarginData` (editorBrowser.ts:442-449). `offset_x` is
 /// editor-left-relative (`Math.abs(request.relativePos.x)`), not lane-relative.
 pub(all) struct MouseTargetMarginData {
@@ -60,6 +66,12 @@ pub(all) struct MouseTargetMarginData {
 } derive(Eq, Debug)
 
 ///|
+pub extend MouseTargetMarginData with Eq::{not_equal, equal}
+
+///|
+pub extend MouseTargetMarginData with Debug::{to_repr}
+
+///|
 /// `IMouseTargetViewZoneData` (editorBrowser.ts:456-462).
 pub(all) struct MouseTargetViewZoneData {
   view_zone_id : String
@@ -68,6 +80,12 @@ pub(all) struct MouseTargetViewZoneData {
   position : @base_common.Position
   after_line_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend MouseTargetViewZoneData with Eq::{not_equal, equal}
+
+///|
+pub extend MouseTargetViewZoneData with Debug::{to_repr}
 
 ///|
 /// `IMouseTargetContentTextData` (editorBrowser.ts:469-475).
@@ -86,6 +104,12 @@ pub(all) struct MouseTargetContentEmptyData {
 } derive(Eq, Debug)
 
 ///|
+pub extend MouseTargetContentEmptyData with Eq::{not_equal, equal}
+
+///|
+pub extend MouseTargetContentEmptyData with Debug::{to_repr}
+
+///|
 /// `IMouseTargetOutsideEditor.outsidePosition` (editorBrowser.ts:514).
 pub(all) enum OutsidePosition {
   Above
@@ -93,6 +117,12 @@ pub(all) enum OutsidePosition {
   Left
   Right
 } derive(Eq, Debug)
+
+///|
+pub extend OutsidePosition with Eq::{not_equal, equal}
+
+///|
+pub extend OutsidePosition with Debug::{to_repr}
 
 ///|
 /// `IMouseTarget` (editorBrowser.ts:520-532): the discriminated union. Margin

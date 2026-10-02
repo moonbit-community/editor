@@ -17,6 +17,12 @@ pub(all) enum ProtocolErrorCode {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProtocolErrorCode with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolErrorCode with Debug::{to_repr}
+
+///|
 /// Debug label that keeps the local enum prefix visible.
 pub fn ProtocolErrorCode::label(self : ProtocolErrorCode) -> String {
   match self {
@@ -41,11 +47,17 @@ pub struct ProtocolError {
 } derive(Debug)
 
 ///|
+pub extend ProtocolError with Debug::{to_repr}
+
+///|
 /// Request addressed only by document URI.
 pub(all) struct DocumentRequest {
   id : String
   uri : @base_common.Uri
 } derive(Debug)
+
+///|
+pub extend DocumentRequest with Debug::{to_repr}
 
 ///|
 /// Request addressed by URI, expected document revision, and UTF-16 offset.
@@ -58,6 +70,9 @@ pub(all) struct DocumentPositionRequest {
 } derive(Debug)
 
 ///|
+pub extend DocumentPositionRequest with Debug::{to_repr}
+
+///|
 /// Request addressed by URI and expected document revision, for whole-document
 /// feature refreshes.
 pub(all) struct DocumentRevisionRequest {
@@ -65,6 +80,9 @@ pub(all) struct DocumentRevisionRequest {
   uri : @base_common.Uri
   document_revision : String
 } derive(Debug)
+
+///|
+pub extend DocumentRevisionRequest with Debug::{to_repr}
 
 ///|
 /// Browser-to-server request packet variants.
@@ -80,11 +98,17 @@ pub(all) enum ClientPacket {
 } derive(Debug)
 
 ///|
+pub extend ClientPacket with Debug::{to_repr}
+
+///|
 /// Loaded or changed document payload from the remote server.
 pub(all) struct DocumentPayload {
   id : String
   document : @workspace.DocumentSnapshot
 } derive(Debug)
+
+///|
+pub extend DocumentPayload with Debug::{to_repr}
 
 ///|
 /// One stat for the requested directory URI with exactly one level of
@@ -93,6 +117,9 @@ pub(all) struct DirectoryResolvedPayload {
   id : String
   stat : @workspace.WorkspaceStat
 } derive(Debug)
+
+///|
+pub extend DirectoryResolvedPayload with Debug::{to_repr}
 
 ///|
 /// Server-initiated diagnostics push for a URI at a document revision. The
@@ -105,6 +132,9 @@ pub(all) struct DiagnosticsPayload {
 } derive(Debug)
 
 ///|
+pub extend DiagnosticsPayload with Debug::{to_repr}
+
+///|
 /// Hover response for a specific URI, document revision, and request id.
 pub(all) struct HoverResultPayload {
   id : String
@@ -114,6 +144,9 @@ pub(all) struct HoverResultPayload {
 } derive(Debug)
 
 ///|
+pub extend HoverResultPayload with Debug::{to_repr}
+
+///|
 /// Definition response for a specific URI, document revision, and request id.
 pub(all) struct DefinitionResultPayload {
   id : String
@@ -121,6 +154,9 @@ pub(all) struct DefinitionResultPayload {
   revision : String
   location : @language.Location?
 } derive(Debug)
+
+///|
+pub extend DefinitionResultPayload with Debug::{to_repr}
 
 ///|
 /// A reference location enriched by the server with one-based line/column
@@ -135,6 +171,9 @@ pub(all) struct ReferenceItem {
 } derive(Debug)
 
 ///|
+pub extend ReferenceItem with Debug::{to_repr}
+
+///|
 /// References response for a specific URI and document revision.
 pub(all) struct ReferencesResultPayload {
   id : String
@@ -144,6 +183,9 @@ pub(all) struct ReferencesResultPayload {
 } derive(Debug)
 
 ///|
+pub extend ReferencesResultPayload with Debug::{to_repr}
+
+///|
 /// Document symbols response for a specific URI and document revision.
 pub(all) struct DocumentSymbolsResultPayload {
   id : String
@@ -151,6 +193,9 @@ pub(all) struct DocumentSymbolsResultPayload {
   revision : String
   symbols : Array[@language.DocumentSymbol]
 } derive(Debug)
+
+///|
+pub extend DocumentSymbolsResultPayload with Debug::{to_repr}
 
 ///|
 /// Server-to-browser response, event, and error packet variants.
@@ -167,11 +212,17 @@ pub(all) enum ServerPacket {
 } derive(Debug)
 
 ///|
+pub extend ServerPacket with Debug::{to_repr}
+
+///|
 /// Client-packet decode result that preserves structured protocol errors.
 pub enum ClientPacketDecodeResult {
   DecodedClientPacket(ClientPacket)
   ClientPacketDecodeError(ProtocolError)
 } derive(Debug)
+
+///|
+pub extend ClientPacketDecodeResult with Debug::{to_repr}
 
 ///|
 /// Server-packet decode result that preserves structured protocol errors.
@@ -181,11 +232,17 @@ pub enum ServerPacketDecodeResult {
 } derive(Debug)
 
 ///|
+pub extend ServerPacketDecodeResult with Debug::{to_repr}
+
+///|
 /// Version-negotiation result used before opening a long-lived connection.
 pub enum ProtocolNegotiation {
   ProtocolAccepted(Int)
   ProtocolRejected(ProtocolError)
 } derive(Debug)
+
+///|
+pub extend ProtocolNegotiation with Debug::{to_repr}
 
 ///|
 /// Builds a protocol error, defaulting an empty message to the wire code.
@@ -275,6 +332,9 @@ pub impl ToJson for ClientPacket with fn to_json(self) {
 }
 
 ///|
+pub extend ClientPacket with ToJson::{to_json}
+
+///|
 /// Serializes server responses and events to the remote protocol JSON shape.
 pub impl ToJson for ServerPacket with fn to_json(self) {
   match self {
@@ -290,6 +350,9 @@ pub impl ToJson for ServerPacket with fn to_json(self) {
     RemoteError(error) => error_packet_json(error)
   }
 }
+
+///|
+pub extend ServerPacket with ToJson::{to_json}
 
 ///|
 /// Decodes and validates a client packet, returning structured errors instead
@@ -990,6 +1053,9 @@ pub impl ToJson for ProtocolError with fn to_json(self) {
   }
   Json::object(fields)
 }
+
+///|
+pub extend ProtocolError with ToJson::{to_json}
 
 ///|
 fn packet_fields(kind : String, id : String) -> Map[String, Json] {

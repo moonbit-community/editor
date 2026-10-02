@@ -9,6 +9,12 @@ pub(all) enum SelectionStartKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend SelectionStartKind with Eq::{not_equal, equal}
+
+///|
+pub extend SelectionStartKind with Debug::{to_repr}
+
+///|
 /// The cursor state on either the model or the view model, a faithful port of
 /// Monaco's `cursorCommon.ts` `SingleCursorState`. `selection_start` is the
 /// anchor *range* (a region for word/line selection, collapsed for simple) and
@@ -28,6 +34,12 @@ pub struct SingleCursorState {
   position : @base_common.Position
   leftover_visible_columns : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SingleCursorState with Eq::{not_equal, equal}
+
+///|
+pub extend SingleCursorState with Debug::{to_repr}
 
 ///|
 /// Builds a cursor state from an explicit anchor range and active position.

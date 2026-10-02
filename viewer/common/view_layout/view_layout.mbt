@@ -29,11 +29,23 @@ pub struct Viewport {
 } derive(Eq, Debug)
 
 ///|
+pub extend Viewport with Eq::{not_equal, equal}
+
+///|
+pub extend Viewport with Debug::{to_repr}
+
+///|
 pub struct SavedScrollState {
   scroll_top : Double
   scroll_top_without_view_zones : Double
   scroll_left : Double
 } derive(Eq, Debug)
+
+///|
+pub extend SavedScrollState with Eq::{not_equal, equal}
+
+///|
+pub extend SavedScrollState with Debug::{to_repr}
 
 ///|
 let smooth_scrolling_time : Double = 125.0

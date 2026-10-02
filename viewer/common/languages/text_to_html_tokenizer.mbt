@@ -14,7 +14,7 @@
 /// Splits `text` on `\r\n` / `\r` / `\n`. Mirrors `strings.splitLines`.
 fn split_lines(text : String) -> Array[String] {
   let lines = []
-  let start = StringBuilder::new()
+  let start = StringBuilder()
   let len = text.length()
   let mut i = 0
   while i < len {
@@ -50,7 +50,7 @@ pub fn tokenize_line_to_html(
   tab_size : Int,
   use_nbsp : Bool,
 ) -> String {
-  let result = StringBuilder::new()
+  let result = StringBuilder()
   result.write_string("<div>")
   let mut char_index = 0
   let mut width = 0
@@ -58,7 +58,7 @@ pub fn tokenize_line_to_html(
   let token_count = view_line_tokens.get_count()
   for token_index in 0..<token_count {
     let token_end_index = view_line_tokens.get_end_offset(token_index)
-    let part = StringBuilder::new()
+    let part = StringBuilder()
     while char_index < token_end_index && char_index < end_offset {
       let char_code = text[char_index].to_int()
       let is_tab = char_code == 9
@@ -162,7 +162,7 @@ pub fn tokenize_to_string(
   codec : @services.LanguageIdCodec,
   tokenize_encoded : (String) -> Array[UInt],
 ) -> String {
-  let result = StringBuilder::new()
+  let result = StringBuilder()
   result.write_string("<div class=\"monaco-tokenized-source\">")
   let lines = split_lines(text)
   for i, line in lines {

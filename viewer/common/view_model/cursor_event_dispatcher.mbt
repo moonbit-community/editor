@@ -10,6 +10,12 @@ pub(all) enum OutgoingViewModelEventKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend OutgoingViewModelEventKind with Eq::{not_equal, equal}
+
+///|
+pub extend OutgoingViewModelEventKind with Debug::{to_repr}
+
+///|
 /// Complete outgoing cursor payload owned by the ViewModel. It retains the
 /// earliest old state when merged and the latest new state/source/reason.
 pub(all) struct CursorStateChangedEvent {
@@ -22,6 +28,9 @@ pub(all) struct CursorStateChangedEvent {
   reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
 } derive(Debug)
+
+///|
+pub extend CursorStateChangedEvent with Debug::{to_repr}
 
 ///|
 /// Builds the outgoing event from one controller transition fact.
@@ -82,6 +91,9 @@ pub struct ViewZonesChangedEvent {
 } derive(Debug)
 
 ///|
+pub extend ViewZonesChangedEvent with Debug::{to_repr}
+
+///|
 /// Creates one source-shaped ViewZones change event.
 #alias(new, deprecated)
 pub fn ViewZonesChangedEvent::ViewZonesChangedEvent() -> ViewZonesChangedEvent {
@@ -101,6 +113,9 @@ pub fn ViewZonesChangedEvent::is_no_op(_self : ViewZonesChangedEvent) -> Bool {
 pub struct HiddenAreasChangedOutgoingEvent {
   kind : OutgoingViewModelEventKind
 } derive(Debug)
+
+///|
+pub extend HiddenAreasChangedOutgoingEvent with Debug::{to_repr}
 
 ///|
 /// Creates one source-shaped hidden-area change event.

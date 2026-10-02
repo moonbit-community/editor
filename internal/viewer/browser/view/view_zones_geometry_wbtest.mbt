@@ -54,7 +54,7 @@ extern "js" fn record_view_zones_geometry_event(value : String) -> Unit =
   #| value => { globalThis.__viewZonesGeometryEvents.push(value); }
 
 ///|
-extern "js" fn view_zones_geometry_events() -> Array[String] =
+extern "js" fn view_zones_geometry_events() -> FixedArray[String] =
   #| () => [...globalThis.__viewZonesGeometryEvents]
 
 ///|
@@ -162,7 +162,7 @@ test "ViewZones width gate covers below equal above and contentLeft zero nonzero
 test "ViewZones writes callbacks and zone geometry before container widths" {
   let (part, _, _, visible) = view_zones_geometry_fixture(120.0, 17.0)
   render_geometry_zone(part, visible, 100.0)
-  let events = view_zones_geometry_events()
+  let events = Array::from_fixed_array(view_zones_geometry_events())
   let callback = geometry_event_index(events, "callback:top")
   let content_top = geometry_event_index(events, "style:content-zone:top:42px")
   let content_height = geometry_event_index(

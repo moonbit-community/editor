@@ -14,6 +14,12 @@ pub(all) struct ViewportData {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend ViewportData with Debug::{to_repr}
+
+///|
 /// Line-rendering data for a one-based line number inside this viewport.
 pub fn ViewportData::line_data(
   self : ViewportData,

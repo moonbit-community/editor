@@ -18,6 +18,12 @@ pub(all) struct Range {
 } derive(Eq, Debug)
 
 ///|
+pub extend Range with Eq::{not_equal, equal}
+
+///|
+pub extend Range with Debug::{to_repr}
+
+///|
 pub fn Range::Range(
   start_line_number : Int,
   start_column : Int,

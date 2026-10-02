@@ -20,6 +20,9 @@ pub impl LineTokenizer for PlainTokenizer with fn initial_state(_self) {
 }
 
 ///|
+pub extend PlainTokenizer with LineTokenizer::{initial_state, tokenize_line}
+
+///|
 /// Tokenizes one line with simple MoonBit-ish lexical classes.
 pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
   _self,

@@ -32,4 +32,3 @@ pub(all) struct RenderedMarkdown {
 // Type aliases
 
 // Traits
-

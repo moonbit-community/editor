@@ -2,7 +2,7 @@
 fn feedback_fixture(
   resource : @base_common.Uri,
   id? : String = "feedback-1",
-) -> AgentFeedback {
+) -> @agent_feedback_api.AgentFeedback {
   {
     id,
     text: "note",
@@ -120,12 +120,15 @@ test "AgentFeedbackHandle forwards its exact callback floor" {
 test "agent-feedback DTO events are public value contracts" {
   let resource = try! @base_common.Uri::parse("memory://session/a.mbt")
   let feedback = feedback_fixture(resource)
-  let added : AgentFeedbackAddedEvent = {
+  let added : @agent_feedback_api.AgentFeedbackAddedEvent = {
     feedback,
     has_existing_feedback_for_file: true,
   }
-  let reply : AgentFeedbackReplyAddedEvent = { feedback, reply_count: 2, }
-  let submitted : AgentFeedbackSubmittedEvent = {
+  let reply : @agent_feedback_api.AgentFeedbackReplyAddedEvent = {
+    feedback,
+    reply_count: 2,
+  }
+  let submitted : @agent_feedback_api.AgentFeedbackSubmittedEvent = {
     resource,
     items: [feedback],
     user_count: 1,

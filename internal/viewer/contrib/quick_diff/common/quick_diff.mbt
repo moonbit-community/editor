@@ -27,6 +27,12 @@ pub(all) enum ChangeType {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChangeType with Eq::{not_equal, equal}
+
+///|
+pub extend ChangeType with Debug::{to_repr}
+
+///|
 pub impl Show for ChangeType with fn output(self, logger) {
   logger.write_string(
     match self {
@@ -36,6 +42,9 @@ pub impl Show for ChangeType with fn output(self, logger) {
     },
   )
 }
+
+///|
+pub extend ChangeType with Show::{to_string, output}
 
 ///|
 /// `getChangeType` (`quickDiff.ts:121`).

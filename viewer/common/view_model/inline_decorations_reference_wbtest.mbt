@@ -15,11 +15,11 @@ priv struct TestTextModel {
 /// Splits text into logical lines on newline (the suite uses newline only).
 fn TestTextModel::create(text : String) -> TestTextModel {
   let lines : Array[String] = []
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for ch in text {
     if ch == '\n' {
       lines.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(ch)
     }

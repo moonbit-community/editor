@@ -24,4 +24,3 @@ pub fn FontMeasurementsImpl::read_font_info(Self, @moonbit-community/editor/view
 // Type aliases
 
 // Traits
-

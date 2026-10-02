@@ -30,6 +30,12 @@ pub struct ViewLineOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewLineOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ViewLineOptions with Debug::{to_repr}
+
+///|
 pub fn ViewLineOptions::ViewLineOptions(
   line_height? : Int = 20,
   space_width? : Double = 7.2,

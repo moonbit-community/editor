@@ -12,6 +12,12 @@ pub enum HoverAnchorType {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverAnchorType with Eq::{not_equal, equal}
+
+///|
+pub extend HoverAnchorType with Debug::{to_repr}
+
+///|
 /// Stable identity of the participant that owns a foreign-element anchor.
 /// Monaco compares participant objects by identity; the multi-target MoonBit
 /// port mints an explicit identity so copying or rebuilding a participant
@@ -19,6 +25,12 @@ pub enum HoverAnchorType {
 pub struct HoverParticipantOwner {
   priv id : Int
 } derive(Eq, Debug)
+
+///|
+pub extend HoverParticipantOwner with Eq::{not_equal, equal}
+
+///|
+pub extend HoverParticipantOwner with Debug::{to_repr}
 
 ///|
 let next_hover_participant_owner_id : Ref[Int] = Ref(0)
@@ -58,6 +70,12 @@ pub(all) enum HoverAnchor {
     supports_marker_hover~ : Bool
   )
 } derive(Eq, Debug)
+
+///|
+pub extend HoverAnchor with Eq::{not_equal, equal}
+
+///|
+pub extend HoverAnchor with Debug::{to_repr}
 
 ///|
 pub fn HoverAnchor::anchor_type(self : HoverAnchor) -> HoverAnchorType {

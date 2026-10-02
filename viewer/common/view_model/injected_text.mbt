@@ -8,6 +8,12 @@ pub struct InjectedText {
 } derive(Eq, Debug)
 
 ///|
+pub extend InjectedText with Eq::{not_equal, equal}
+
+///|
+pub extend InjectedText with Debug::{to_repr}
+
+///|
 /// Builds injected text at a model position.
 pub fn InjectedText::InjectedText(
   position : @base_common.Position,
@@ -30,12 +36,24 @@ pub enum ProjectedLinePartKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectedLinePartKind with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectedLinePartKind with Debug::{to_repr}
+
+///|
 /// Half-open projected text segment with its source/injected identity.
 pub struct ProjectedLinePart {
   start : Int
   end : Int
   kind : ProjectedLinePartKind
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectedLinePart with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectedLinePart with Debug::{to_repr}
 
 ///|
 /// One model line after injected text has been projected into display text,
@@ -58,6 +76,12 @@ pub struct ProjectedTextLine {
   model_to_projected_columns : Array[Int]
   parts : Array[ProjectedLinePart]
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectedTextLine with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectedTextLine with Debug::{to_repr}
 
 ///|
 /// Projection for a line with no injected text.

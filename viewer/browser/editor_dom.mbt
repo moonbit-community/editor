@@ -32,6 +32,12 @@ pub(all) struct PageCoordinates {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCoordinates with Eq::{not_equal, equal}
+
+///|
+pub extend PageCoordinates with Debug::{to_repr}
+
+///|
 pub fn PageCoordinates::to_client_coordinates(
   self : PageCoordinates,
 ) -> ClientCoordinates {
@@ -48,6 +54,12 @@ pub(all) struct ClientCoordinates {
   client_x : Double
   client_y : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ClientCoordinates with Eq::{not_equal, equal}
+
+///|
+pub extend ClientCoordinates with Debug::{to_repr}
 
 ///|
 pub fn ClientCoordinates::to_page_coordinates(
@@ -70,6 +82,12 @@ pub struct EditorPagePosition {
 } derive(Eq, Debug)
 
 ///|
+pub extend EditorPagePosition with Eq::{not_equal, equal}
+
+///|
+pub extend EditorPagePosition with Debug::{to_repr}
+
+///|
 /// Coordinates relative to the (top;left) of the editor, scale-corrected —
 /// `CoordinatesRelativeToEditor` (editorDom.ts:72-79). Can be negative when
 /// the mouse is outside the editor.
@@ -77,6 +95,12 @@ pub struct CoordinatesRelativeToEditor {
   x : Double
   y : Double
 } derive(Eq, Debug)
+
+///|
+pub extend CoordinatesRelativeToEditor with Eq::{not_equal, equal}
+
+///|
+pub extend CoordinatesRelativeToEditor with Debug::{to_repr}
 
 ///|
 /// `createEditorPagePosition` (editorDom.ts:81-84):

@@ -28,6 +28,12 @@ pub(all) enum CursorMoveDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorMoveDirection with Eq::{not_equal, equal}
+
+///|
+pub extend CursorMoveDirection with Debug::{to_repr}
+
+///|
 /// MoonBit representation of the source's exact 11-member
 /// `SimpleMoveDirection` union (`cursorMoveCommands.ts:950-962`).
 pub(all) enum SimpleMoveDirection {
@@ -45,6 +51,12 @@ pub(all) enum SimpleMoveDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend SimpleMoveDirection with Eq::{not_equal, equal}
+
+///|
+pub extend SimpleMoveDirection with Debug::{to_repr}
+
+///|
 /// Exact `CursorMove.Unit` enum contract (`cursorMoveCommands.ts:971-978`).
 /// `None` and `WrappedLine` are behaviorally scoped; Line, Character,
 /// HalfLine, and FoldedLine remain explicit branch deferrals.
@@ -58,6 +70,12 @@ pub(all) enum CursorMoveUnit {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorMoveUnit with Eq::{not_equal, equal}
+
+///|
+pub extend CursorMoveUnit with Debug::{to_repr}
+
+///|
 /// Exact typed argument contract consumed by the bound simple-move commands.
 pub struct SimpleMoveArguments {
   direction : SimpleMoveDirection
@@ -65,6 +83,12 @@ pub struct SimpleMoveArguments {
   select : Bool
   value : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SimpleMoveArguments with Eq::{not_equal, equal}
+
+///|
+pub extend SimpleMoveArguments with Debug::{to_repr}
 
 ///|
 #alias(new, deprecated)

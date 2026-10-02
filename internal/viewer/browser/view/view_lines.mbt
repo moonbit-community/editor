@@ -16,6 +16,12 @@ pub struct ViewLinesConfiguration {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewLinesConfiguration with Eq::{not_equal, equal}
+
+///|
+pub extend ViewLinesConfiguration with Debug::{to_repr}
+
+///|
 pub fn ViewLinesConfiguration::ViewLinesConfiguration(
   line_height? : Int = 20,
   typical_halfwidth_character_width? : Double = 7.2,

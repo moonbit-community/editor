@@ -11,82 +11,114 @@
 
 ///|
 test "file#toString" {
-  assert_eq(Uri::file("c:/win/path").to_string(), "file:///c%3A/win/path")
-  assert_eq(Uri::file("C:/win/path").to_string(), "file:///c%3A/win/path")
-  assert_eq(Uri::file("c:/win/path/").to_string(), "file:///c%3A/win/path/")
-  assert_eq(Uri::file("/c:/win/path").to_string(), "file:///c%3A/win/path")
+  assert_eq(
+    @common.Uri::file("c:/win/path").to_string(),
+    "file:///c%3A/win/path",
+  )
+  assert_eq(
+    @common.Uri::file("C:/win/path").to_string(),
+    "file:///c%3A/win/path",
+  )
+  assert_eq(
+    @common.Uri::file("c:/win/path/").to_string(),
+    "file:///c%3A/win/path/",
+  )
+  assert_eq(
+    @common.Uri::file("/c:/win/path").to_string(),
+    "file:///c%3A/win/path",
+  )
 }
 
 ///|
 test "URI.file (win-special)" {
   // isWindows branch
-  set_is_windows_for_testing(value=true)
-  assert_eq(Uri::file("c:\\win\\path").to_string(), "file:///c%3A/win/path")
-  assert_eq(Uri::file("c:\\win/path").to_string(), "file:///c%3A/win/path")
+  @common.set_is_windows_for_testing(value=true)
+  assert_eq(
+    @common.Uri::file("c:\\win\\path").to_string(),
+    "file:///c%3A/win/path",
+  )
+  assert_eq(
+    @common.Uri::file("c:\\win/path").to_string(),
+    "file:///c%3A/win/path",
+  )
   // non-Windows branch
-  set_is_windows_for_testing(value=false)
-  assert_eq(Uri::file("c:\\win\\path").to_string(), "file:///c%3A%5Cwin%5Cpath")
-  assert_eq(Uri::file("c:\\win/path").to_string(), "file:///c%3A%5Cwin/path")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing(value=false)
+  assert_eq(
+    @common.Uri::file("c:\\win\\path").to_string(),
+    "file:///c%3A%5Cwin%5Cpath",
+  )
+  assert_eq(
+    @common.Uri::file("c:\\win/path").to_string(),
+    "file:///c%3A%5Cwin/path",
+  )
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "file#fsPath (win-special)" {
-  set_is_windows_for_testing(value=true)
-  assert_eq(Uri::file("c:\\win\\path").fs_path(), "c:\\win\\path")
-  assert_eq(Uri::file("c:\\win/path").fs_path(), "c:\\win\\path")
-  assert_eq(Uri::file("c:/win/path").fs_path(), "c:\\win\\path")
-  assert_eq(Uri::file("c:/win/path/").fs_path(), "c:\\win\\path\\")
-  assert_eq(Uri::file("C:/win/path").fs_path(), "c:\\win\\path")
-  assert_eq(Uri::file("/c:/win/path").fs_path(), "c:\\win\\path")
-  assert_eq(Uri::file("./c/win/path").fs_path(), "\\.\\c\\win\\path")
-  set_is_windows_for_testing(value=false)
-  assert_eq(Uri::file("c:/win/path").fs_path(), "c:/win/path")
-  assert_eq(Uri::file("c:/win/path/").fs_path(), "c:/win/path/")
-  assert_eq(Uri::file("C:/win/path").fs_path(), "c:/win/path")
-  assert_eq(Uri::file("/c:/win/path").fs_path(), "c:/win/path")
-  assert_eq(Uri::file("./c/win/path").fs_path(), "/./c/win/path")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing(value=true)
+  assert_eq(@common.Uri::file("c:\\win\\path").fs_path(), "c:\\win\\path")
+  assert_eq(@common.Uri::file("c:\\win/path").fs_path(), "c:\\win\\path")
+  assert_eq(@common.Uri::file("c:/win/path").fs_path(), "c:\\win\\path")
+  assert_eq(@common.Uri::file("c:/win/path/").fs_path(), "c:\\win\\path\\")
+  assert_eq(@common.Uri::file("C:/win/path").fs_path(), "c:\\win\\path")
+  assert_eq(@common.Uri::file("/c:/win/path").fs_path(), "c:\\win\\path")
+  assert_eq(@common.Uri::file("./c/win/path").fs_path(), "\\.\\c\\win\\path")
+  @common.set_is_windows_for_testing(value=false)
+  assert_eq(@common.Uri::file("c:/win/path").fs_path(), "c:/win/path")
+  assert_eq(@common.Uri::file("c:/win/path/").fs_path(), "c:/win/path/")
+  assert_eq(@common.Uri::file("C:/win/path").fs_path(), "c:/win/path")
+  assert_eq(@common.Uri::file("/c:/win/path").fs_path(), "c:/win/path")
+  assert_eq(@common.Uri::file("./c/win/path").fs_path(), "/./c/win/path")
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "URI#fsPath - no fsPath when no path" {
-  set_is_windows_for_testing(value=false)
-  let value = Uri::parse(
+  @common.set_is_windows_for_testing(value=false)
+  let value = @common.Uri::parse(
     "file://%2Fhome%2Fticino%2Fdesktop%2Fcpluscplus%2Ftest.cpp",
   )
   assert_eq(value.authority, "/home/ticino/desktop/cpluscplus/test.cpp")
   assert_eq(value.path, "/")
   assert_eq(value.fs_path(), "/")
-  set_is_windows_for_testing(value=true)
-  let value = Uri::parse(
+  @common.set_is_windows_for_testing(value=true)
+  let value = @common.Uri::parse(
     "file://%2Fhome%2Fticino%2Fdesktop%2Fcpluscplus%2Ftest.cpp",
   )
   assert_eq(value.fs_path(), "\\")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "http#toString" {
   assert_eq(
-    Uri::from(scheme="http", authority="www.example.com", path="/my/path").to_string(),
+    @common.Uri::from(
+      scheme="http",
+      authority="www.example.com",
+      path="/my/path",
+    ).to_string(),
     "http://www.example.com/my/path",
   )
   assert_eq(
-    Uri::from(scheme="http", authority="www.EXAMPLE.com", path="/my/path").to_string(),
+    @common.Uri::from(
+      scheme="http",
+      authority="www.EXAMPLE.com",
+      path="/my/path",
+    ).to_string(),
     "http://www.example.com/my/path",
   )
   assert_eq(
-    Uri::from(scheme="http", authority="", path="my/path").to_string(),
+    @common.Uri::from(scheme="http", authority="", path="my/path").to_string(),
     "http:/my/path",
   )
   assert_eq(
-    Uri::from(scheme="http", authority="", path="/my/path").to_string(),
+    @common.Uri::from(scheme="http", authority="", path="/my/path").to_string(),
     "http:/my/path",
   )
   //http://example.com/#test=true
   assert_eq(
-    Uri::from(
+    @common.Uri::from(
       scheme="http",
       authority="example.com",
       path="/",
@@ -95,7 +127,7 @@ test "http#toString" {
     "http://example.com/?test%3Dtrue",
   )
   assert_eq(
-    Uri::from(
+    @common.Uri::from(
       scheme="http",
       authority="example.com",
       path="/",
@@ -109,7 +141,7 @@ test "http#toString" {
 ///|
 test "http#toString, encode=FALSE" {
   assert_eq(
-    Uri::from(
+    @common.Uri::from(
       scheme="http",
       authority="example.com",
       path="/",
@@ -118,7 +150,7 @@ test "http#toString, encode=FALSE" {
     "http://example.com/?test=true",
   )
   assert_eq(
-    Uri::from(
+    @common.Uri::from(
       scheme="http",
       authority="example.com",
       path="/",
@@ -128,12 +160,12 @@ test "http#toString, encode=FALSE" {
     "http://example.com/#test=true",
   )
   assert_eq(
-    Uri::from(scheme="http", path="/api/files/test.me", query="t=1234").to_string(
+    @common.Uri::from(scheme="http", path="/api/files/test.me", query="t=1234").to_string(
       skip_encoding=true,
     ),
     "http:/api/files/test.me?t=1234",
   )
-  let value = Uri::parse("file://shares/pröjects/c%23/#l12")
+  let value = @common.Uri::parse("file://shares/pröjects/c%23/#l12")
   assert_eq(value.authority, "shares")
   assert_eq(value.path, "/pröjects/c#/")
   assert_eq(value.fragment, "l12")
@@ -142,8 +174,8 @@ test "http#toString, encode=FALSE" {
     value.to_string(skip_encoding=true),
     "file://shares/pröjects/c%23/#l12",
   )
-  let uri2 = Uri::parse(value.to_string(skip_encoding=true))
-  let uri3 = Uri::parse(value.to_string())
+  let uri2 = @common.Uri::parse(value.to_string(skip_encoding=true))
+  let uri3 = @common.Uri::parse(value.to_string())
   assert_eq(uri2.authority, uri3.authority)
   assert_eq(uri2.path, uri3.path)
   assert_eq(uri2.query, uri3.query)
@@ -152,7 +184,7 @@ test "http#toString, encode=FALSE" {
 
 ///|
 test "with, identity" {
-  let uri = Uri::parse("foo:bar/path")
+  let uri = @common.Uri::parse("foo:bar/path")
   let uri2 = uri.with_()
   assert_true(physical_equal(uri, uri2))
   let uri3 = uri.with_(scheme="foo", path="bar/path")
@@ -162,17 +194,19 @@ test "with, identity" {
 ///|
 test "with, changes" {
   assert_eq(
-    Uri::parse("before:some/file/path").with_(scheme="after").to_string(),
+    @common.Uri::parse("before:some/file/path")
+    .with_(scheme="after")
+    .to_string(),
     "after:some/file/path",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(scheme="http", path="/api/files/test.me", query="t=1234")
     .to_string(),
     "http:/api/files/test.me?t%3D1234",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(
       scheme="http",
       authority="",
@@ -184,7 +218,7 @@ test "with, changes" {
     "http:/api/files/test.me?t%3D1234",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(
       scheme="https",
       authority="",
@@ -196,7 +230,7 @@ test "with, changes" {
     "https:/api/files/test.me?t%3D1234",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(
       scheme="HTTP",
       authority="",
@@ -208,7 +242,7 @@ test "with, changes" {
     "HTTP:/api/files/test.me?t%3D1234",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(
       scheme="HTTPS",
       authority="",
@@ -220,7 +254,7 @@ test "with, changes" {
     "HTTPS:/api/files/test.me?t%3D1234",
   )
   assert_eq(
-    Uri::from(scheme="s")
+    @common.Uri::from(scheme="s")
     .with_(
       scheme="boo",
       authority="",
@@ -236,32 +270,34 @@ test "with, changes" {
 ///|
 test "with, remove components #8465" {
   assert_eq(
-    Uri::parse("scheme://authority/path").with_(authority="").to_string(),
+    @common.Uri::parse("scheme://authority/path")
+    .with_(authority="")
+    .to_string(),
     "scheme:/path",
   )
   assert_eq(
-    Uri::parse("scheme:/path")
+    @common.Uri::parse("scheme:/path")
     .with_(authority="authority")
     .with_(authority="")
     .to_string(),
     "scheme:/path",
   )
   assert_eq(
-    Uri::parse("scheme:/path")
+    @common.Uri::parse("scheme:/path")
     .with_(authority="authority")
     .with_(path="")
     .to_string(),
     "scheme://authority",
   )
   assert_eq(
-    Uri::parse("scheme:/path").with_(authority="").to_string(),
+    @common.Uri::parse("scheme:/path").with_(authority="").to_string(),
     "scheme:/path",
   )
 }
 
 ///|
 test "with, validation" {
-  let uri = Uri::parse("foo:bar/path")
+  let uri = @common.Uri::parse("foo:bar/path")
   for
     change in [
       () => uri.with_(scheme="fai:l") |> ignore,
@@ -279,41 +315,41 @@ test "with, validation" {
 
 ///|
 test "parse" {
-  let value = Uri::parse("http:/api/files/test.me?t=1234")
+  let value = @common.Uri::parse("http:/api/files/test.me?t=1234")
   assert_eq(value.scheme, "http")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/api/files/test.me")
   assert_eq(value.query, "t=1234")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("http://api/files/test.me?t=1234")
+  let value = @common.Uri::parse("http://api/files/test.me?t=1234")
   assert_eq(value.scheme, "http")
   assert_eq(value.authority, "api")
   assert_eq(value.path, "/files/test.me")
   assert_eq(value.query, "t=1234")
   assert_eq(value.fragment, "")
-  set_is_windows_for_testing(value=false)
-  let value = Uri::parse("file:///c:/test/me")
+  @common.set_is_windows_for_testing(value=false)
+  let value = @common.Uri::parse("file:///c:/test/me")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/c:/test/me")
   assert_eq(value.fragment, "")
   assert_eq(value.query, "")
   assert_eq(value.fs_path(), "c:/test/me")
-  let value = Uri::parse("file://shares/files/c%23/p.cs")
+  let value = @common.Uri::parse("file://shares/files/c%23/p.cs")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "shares")
   assert_eq(value.path, "/files/c#/p.cs")
   assert_eq(value.fragment, "")
   assert_eq(value.query, "")
   assert_eq(value.fs_path(), "//shares/files/c#/p.cs")
-  set_is_windows_for_testing(value=true)
-  assert_eq(Uri::parse("file:///c:/test/me").fs_path(), "c:\\test\\me")
+  @common.set_is_windows_for_testing(value=true)
+  assert_eq(@common.Uri::parse("file:///c:/test/me").fs_path(), "c:\\test\\me")
   assert_eq(
-    Uri::parse("file://shares/files/c%23/p.cs").fs_path(),
+    @common.Uri::parse("file://shares/files/c%23/p.cs").fs_path(),
     "\\\\shares\\files\\c#\\p.cs",
   )
-  set_is_windows_for_testing()
-  let value = Uri::parse(
+  @common.set_is_windows_for_testing()
+  let value = @common.Uri::parse(
     "file:///c:/Source/Z%C3%BCrich%20or%20Zurich%20(%CB%88zj%CA%8A%C9%99r%C9%AAk,/Code/resources/app/plugins/c%23/plugin.json",
   )
   assert_eq(value.scheme, "file")
@@ -324,55 +360,55 @@ test "parse" {
   )
   assert_eq(value.fragment, "")
   assert_eq(value.query, "")
-  let value = Uri::parse("file:///c:/test %25/path")
+  let value = @common.Uri::parse("file:///c:/test %25/path")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/c:/test %/path")
   assert_eq(value.fragment, "")
   assert_eq(value.query, "")
-  let value = Uri::parse("inmemory:")
+  let value = @common.Uri::parse("inmemory:")
   assert_eq(value.scheme, "inmemory")
   assert_eq(value.authority, "")
   assert_eq(value.path, "")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("foo:api/files/test")
+  let value = @common.Uri::parse("foo:api/files/test")
   assert_eq(value.scheme, "foo")
   assert_eq(value.authority, "")
   assert_eq(value.path, "api/files/test")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("file:?q")
+  let value = @common.Uri::parse("file:?q")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/")
   assert_eq(value.query, "q")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("file:#d")
+  let value = @common.Uri::parse("file:#d")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "d")
-  let value = Uri::parse("f3ile:#d")
+  let value = @common.Uri::parse("f3ile:#d")
   assert_eq(value.scheme, "f3ile")
   assert_eq(value.authority, "")
   assert_eq(value.path, "")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "d")
-  let value = Uri::parse("foo+bar:path")
+  let value = @common.Uri::parse("foo+bar:path")
   assert_eq(value.scheme, "foo+bar")
   assert_eq(value.authority, "")
   assert_eq(value.path, "path")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("foo-bar:path")
+  let value = @common.Uri::parse("foo-bar:path")
   assert_eq(value.scheme, "foo-bar")
   assert_eq(value.authority, "")
   assert_eq(value.path, "path")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "")
-  let value = Uri::parse("foo.bar:path")
+  let value = @common.Uri::parse("foo.bar:path")
   assert_eq(value.scheme, "foo.bar")
   assert_eq(value.authority, "")
   assert_eq(value.path, "path")
@@ -382,7 +418,7 @@ test "parse" {
 
 ///|
 test "parse, disallow //path when no authority" {
-  try Uri::parse("file:////shares/files/p.cs") |> ignore catch {
+  try @common.Uri::parse("file:////shares/files/p.cs") |> ignore catch {
     UriError(_) => ()
   } noraise {
     _ => fail("expected parse to raise UriError")
@@ -392,72 +428,72 @@ test "parse, disallow //path when no authority" {
 ///|
 test "URI#file, win-speciale" {
   // The JS test is isWindows-gated; run it under the D8 seam.
-  set_is_windows_for_testing(value=true)
-  let value = Uri::file("c:\\test\\drive")
+  @common.set_is_windows_for_testing(value=true)
+  let value = @common.Uri::file("c:\\test\\drive")
   assert_eq(value.path, "/c:/test/drive")
   assert_eq(value.to_string(), "file:///c%3A/test/drive")
-  let value = Uri::file("\\\\shäres\\path\\c#\\plugin.json")
+  let value = @common.Uri::file("\\\\shäres\\path\\c#\\plugin.json")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "shäres")
   assert_eq(value.path, "/path/c#/plugin.json")
   assert_eq(value.fragment, "")
   assert_eq(value.query, "")
   assert_eq(value.to_string(), "file://sh%C3%A4res/path/c%23/plugin.json")
-  let value = Uri::file("\\\\localhost\\c$\\GitDevelopment\\express")
+  let value = @common.Uri::file("\\\\localhost\\c$\\GitDevelopment\\express")
   assert_eq(value.scheme, "file")
   assert_eq(value.path, "/c$/GitDevelopment/express")
   assert_eq(value.fs_path(), "\\\\localhost\\c$\\GitDevelopment\\express")
   assert_eq(value.query, "")
   assert_eq(value.fragment, "")
   assert_eq(value.to_string(), "file://localhost/c%24/GitDevelopment/express")
-  let value = Uri::file("c:\\test with %\\path")
+  let value = @common.Uri::file("c:\\test with %\\path")
   assert_eq(value.path, "/c:/test with %/path")
   assert_eq(value.to_string(), "file:///c%3A/test%20with%20%25/path")
-  let value = Uri::file("c:\\test with %25\\path")
+  let value = @common.Uri::file("c:\\test with %25\\path")
   assert_eq(value.path, "/c:/test with %25/path")
   assert_eq(value.to_string(), "file:///c%3A/test%20with%20%2525/path")
-  let value = Uri::file("c:\\test with %25\\c#code")
+  let value = @common.Uri::file("c:\\test with %25\\c#code")
   assert_eq(value.path, "/c:/test with %25/c#code")
   assert_eq(value.to_string(), "file:///c%3A/test%20with%20%2525/c%23code")
-  let value = Uri::file("\\\\shares")
+  let value = @common.Uri::file("\\\\shares")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "shares")
   assert_eq(value.path, "/") // slash is always there
-  let value = Uri::file("\\\\shares\\")
+  let value = @common.Uri::file("\\\\shares\\")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "shares")
   assert_eq(value.path, "/")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "VSCode URI module's driveLetterPath regex is incorrect, #32961" {
-  set_is_windows_for_testing(value=false)
-  assert_eq(Uri::parse("file:///_:/path").fs_path(), "/_:/path")
-  set_is_windows_for_testing(value=true)
-  assert_eq(Uri::parse("file:///_:/path").fs_path(), "\\_:\\path")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing(value=false)
+  assert_eq(@common.Uri::parse("file:///_:/path").fs_path(), "/_:/path")
+  @common.set_is_windows_for_testing(value=true)
+  assert_eq(@common.Uri::parse("file:///_:/path").fs_path(), "\\_:\\path")
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "URI#file, no path-is-uri check" {
-  set_is_windows_for_testing(value=false)
+  @common.set_is_windows_for_testing(value=false)
   // we don't complain here
-  let value = Uri::file("file://path/to/file")
+  let value = @common.Uri::file("file://path/to/file")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/file://path/to/file")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "URI#file, always slash" {
-  let value = Uri::file("a.file")
+  let value = @common.Uri::file("a.file")
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/a.file")
   assert_eq(value.to_string(), "file:///a.file")
-  let value = Uri::parse(value.to_string())
+  let value = @common.Uri::parse(value.to_string())
   assert_eq(value.scheme, "file")
   assert_eq(value.authority, "")
   assert_eq(value.path, "/a.file")
@@ -466,13 +502,16 @@ test "URI#file, always slash" {
 
 ///|
 test "URI.toString, only scheme and query" {
-  assert_eq(Uri::parse("stuff:?qüery").to_string(), "stuff:?q%C3%BCery")
+  assert_eq(
+    @common.Uri::parse("stuff:?qüery").to_string(),
+    "stuff:?q%C3%BCery",
+  )
 }
 
 ///|
 test "URI#toString, upper-case percent espaces" {
   assert_eq(
-    Uri::parse("file://sh%c3%a4res/path").to_string(),
+    @common.Uri::parse("file://sh%c3%a4res/path").to_string(),
     "file://sh%C3%A4res/path",
   )
 }
@@ -480,18 +519,18 @@ test "URI#toString, upper-case percent espaces" {
 ///|
 test "URI#toString, lower-case windows drive letter" {
   assert_eq(
-    Uri::parse("untitled:c:/Users/jrieken/Code/abc.txt").to_string(),
+    @common.Uri::parse("untitled:c:/Users/jrieken/Code/abc.txt").to_string(),
     "untitled:c%3A/Users/jrieken/Code/abc.txt",
   )
   assert_eq(
-    Uri::parse("untitled:C:/Users/jrieken/Code/abc.txt").to_string(),
+    @common.Uri::parse("untitled:C:/Users/jrieken/Code/abc.txt").to_string(),
     "untitled:c%3A/Users/jrieken/Code/abc.txt",
   )
 }
 
 ///|
 test "URI#toString, escape all the bits" {
-  let value = Uri::file(
+  let value = @common.Uri::file(
     "/Users/jrieken/Code/_samples/18500/Mödel + Other Thîngß/model.js",
   )
   assert_eq(
@@ -502,23 +541,27 @@ test "URI#toString, escape all the bits" {
 
 ///|
 test "URI#toString, don't encode port" {
-  let value = Uri::parse("http://localhost:8080/far")
+  let value = @common.Uri::parse("http://localhost:8080/far")
   assert_eq(value.to_string(), "http://localhost:8080/far")
-  let value = Uri::from(scheme="http", authority="löcalhost:8080", path="/far")
+  let value = @common.Uri::from(
+    scheme="http",
+    authority="löcalhost:8080",
+    path="/far",
+  )
   assert_eq(value.to_string(), "http://l%C3%B6calhost:8080/far")
 }
 
 ///|
 test "URI#toString, user information in authority" {
-  let value = Uri::parse("http://foo:bar@localhost/far")
+  let value = @common.Uri::parse("http://foo:bar@localhost/far")
   assert_eq(value.to_string(), "http://foo:bar@localhost/far")
-  let value = Uri::parse("http://foo@localhost/far")
+  let value = @common.Uri::parse("http://foo@localhost/far")
   assert_eq(value.to_string(), "http://foo@localhost/far")
-  let value = Uri::parse("http://foo:bAr@localhost:8080/far")
+  let value = @common.Uri::parse("http://foo:bAr@localhost:8080/far")
   assert_eq(value.to_string(), "http://foo:bAr@localhost:8080/far")
-  let value = Uri::parse("http://foo@localhost:8080/far")
+  let value = @common.Uri::parse("http://foo@localhost:8080/far")
   assert_eq(value.to_string(), "http://foo@localhost:8080/far")
-  let value = Uri::from(
+  let value = @common.Uri::from(
     scheme="http",
     authority="föö:bör@löcalhost:8080",
     path="/far",
@@ -531,16 +574,16 @@ test "URI#toString, user information in authority" {
 
 ///|
 fn check_file_uri_to_fs_path(input : String, expected : String) -> Unit raise {
-  let value = Uri::parse(input)
+  let value = @common.Uri::parse(input)
   assert_eq(value.fs_path(), expected, msg="Result for " + input)
-  let value2 = Uri::file(value.fs_path())
+  let value2 = @common.Uri::file(value.fs_path())
   assert_eq(value2.fs_path(), expected, msg="Result for " + input)
   assert_eq(value.to_string(), value2.to_string())
 }
 
 ///|
 test "correctFileUriToFilePath2" {
-  set_is_windows_for_testing(value=false)
+  @common.set_is_windows_for_testing(value=false)
   check_file_uri_to_fs_path("file:///c:/alex.txt", "c:/alex.txt")
   check_file_uri_to_fs_path(
     "file:///c:/Source/Z%C3%BCrich%20or%20Zurich%20(%CB%88zj%CA%8A%C9%99r%C9%AAk,/Code/resources/app/plugins",
@@ -552,7 +595,7 @@ test "correctFileUriToFilePath2" {
   check_file_uri_to_fs_path(
     "file://monacotools1/certificates/SSL/", "//monacotools1/certificates/SSL/",
   )
-  set_is_windows_for_testing(value=true)
+  @common.set_is_windows_for_testing(value=true)
   check_file_uri_to_fs_path("file:///c:/alex.txt", "c:\\alex.txt")
   check_file_uri_to_fs_path(
     "file:///c:/Source/Z%C3%BCrich%20or%20Zurich%20(%CB%88zj%CA%8A%C9%99r%C9%AAk,/Code/resources/app/plugins",
@@ -564,22 +607,22 @@ test "correctFileUriToFilePath2" {
   check_file_uri_to_fs_path(
     "file://monacotools1/certificates/SSL/", "\\\\monacotools1\\certificates\\SSL\\",
   )
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "URI - http, query & toString" {
-  let uri = Uri::parse("https://go.microsoft.com/fwlink/?LinkId=518008")
+  let uri = @common.Uri::parse("https://go.microsoft.com/fwlink/?LinkId=518008")
   assert_eq(uri.query, "LinkId=518008")
   assert_eq(
     uri.to_string(skip_encoding=true),
     "https://go.microsoft.com/fwlink/?LinkId=518008",
   )
   assert_eq(uri.to_string(), "https://go.microsoft.com/fwlink/?LinkId%3D518008")
-  let uri2 = Uri::parse(uri.to_string())
+  let uri2 = @common.Uri::parse(uri.to_string())
   assert_eq(uri2.query, "LinkId=518008")
   assert_eq(uri2.query, uri.query)
-  let uri = Uri::parse(
+  let uri = @common.Uri::parse(
     "https://go.microsoft.com/fwlink/?LinkId=518008&foö&ké¥=üü",
   )
   assert_eq(uri.query, "LinkId=518008&foö&ké¥=üü")
@@ -591,12 +634,12 @@ test "URI - http, query & toString" {
     uri.to_string(),
     "https://go.microsoft.com/fwlink/?LinkId%3D518008%26fo%C3%B6%26k%C3%A9%C2%A5%3D%C3%BC%C3%BC",
   )
-  let uri2 = Uri::parse(uri.to_string())
+  let uri2 = @common.Uri::parse(uri.to_string())
   assert_eq(uri2.query, "LinkId=518008&foö&ké¥=üü")
   assert_eq(uri2.query, uri.query)
 
   // #24849
-  let uri = Uri::parse("https://twitter.com/search?src=typd&q=%23tag")
+  let uri = @common.Uri::parse("https://twitter.com/search?src=typd&q=%23tag")
   assert_eq(
     uri.to_string(skip_encoding=true),
     "https://twitter.com/search?src=typd&q=%23tag",
@@ -605,15 +648,15 @@ test "URI - http, query & toString" {
 
 ///|
 test "class URI cannot represent relative file paths #34449" {
-  assert_eq(Uri::file("/foo/bar").path, "/foo/bar")
-  assert_eq(Uri::file("foo/bar").path, "/foo/bar")
-  assert_eq(Uri::file("./foo/bar").path, "/./foo/bar") // missing normalization
-  let file_uri1 = Uri::parse("file:foo/bar")
+  assert_eq(@common.Uri::file("/foo/bar").path, "/foo/bar")
+  assert_eq(@common.Uri::file("foo/bar").path, "/foo/bar")
+  assert_eq(@common.Uri::file("./foo/bar").path, "/./foo/bar") // missing normalization
+  let file_uri1 = @common.Uri::parse("file:foo/bar")
   assert_eq(file_uri1.path, "/foo/bar")
   assert_eq(file_uri1.authority, "")
   let uri = file_uri1.to_string()
   assert_eq(uri, "file:///foo/bar")
-  let file_uri2 = Uri::parse(uri)
+  let file_uri2 = @common.Uri::parse(uri)
   assert_eq(file_uri2.path, "/foo/bar")
   assert_eq(file_uri2.authority, "")
 }
@@ -621,41 +664,44 @@ test "class URI cannot represent relative file paths #34449" {
 ///|
 test "Ctrl click to follow hash query param url gets urlencoded #49628" {
   let input = "http://localhost:3000/#/foo?bar=baz"
-  let uri = Uri::parse(input)
+  let uri = @common.Uri::parse(input)
   assert_eq(uri.to_string(skip_encoding=true), input)
   let input = "http://localhost:3000/foo?bar=baz"
-  let uri = Uri::parse(input)
+  let uri = @common.Uri::parse(input)
   assert_eq(uri.to_string(skip_encoding=true), input)
 }
 
 ///|
 test "Unable to open '%A0.txt': URI malformed #76506" {
-  let uri = Uri::file("/foo/%A0.txt")
-  let uri2 = Uri::parse(uri.to_string())
+  let uri = @common.Uri::file("/foo/%A0.txt")
+  let uri2 = @common.Uri::parse(uri.to_string())
   assert_eq(uri.scheme, uri2.scheme)
   assert_eq(uri.path, uri2.path)
-  let uri = Uri::file("/foo/%2e.txt")
-  let uri2 = Uri::parse(uri.to_string())
+  let uri = @common.Uri::file("/foo/%2e.txt")
+  let uri2 = @common.Uri::parse(uri.to_string())
   assert_eq(uri.scheme, uri2.scheme)
   assert_eq(uri.path, uri2.path)
 }
 
 ///|
 test "from, from(strict)" {
-  try Uri::from(scheme="", strict=true) |> ignore catch {
+  try @common.Uri::from(scheme="", strict=true) |> ignore catch {
     UriError(_) => ()
   } noraise {
     _ => fail("expected from(strict) to raise UriError")
   }
-  assert_eq(Uri::from(scheme="").scheme, "file")
+  assert_eq(@common.Uri::from(scheme="").scheme, "file")
   // `URI.revive({scheme: ''}).scheme === ''` — revive deferred (D7).
 }
 
 ///|
 test "Unable to open '%A0.txt': URI malformed #76506, part 2" {
-  assert_eq(Uri::parse("file://some/%.txt").to_string(), "file://some/%25.txt")
   assert_eq(
-    Uri::parse("file://some/%A0.txt").to_string(),
+    @common.Uri::parse("file://some/%.txt").to_string(),
+    "file://some/%25.txt",
+  )
+  assert_eq(
+    @common.Uri::parse("file://some/%A0.txt").to_string(),
     "file://some/%25A0.txt",
   )
 }
@@ -666,8 +712,8 @@ fn assert_joined(
   fragment : String,
   expected : String,
 ) -> Unit raise {
-  let base_uri = Uri::parse(base)
-  let new_uri = Uri::join_path(base_uri, [fragment])
+  let base_uri = @common.Uri::parse(base)
+  let new_uri = @common.Uri::join_path(base_uri, [fragment])
   let actual = new_uri.to_string(skip_encoding=true)
   assert_eq(actual, expected)
 }
@@ -695,28 +741,28 @@ test "URI#joinPath" {
 ///|
 test "panic URI#joinPath, no auto-path + no path (foo:)" {
   // no "auto-path" + no path -> error
-  ignore(Uri::join_path(Uri::parse("foo:"), ["bazz"]))
+  ignore(@common.Uri::join_path(@common.Uri::parse("foo:"), ["bazz"]))
 }
 
 ///|
 test "panic URI#joinPath, no auto-path + no path (foo://bar)" {
-  ignore(Uri::join_path(Uri::parse("foo://bar"), ["bazz"]))
+  ignore(@common.Uri::join_path(@common.Uri::parse("foo://bar"), ["bazz"]))
 }
 
 ///|
 test "URI#joinPath (posix)" {
-  set_is_windows_for_testing(value=false)
+  @common.set_is_windows_for_testing(value=false)
   assert_joined("file:///c:/foo/", "../../bazz", "file:///bazz")
   assert_joined("file://server/share/c:/", "../../bazz", "file://server/bazz")
   assert_joined("file://server/share/c:", "../../bazz", "file://server/bazz")
   assert_joined("file://ser/foo/", "../../bazz", "file://ser/bazz")
   assert_joined("file://ser/foo", "../../bazz", "file://ser/bazz")
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "URI#joinPath (windows)" {
-  set_is_windows_for_testing(value=true)
+  @common.set_is_windows_for_testing(value=true)
   assert_joined("file:///c:/foo/", "../../bazz", "file:///c:/bazz")
   assert_joined(
     "file://server/share/c:/", "../../bazz", "file://server/share/bazz",
@@ -731,23 +777,25 @@ test "URI#joinPath (windows)" {
   assert_joined(
     "file:///c:/foo/bar", "./other/foo.img", "file:///c:/foo/bar/other/foo.img",
   )
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 ///|
 test "vscode-uri: URI.toString() wrongly encode IPv6 literals #154048" {
   assert_eq(
-    Uri::parse("http://[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:80/index.html").to_string(),
+    @common.Uri::parse(
+      "http://[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:80/index.html",
+    ).to_string(),
     "http://[fedc:ba98:7654:3210:fedc:ba98:7654:3210]:80/index.html",
   )
   assert_eq(
-    Uri::parse(
+    @common.Uri::parse(
       "http://user@[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:80/index.html",
     ).to_string(),
     "http://user@[fedc:ba98:7654:3210:fedc:ba98:7654:3210]:80/index.html",
   )
   assert_eq(
-    Uri::parse(
+    @common.Uri::parse(
       "http://us[er@[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:80/index.html",
     ).to_string(),
     "http://us%5Ber@[fedc:ba98:7654:3210:fedc:ba98:7654:3210]:80/index.html",
@@ -756,9 +804,9 @@ test "vscode-uri: URI.toString() wrongly encode IPv6 literals #154048" {
 
 ///|
 test "File paths containing apostrophes break URI parsing and cannot be opened #276075" {
-  set_is_windows_for_testing(value=true)
+  @common.set_is_windows_for_testing(value=true)
   let file_path = "C:\\Users\\Abd-al-Haseeb's_Dell\\Studio\\w3mage\\wp-content\\database.ht.sqlite"
-  let uri = Uri::file(file_path)
+  let uri = @common.Uri::file(file_path)
   assert_eq(
     uri.path,
     "/C:/Users/Abd-al-Haseeb's_Dell/Studio/w3mage/wp-content/database.ht.sqlite",
@@ -767,7 +815,7 @@ test "File paths containing apostrophes break URI parsing and cannot be opened #
     uri.fs_path(),
     "c:\\Users\\Abd-al-Haseeb's_Dell\\Studio\\w3mage\\wp-content\\database.ht.sqlite",
   )
-  set_is_windows_for_testing()
+  @common.set_is_windows_for_testing()
 }
 
 // --- MoonBit-specific pins beyond the JS suite (test matrix, D3/D4/D6) ---
@@ -775,25 +823,27 @@ test "File paths containing apostrophes break URI parsing and cannot be opened #
 ///|
 test "strict-mode and scheme validation errors (each _validateUri branch)" {
   // missing scheme, strict
-  try Uri::parse("/relative/path", strict=true) |> ignore catch {
+  try @common.Uri::parse("/relative/path", strict=true) |> ignore catch {
     UriError(_) => ()
   } noraise {
     _ => fail("expected missing-scheme error")
   }
   // illegal scheme chars (space captured by the scheme scanner)
-  try Uri::parse("ht tp://example.com") |> ignore catch {
+  try @common.Uri::parse("ht tp://example.com") |> ignore catch {
     UriError(message) => assert_true(message.contains("illegal characters"))
   } noraise {
     _ => fail("expected illegal-scheme error")
   }
   // authority + path without leading slash
-  try Uri::from(scheme="s", authority="auth", path="relative") |> ignore catch {
+  try
+    @common.Uri::from(scheme="s", authority="auth", path="relative") |> ignore
+  catch {
     UriError(_) => ()
   } noraise {
     _ => fail("expected authority/path slash-rule error")
   }
   // no authority + `//` path via percent-decoded parse input
-  try Uri::parse("foo:%2F%2Fbar") |> ignore catch {
+  try @common.Uri::parse("foo:%2F%2Fbar") |> ignore catch {
     UriError(_) => ()
   } noraise {
     _ => fail("expected //-path error")
@@ -803,20 +853,24 @@ test "strict-mode and scheme validation errors (each _validateUri branch)" {
 ///|
 test "non-ASCII and astral path round-trips (D4)" {
   // astral char U+1D49C (𝒜) → 4-byte UTF-8 percent encoding
-  let value = Uri::from(scheme="s", authority="a", path="/𝒜/file.txt")
+  let value = @common.Uri::from(
+    scheme="s",
+    authority="a",
+    path="/𝒜/file.txt",
+  )
   assert_eq(value.to_string(), "s://a/%F0%9D%92%9C/file.txt")
-  let round = Uri::parse(value.to_string())
+  let round = @common.Uri::parse(value.to_string())
   assert_eq(round.path, "/𝒜/file.txt")
   assert_true(round == value)
   // invalid %ZZ run decodes gracefully (raw text kept)
-  assert_eq(Uri::parse("s://a/%ZZ.txt").path, "/%ZZ.txt")
+  assert_eq(@common.Uri::parse("s://a/%ZZ.txt").path, "/%ZZ.txt")
   // double-encoded input round-trips through one decode
-  assert_eq(Uri::parse("s://a/%2520").path, "/%20")
+  assert_eq(@common.Uri::parse("s://a/%2520").path, "/%20")
 }
 
 ///|
 test "panic toString with lone surrogate raises like URIError (D4)" {
   let lone = Int::unsafe_to_char(0xD800).to_string()
-  let value = Uri::from(scheme="s", authority="a", path="/" + lone)
+  let value = @common.Uri::from(scheme="s", authority="a", path="/" + lone)
   ignore(value.to_string())
 }

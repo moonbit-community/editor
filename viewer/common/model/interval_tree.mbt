@@ -53,6 +53,12 @@ pub enum NodeColor {
 } derive(Eq, Debug)
 
 ///|
+pub extend NodeColor with Eq::{not_equal, equal}
+
+///|
+pub extend NodeColor with Debug::{to_repr}
+
+///|
 /// `Constants` bit layout of the packed `metadata` byte
 /// (`intervalTree.ts:29-56`).
 const COLOR_MASK : Int = 0b00000001

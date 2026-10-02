@@ -13,6 +13,12 @@ pub(all) struct PrefixSumIndexOfResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PrefixSumIndexOfResult with Eq::{not_equal, equal}
+
+///|
+pub extend PrefixSumIndexOfResult with Debug::{to_repr}
+
+///|
 /// Incrementally-cached prefix-sum computer over a mutable array of values.
 /// `get_index_of` is O(log n); mutations invalidate only the affected suffix of
 /// the cached prefix sums.

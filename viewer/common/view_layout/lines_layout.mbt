@@ -26,6 +26,12 @@ pub struct EditorWhitespace {
 } derive(Eq, Debug)
 
 ///|
+pub extend EditorWhitespace with Eq::{not_equal, equal}
+
+///|
+pub extend EditorWhitespace with Debug::{to_repr}
+
+///|
 /// Constructs a whitespace; `prefix_sum` starts at 0 (lazily computed).
 #alias(new, deprecated)
 pub fn EditorWhitespace::EditorWhitespace(
@@ -53,6 +59,12 @@ pub struct PartialViewLinesViewportData {
 } derive(Eq, Debug)
 
 ///|
+pub extend PartialViewLinesViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend PartialViewLinesViewportData with Debug::{to_repr}
+
+///|
 /// One whitespace positioned relative to a viewport — the Monaco
 /// `IViewWhitespaceViewportData` shape.
 pub struct ViewWhitespaceViewportData {
@@ -61,6 +73,12 @@ pub struct ViewWhitespaceViewportData {
   vertical_offset : Double
   height : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ViewWhitespaceViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend ViewWhitespaceViewportData with Debug::{to_repr}
 
 ///|
 priv struct PendingChange {

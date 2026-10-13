@@ -26,6 +26,12 @@ pub(all) enum ViewConfigurationOption {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewConfigurationOption with Eq::{not_equal, equal}
+
+///|
+pub extend ViewConfigurationOption with Debug::{to_repr}
+
+///|
 /// Source-shaped configuration payload.  `changed_options` is a typed bitset
 /// represented as a deduplicated array because the readonly viewer has a
 /// deliberately small option surface.
@@ -126,14 +132,14 @@ pub fn ViewScrollChangedEvent::ViewScrollChangedEvent(
 ///|
 /// Inclusive line range carried by `ViewTokensChangedEvent`.
 pub struct ViewTokenChangeRange {
-  priv from_line_number : Int
-  priv to_line_number : Int
+  priv from_line_number : Int32
+  priv to_line_number : Int32
 }
 
 ///|
 pub fn ViewTokenChangeRange::ViewTokenChangeRange(
-  from_line_number : Int,
-  to_line_number : Int,
+  from_line_number : Int32,
+  to_line_number : Int32,
 ) -> ViewTokenChangeRange {
   { from_line_number, to_line_number, }
 }

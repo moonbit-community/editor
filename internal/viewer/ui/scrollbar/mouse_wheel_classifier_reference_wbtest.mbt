@@ -7,7 +7,7 @@
 fn run_classifier_trace(
   label : String,
   expected_physical : Bool,
-  skip_first? : Bool = false,
+  skip_first~ : Bool = false,
 ) -> Unit raise {
   let classifier = MouseWheelClassifier()
   let trace = load_classifier_trace(label)
@@ -70,7 +70,9 @@ test "upstream classifier trace: Linux Wayland - Logitech G Pro Wireless" {
 }
 
 ///|
-extern "js" fn load_classifier_trace(label : String) -> Array[Array[Double]] =
+extern "js" fn load_classifier_trace(
+  label : String,
+) -> FixedArray[FixedArray[Double]] =
   #| (label) => {
   #|   const fs = process.getBuiltinModule('fs');
   #|   const path = process.getBuiltinModule('path');

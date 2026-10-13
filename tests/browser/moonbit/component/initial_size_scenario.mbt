@@ -6,7 +6,7 @@
 
 ///|
 priv struct InitialSizeCountingTokenizer {
-  calls : Ref[Int]
+  calls : Ref[Int32]
 }
 
 ///|

@@ -19,9 +19,15 @@ pub(all) struct LinesDiffComputerOptions {
   ignore_trim_whitespace : Bool
   /// `0` disables the computation budget entirely (Monaco's
   /// `InfiniteTimeout`).
-  max_computation_time_ms : Int
+  max_computation_time_ms : Int32
   compute_moves : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend LinesDiffComputerOptions with Eq::{not_equal, equal}
+
+///|
+pub extend LinesDiffComputerOptions with Debug::{to_repr}
 
 ///|
 /// `LinesDiff` (`linesDiffComputer.ts:19`).
@@ -37,6 +43,12 @@ pub struct LinesDiff {
 } derive(Eq, Debug)
 
 ///|
+pub extend LinesDiff with Eq::{not_equal, equal}
+
+///|
+pub extend LinesDiff with Debug::{to_repr}
+
+///|
 /// `MovedText` (`linesDiffComputer.ts:38`).
 pub struct MovedText {
   line_range_mapping : LineRangeMapping
@@ -45,6 +57,12 @@ pub struct MovedText {
   /// change (only moved).
   changes : Array[DetailedLineRangeMapping]
 } derive(Eq, Debug)
+
+///|
+pub extend MovedText with Eq::{not_equal, equal}
+
+///|
+pub extend MovedText with Debug::{to_repr}
 
 ///|
 pub fn MovedText::MovedText(

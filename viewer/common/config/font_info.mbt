@@ -80,6 +80,12 @@ pub struct EditorFontDefaults {
 } derive(Eq, Debug)
 
 ///|
+pub extend EditorFontDefaults with Eq::{not_equal, equal}
+
+///|
+pub extend EditorFontDefaults with Debug::{to_repr}
+
+///|
 pub let editor_font_defaults : EditorFontDefaults = editor_font_defaults_for_platform(
   current_font_platform(),
 )
@@ -114,9 +120,15 @@ pub struct BareFontInfo {
   font_size : Double
   font_feature_settings : String
   font_variation_settings : String
-  line_height : Int
+  line_height : Int32
   letter_spacing : Double
 } derive(Eq, Debug)
+
+///|
+pub extend BareFontInfo with Eq::{not_equal, equal}
+
+///|
+pub extend BareFontInfo with Debug::{to_repr}
 
 ///|
 /// Monaco `BareFontInfo._create`: `lineHeight == 0` derives the golden-ratio
@@ -257,7 +269,7 @@ fn parse_decimal_prefix(value : String) -> String {
 ///|
 /// Leading whitespace accepted by ECMAScript `StringNumericLiteral`, which is
 /// what `parseInt` trims before reading its optional sign and decimal prefix.
-fn is_ecmascript_whitespace(code : Int) -> Bool {
+fn is_ecmascript_whitespace(code : Int32) -> Bool {
   (code >= 0x0009 && code <= 0x000D) ||
   code == 0x0020 ||
   code == 0x00A0 ||
@@ -282,7 +294,7 @@ pub(all) struct FontInfo {
   font_size : Double
   font_feature_settings : String
   font_variation_settings : String
-  line_height : Int
+  line_height : Int32
   letter_spacing : Double
   is_trusted : Bool
   is_monospace : Bool
@@ -294,6 +306,12 @@ pub(all) struct FontInfo {
   wsmiddot_width : Double
   max_digit_width : Double
 } derive(Eq, Debug)
+
+///|
+pub extend FontInfo with Eq::{not_equal, equal}
+
+///|
+pub extend FontInfo with Debug::{to_repr}
 
 ///|
 /// An estimated `FontInfo` for a `BareFontInfo` that has not been measured

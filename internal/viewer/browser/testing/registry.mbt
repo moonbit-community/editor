@@ -3,7 +3,7 @@
 /// package deliberately knows a viewer only by its stable public id and
 /// callback surface, keeping the dependency direction toward root one-way.
 priv struct ViewerTestingEntry {
-  registration_id : Int
+  registration_id : Int32
   has_model : () -> Bool
   set_hidden_areas : (Array[@base_common.Range], String?, Bool) -> Unit
   did_build_view_model : @base_common.Emitter[ViewModelBuiltObservation]
@@ -16,7 +16,7 @@ priv struct ViewerTestingEntry {
 let viewer_entries : Map[String, ViewerTestingEntry] = Map([])
 
 ///|
-let next_registration_id : Ref[Int] = Ref(0)
+let next_registration_id : Ref[Int32] = Ref(0)
 
 ///|
 fn ViewerTestingEntry::dispose(self : ViewerTestingEntry) -> Unit {
@@ -27,7 +27,7 @@ fn ViewerTestingEntry::dispose(self : ViewerTestingEntry) -> Unit {
 }
 
 ///|
-fn unregister_if_current(viewer_id : String, registration_id : Int) -> Unit {
+fn unregister_if_current(viewer_id : String, registration_id : Int32) -> Unit {
   match viewer_entries.get(viewer_id) {
     Some(entry) if entry.registration_id == registration_id => {
       viewer_entries.remove(viewer_id)
@@ -94,7 +94,7 @@ pub fn set_hidden_areas(
   viewer_id : String,
   ranges : Array[@base_common.Range],
   source? : String,
-  force_update? : Bool = false,
+  force_update~ : Bool = false,
 ) -> Bool {
   match viewer_entries.get(viewer_id) {
     Some(entry) => {

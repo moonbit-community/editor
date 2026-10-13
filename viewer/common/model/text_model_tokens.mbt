@@ -8,12 +8,12 @@
 
 ///|
 /// Private maximum-line sentinel used only when no invalid frontier exists.
-const MAX_LINE_NUMBER_SENTINEL : Int = 0x7FFFFFFF
+const MAX_LINE_NUMBER_SENTINEL : Int32 = 0x7FFFFFFF
 
 ///|
 /// Raw start-offset token words and carried state.
 priv struct EncodedTokenizationResult {
-  tokens : Array[UInt]
+  tokens : Array[UInt32]
   end_state : @syntax.TokenizerState
 }
 
@@ -94,7 +94,7 @@ fn TokenizationStateStore::TokenizationStateStore() -> TokenizationStateStore {
 /// Returns one exact one-based end state.
 fn TokenizationStateStore::get_end_state(
   self : TokenizationStateStore,
-  line_number : Int,
+  line_number : Int32,
 ) -> @syntax.TokenizerState? {
   if line_number < 0 || line_number >= self.line_end_states.length() {
     None
@@ -107,7 +107,7 @@ fn TokenizationStateStore::get_end_state(
 /// Stores a changed state; equal values preserve the prior cell and return false.
 fn TokenizationStateStore::set_end_state(
   self : TokenizationStateStore,
-  line_number : Int,
+  line_number : Int32,
   state : @syntax.TokenizerState,
 ) -> Bool {
   match self.get_end_state(line_number) {
@@ -135,7 +135,7 @@ fn RangePriorityQueueImpl::RangePriorityQueueImpl() -> RangePriorityQueueImpl {
 
 ///|
 /// Smallest queued line, or `None`.
-fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
+fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int32? {
   if self.ranges.is_empty() {
     None
   } else {
@@ -147,7 +147,7 @@ fn RangePriorityQueueImpl::min(self : RangePriorityQueueImpl) -> Int? {
 /// Deletes one queued line, trimming/removing/splitting its containing range.
 fn RangePriorityQueueImpl::delete(
   self : RangePriorityQueueImpl,
-  value : Int,
+  value : Int32,
 ) -> Unit {
   let mut index = -1
   for i, range in self.ranges {
@@ -186,7 +186,7 @@ fn RangePriorityQueueImpl::add_range(
 ///|
 /// Invalid-line record with its required carried start state.
 priv struct FirstInvalidLine {
-  line_number : Int
+  line_number : Int32
   start_state : @syntax.TokenizerState
 }
 
@@ -195,13 +195,13 @@ priv struct FirstInvalidLine {
 priv struct TrackingTokenizationStateStore {
   tokenization_state_store : TokenizationStateStore
   invalid_end_states_line_numbers : RangePriorityQueueImpl
-  line_count : Int
+  line_count : Int32
 }
 
 ///|
 /// Seeds every one-based line invalid as `[1,line_count+1)`.
 fn TrackingTokenizationStateStore::TrackingTokenizationStateStore(
-  line_count : Int,
+  line_count : Int32,
 ) -> TrackingTokenizationStateStore {
   let invalid = RangePriorityQueueImpl()
   invalid.add_range(OffsetRange(1, line_count + 1))
@@ -216,7 +216,7 @@ fn TrackingTokenizationStateStore::TrackingTokenizationStateStore(
 /// Returns one exact line end state.
 fn TrackingTokenizationStateStore::get_end_state(
   self : TrackingTokenizationStateStore,
-  line_number : Int,
+  line_number : Int32,
 ) -> @syntax.TokenizerState? {
   self.tokenization_state_store.get_end_state(line_number)
 }
@@ -225,7 +225,7 @@ fn TrackingTokenizationStateStore::get_end_state(
 /// Commits a state and invalidates only its successor when changed and nonfinal.
 fn TrackingTokenizationStateStore::set_end_state(
   self : TrackingTokenizationStateStore,
-  line_number : Int,
+  line_number : Int32,
   state : @syntax.TokenizerState,
 ) -> Bool {
   self.invalid_end_states_line_numbers.delete(line_number)
@@ -253,7 +253,7 @@ fn TrackingTokenizationStateStore::invalidate_end_state_range(
 /// Smallest invalid line or `None`.
 fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(
   self : TrackingTokenizationStateStore,
-) -> Int? {
+) -> Int32? {
   self.invalid_end_states_line_numbers.min()
 }
 
@@ -261,7 +261,7 @@ fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number(
 /// Smallest invalid line or the private maximum-line sentinel.
 fn TrackingTokenizationStateStore::get_first_invalid_end_state_line_number_or_max(
   self : TrackingTokenizationStateStore,
-) -> Int {
+) -> Int32 {
   match self.get_first_invalid_end_state_line_number() {
     Some(line) => line
     None => MAX_LINE_NUMBER_SENTINEL
@@ -280,7 +280,7 @@ fn TrackingTokenizationStateStore::all_states_valid(
 /// Initial state for line one, predecessor end state otherwise.
 fn TrackingTokenizationStateStore::get_start_state(
   self : TrackingTokenizationStateStore,
-  line_number : Int,
+  line_number : Int32,
   initial_state : @syntax.TokenizerState,
 ) -> @syntax.TokenizerState? {
   if line_number == 1 {
@@ -316,7 +316,7 @@ priv struct TokenizerWithStateStore {
 ///|
 /// Calls support initial-state acquisition and seeds the exact line count.
 fn TokenizerWithStateStore::TokenizerWithStateStore(
-  line_count : Int,
+  line_count : Int32,
   tokenization_support : InternalTokenizationSupportAdapter,
 ) -> TokenizerWithStateStore raise {
   {
@@ -330,7 +330,7 @@ fn TokenizerWithStateStore::TokenizerWithStateStore(
 /// Start state for an exact one-based line.
 fn TokenizerWithStateStore::get_start_state(
   self : TokenizerWithStateStore,
-  line_number : Int,
+  line_number : Int32,
 ) -> @syntax.TokenizerState? {
   self.store.get_start_state(line_number, self.initial_state_value)
 }
@@ -354,7 +354,7 @@ priv struct TokenizerWithStateStoreAndTextModel {
 ///|
 /// Preserves base initialization before retaining live model-state facts.
 fn TokenizerWithStateStoreAndTextModel::TokenizerWithStateStoreAndTextModel(
-  line_count : Int,
+  line_count : Int32,
   tokenization_support : InternalTokenizationSupportAdapter,
   model_state : TokenizationModelState,
   language_id_codec : @services.LanguageIdCodec,
@@ -379,7 +379,7 @@ fn TokenizerWithStateStoreAndTextModel::get_first_invalid_line(
 fn TokenizerWithStateStoreAndTextModel::update_tokens_until_line(
   self : TokenizerWithStateStoreAndTextModel,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
-  line_number : Int,
+  line_number : Int32,
 ) -> Unit {
   for ;; {
     guard self.base.get_first_invalid_line() is Some(line_to_tokenize) &&
@@ -418,8 +418,8 @@ priv struct HeuristicTokenizationResult {
 fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
   self : TokenizerWithStateStoreAndTextModel,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
 ) -> HeuristicTokenizationResult {
   let first_invalid = self.base.store.get_first_invalid_end_state_line_number_or_max()
   if end_line_number <= first_invalid {
@@ -451,7 +451,7 @@ fn TokenizerWithStateStoreAndTextModel::tokenize_heuristically(
 /// Finds likely indentation ancestors and replays them without EOL.
 fn TokenizerWithStateStoreAndTextModel::guess_start_state(
   self : TokenizerWithStateStoreAndTextModel,
-  line_number : Int,
+  line_number : Int32,
 ) -> @syntax.TokenizerState {
   let relevant = find_likely_relevant_lines(
     self.model_state,
@@ -463,7 +463,7 @@ fn TokenizerWithStateStoreAndTextModel::guess_start_state(
     None =>
       self.base.tokenization_support.initial_state() catch {
         error => {
-          (self.model_state.report_unexpected_error)("\{to_repr(error)}")
+          (self.model_state.report_unexpected_error)("\{Repr(error)}")
           self.base.initial_state_value
         }
       }
@@ -495,7 +495,7 @@ priv struct LikelyRelevantLines {
 /// returns ancestors in forward order plus the first cached start state.
 fn find_likely_relevant_lines(
   model_state : TokenizationModelState,
-  line_number : Int,
+  line_number : Int32,
   store : TokenizerWithStateStore?,
 ) -> LikelyRelevantLines {
   let mut non_whitespace_column = model_state.snapshot.val.get_line_first_non_whitespace_column(
@@ -545,7 +545,7 @@ fn safe_tokenize(
   match support {
     Some(tokenization_support) =>
       try tokenization_support.tokenize(text, has_eol, state) catch {
-        error => (model_state.report_unexpected_error)("\{to_repr(error)}")
+        error => (model_state.report_unexpected_error)("\{Repr(error)}")
       } noraise {
         value => result = Some(value)
       }
@@ -595,7 +595,7 @@ priv struct DefaultBackgroundTokenizer {
   background_token_store : BackgroundTokenizationStore
   mut is_disposed : Bool
   mut is_scheduled : Bool
-  generation : Ref[Int]
+  generation : Ref[Int32]
   mut idle_handle : @base_common.Disposable?
   mut zero_handles : Array[@base_common.Disposable]
 }
@@ -694,7 +694,7 @@ fn DefaultBackgroundTokenizer::begin_background_tokenization(
 fn DefaultBackgroundTokenizer::background_tokenize_with_deadline(
   self : DefaultBackgroundTokenizer,
   deadline : TokenizationIdleDeadline,
-  generation : Int,
+  generation : Int32,
 ) -> Unit {
   let remaining = deadline.time_remaining()
   guard self.tokenizer_with_state_store.model_state.scheduler.val
@@ -710,7 +710,7 @@ fn DefaultBackgroundTokenizer::background_tokenize_with_deadline(
 fn DefaultBackgroundTokenizer::execute_slice_until_deadline(
   self : DefaultBackgroundTokenizer,
   end_time : Double,
-  generation : Int,
+  generation : Int32,
 ) -> Unit {
   if self.is_disposed ||
     generation != self.generation.val ||
@@ -775,7 +775,7 @@ fn DefaultBackgroundTokenizer::has_lines_to_tokenize(
 fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
   self : DefaultBackgroundTokenizer,
   builder : @common_tokens.ContiguousMultilineTokensBuilder,
-) -> Int {
+) -> Int32 {
   guard self.tokenizer_with_state_store.get_first_invalid_line()
     is Some(first_invalid) else {
     return self.tokenizer_with_state_store.model_state.snapshot.val.line_count() +
@@ -792,8 +792,8 @@ fn DefaultBackgroundTokenizer::tokenize_one_invalid_line(
 /// Marks the exact requested half-open range invalid; callers own scheduling.
 fn DefaultBackgroundTokenizer::request_tokens(
   self : DefaultBackgroundTokenizer,
-  start_line_number : Int,
-  end_line_number_exclusive : Int,
+  start_line_number : Int32,
+  end_line_number_exclusive : Int32,
 ) -> Unit {
   self.tokenizer_with_state_store.base.store.invalidate_end_state_range(
     LineRange(start_line_number, end_line_number_exclusive),

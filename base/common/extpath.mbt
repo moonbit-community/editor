@@ -7,13 +7,13 @@
 /// `[\\/]` → `sep` global replace (the regex bodies of extpath.ts:22 and
 /// extpath.ts:71).
 fn replace_path_separators(os_path : String, sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<os_path.length() {
     let code = os_path[i].to_int()
     if is_path_separator(code) {
       sb.write_string(sep)
     } else {
-      sb.write_char(Int::unsafe_to_char(code))
+      sb.write_char(Int32::unsafe_to_char(code))
     }
   }
   sb.to_string()
@@ -136,7 +136,7 @@ pub fn is_equal_or_parent(
   base : String,
   parent_candidate : String,
   ignore_case : Bool,
-  force_posix_semantics? : Bool = false,
+  force_posix_semantics~ : Bool = false,
 ) -> Bool {
   let separator = if force_posix_semantics { Posix::sep() } else { sep() }
   let mut base = base
@@ -184,7 +184,7 @@ pub fn is_equal_or_parent(
 
 ///|
 /// `isWindowsDriveLetter` (extpath.ts:275).
-pub fn is_windows_drive_letter(char0 : Int) -> Bool {
+pub fn is_windows_drive_letter(char0 : Int32) -> Bool {
   (char0 >= 'A'.to_int() && char0 <= 'Z'.to_int()) ||
   (char0 >= 'a'.to_int() && char0 <= 'z'.to_int())
 }

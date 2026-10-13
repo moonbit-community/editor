@@ -35,6 +35,12 @@
 pub struct DefaultLinesDiffComputer {} derive(Eq, Debug)
 
 ///|
+pub extend DefaultLinesDiffComputer with Eq::{not_equal, equal}
+
+///|
+pub extend DefaultLinesDiffComputer with Debug::{to_repr}
+
+///|
 #warnings("-unnecessary_annotation")
 #alias(new, deprecated)
 pub fn DefaultLinesDiffComputer::DefaultLinesDiffComputer() -> DefaultLinesDiffComputer {
@@ -101,7 +107,7 @@ pub fn DefaultLinesDiffComputer::compute_diff(
   } else {
     modified_lines
   }
-  let cutoff : Int? = if options.max_computation_time_ms == 0 {
+  let cutoff : Int32? = if options.max_computation_time_ms == 0 {
     Some(0x7FFFFFFF)
   } else {
     None

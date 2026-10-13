@@ -136,7 +136,7 @@ pub fn remote_document_uri(raw_path : String) -> @base_common.Uri? {
 /// root-relative source path.
 pub fn resolve_remote_document_uri(
   uri : @base_common.Uri,
-  request_id? : String = "",
+  request_id~ : String = "",
 ) -> RemotePathResult {
   let raw = uri.to_string()
   let prefix = "readonly-remote://workspace/"
@@ -181,7 +181,7 @@ pub(all) enum RemoteDirectoryResult {
 /// rejects because documents always carry a path.
 pub fn resolve_remote_directory_uri(
   uri : @base_common.Uri,
-  request_id? : String = "",
+  request_id~ : String = "",
 ) -> RemoteDirectoryResult {
   if uri.to_string() == "readonly-remote://workspace" {
     return ParsedRemoteDirectory("", "workspace")

@@ -9,9 +9,15 @@
 ///|
 /// Inclusive visible model-line range supplied by a view.
 pub(all) struct VisibleLineRange {
-  start_line_number : Int
-  end_line_number : Int
+  start_line_number : Int32
+  end_line_number : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend VisibleLineRange with Eq::{not_equal, equal}
+
+///|
+pub extend VisibleLineRange with Debug::{to_repr}
 
 ///|
 /// Immutable normalized visible ranges plus stabilization state.
@@ -60,7 +66,7 @@ priv struct AttachedViewStateChange {
 ///|
 /// One externally-owned attached-view handle.
 pub struct AttachedViewImpl {
-  priv id : Int
+  priv id : Int32
   priv mut state_value : AttachedViewState?
   priv handle_state_change : (AttachedViewImpl, AttachedViewState) -> Unit
 }
@@ -98,7 +104,7 @@ fn AttachedViewImpl::same(
 /// Owner of all live attached-view identities and aggregate ranges.
 priv struct AttachedViews {
   views : Array[AttachedViewImpl]
-  next_id : Ref[Int]
+  next_id : Ref[Int32]
   did_change_visible_ranges : @base_common.Emitter[AttachedViewStateChange]
 }
 
@@ -160,7 +166,7 @@ fn AttachedViews::dispose(self : AttachedViews) -> Unit {
 
 ///|
 /// Exact visible-range debounce delay from `AttachedViewHandler`.
-const ATTACHED_VIEW_REFRESH_DELAY_MS : Int = 50
+const ATTACHED_VIEW_REFRESH_DELAY_MS : Int32 = 50
 
 ///|
 /// Per-view stabilized/debounced visible refresh owner.
@@ -170,7 +176,7 @@ priv struct AttachedViewHandler {
   mut computed_line_ranges : Array[@base_common.LineRange]
   mut requested_line_ranges : Array[@base_common.LineRange]
   mut pending : @base_common.Disposable?
-  generation : Ref[Int]
+  generation : Ref[Int32]
   mut disposed : Bool
 }
 

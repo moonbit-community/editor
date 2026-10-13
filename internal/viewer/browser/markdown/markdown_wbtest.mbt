@@ -145,7 +145,10 @@ extern "js" fn install_markdown_test_dom() -> Unit =
 extern "js" fn markdown_test_target() -> @rdom.Element = "() => document.createElement('div')"
 
 ///|
-extern "js" fn markdown_test_count(target : @rdom.Element, tag : String) -> Int = "(target, tag) => target.querySelectorAll(tag).length"
+extern "js" fn markdown_test_count(
+  target : @rdom.Element,
+  tag : String,
+) -> Int32 = "(target, tag) => target.querySelectorAll(tag).length"
 
 ///|
 extern "js" fn markdown_test_find_text(
@@ -159,7 +162,7 @@ extern "js" fn markdown_test_find_text(
 extern "js" fn markdown_test_at(
   target : @rdom.Element,
   tag : String,
-  index : Int,
+  index : Int32,
 ) -> @rdom.Element = "(target, tag, index) => target.querySelectorAll(tag)[index]"
 
 ///|
@@ -172,7 +175,7 @@ extern "js" fn markdown_test_attribute(
 extern "js" fn markdown_test_listener_count(
   element : @rdom.Element,
   event_type : String,
-) -> Int = "(element, type) => element.listenerCount(type)"
+) -> Int32 = "(element, type) => element.listenerCount(type)"
 
 ///|
 extern "js" fn markdown_test_same_element(
@@ -184,7 +187,7 @@ extern "js" fn markdown_test_same_element(
 extern "js" fn markdown_test_dispatch_mouse(
   element : @rdom.Element,
   event_type : String,
-  button : Int,
+  button : Int32,
 ) -> Bool =
   #| (element, type, button) => {
   #|   const event = new Event(type, { cancelable: true });
@@ -211,11 +214,11 @@ extern "js" fn markdown_test_dispatch_load(element : @rdom.Element) -> Unit = "(
 ///|
 extern "js" fn markdown_test_dispatch_vertical_wheel(
   element : @rdom.Element,
-  delta_y : Int,
-  scroll_top : Int,
-  client_height : Int,
-  scroll_height : Int,
-) -> Int =
+  delta_y : Int32,
+  scroll_top : Int32,
+  client_height : Int32,
+  scroll_height : Int32,
+) -> Int32 =
   #| (element, deltaY, scrollTop, clientHeight, scrollHeight) => {
   #|   for (const [name, value] of Object.entries({
   #|     scrollLeft: 0,

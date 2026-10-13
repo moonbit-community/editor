@@ -72,8 +72,8 @@ pub fn GlobalPointerMoveMonitor::is_monitoring(
 pub fn GlobalPointerMoveMonitor::start_monitoring(
   self : GlobalPointerMoveMonitor,
   initial_element : @rdom.Element,
-  pointer_id : Int,
-  initial_buttons : Int,
+  pointer_id : Int32,
+  initial_buttons : Int32,
   pointer_move_callback : (@rdom.MouseEvent) -> Unit,
   on_stop_callback : (@rdom.Event?) -> Unit,
 ) -> Unit {
@@ -138,7 +138,7 @@ pub fn GlobalPointerMoveMonitor::start_monitoring(
 /// observable at this boundary.
 extern "js" fn try_set_pointer_capture(
   element : @rdom.Element,
-  pointer_id : Int,
+  pointer_id : Int32,
 ) -> Bool =
   #| (element, pointerId) => {
   #|   try {
@@ -154,7 +154,7 @@ extern "js" fn try_set_pointer_capture(
 /// dropped capture; Monaco deliberately ignores that DOMException.
 extern "js" fn release_pointer_capture_ignoring_errors(
   element : @rdom.Element,
-  pointer_id : Int,
+  pointer_id : Int32,
 ) -> Unit =
   #| (element, pointerId) => {
   #|   try {
@@ -167,7 +167,7 @@ extern "js" fn release_pointer_capture_ignoring_errors(
 ///|
 /// PointerEvent.pointerId gap-fill. Pointer events are MouseEvent subclasses,
 /// which is the event type exposed by the current Rabbita binding.
-pub extern "js" fn mouse_event_pointer_id(event : @rdom.MouseEvent) -> Int =
+pub extern "js" fn mouse_event_pointer_id(event : @rdom.MouseEvent) -> Int32 =
   #| (event) => typeof event.pointerId === "number" ? event.pointerId : 0
 
 ///|

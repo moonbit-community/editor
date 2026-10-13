@@ -29,3 +29,7 @@ import {
 }
 
 supported_targets = "js"
+
+// In-repo consumer of the deprecated `@viewer` API (deprecated for external users in favour of moonbitlang/editor).
+
+warnings = "-deprecated"

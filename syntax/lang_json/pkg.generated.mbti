@@ -14,9 +14,10 @@ pub struct JsonTokenizer {
 }
 #alias(new, deprecated)
 pub fn JsonTokenizer::JsonTokenizer() -> Self
+pub fn JsonTokenizer::initial_state(Self) -> @syntax.TokenizerState
+pub fn JsonTokenizer::tokenize_line(Self, String, @syntax.TokenizerState) -> (Array[@syntax.LineToken], @syntax.TokenizerState)
 pub impl @syntax.LineTokenizer for JsonTokenizer
 
 // Type aliases
 
 // Traits
-

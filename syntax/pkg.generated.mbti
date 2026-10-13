@@ -35,6 +35,11 @@ pub(all) enum HighlightTag {
   Attribute
   Invalid
 } derive(Eq, @debug.Debug)
+pub fn HighlightTag::equal(Self, Self) -> Bool
+pub fn HighlightTag::not_equal(Self, Self) -> Bool
+pub fn HighlightTag::output(Self, &Logger) -> Unit
+pub fn HighlightTag::to_repr(Self) -> @debug.Repr
+pub fn HighlightTag::to_string(Self) -> String
 pub impl Show for HighlightTag
 
 pub(all) struct LineToken {
@@ -42,11 +47,16 @@ pub(all) struct LineToken {
   end : Int
   tag : HighlightTag
 } derive(Eq, @debug.Debug)
+pub fn LineToken::equal(Self, Self) -> Bool
+pub fn LineToken::not_equal(Self, Self) -> Bool
+pub fn LineToken::to_repr(Self) -> @debug.Repr
 
 pub struct PlainTokenizer {
 }
 #alias(new, deprecated)
 pub fn PlainTokenizer::PlainTokenizer() -> Self
+pub fn PlainTokenizer::initial_state(Self) -> TokenizerState
+pub fn PlainTokenizer::tokenize_line(Self, String, TokenizerState) -> (Array[LineToken], TokenizerState)
 pub impl LineTokenizer for PlainTokenizer
 
 pub struct TokenizationChangedEvent {
@@ -69,6 +79,9 @@ pub fn TokenizationRegistry::register(Self, String, &LineTokenizer) -> @common.D
 pub fn TokenizationRegistry::set_color_map(Self, Array[String]) -> Unit
 
 pub(all) struct TokenizerState(String) derive(Eq, @debug.Debug)
+pub fn TokenizerState::equal(Self, Self) -> Bool
+pub fn TokenizerState::not_equal(Self, Self) -> Bool
+pub fn TokenizerState::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
@@ -77,4 +90,3 @@ pub(open) trait LineTokenizer {
   fn initial_state(Self) -> TokenizerState
   fn tokenize_line(Self, String, TokenizerState) -> (Array[LineToken], TokenizerState)
 }
-

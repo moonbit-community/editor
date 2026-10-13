@@ -21,6 +21,9 @@ pub(all) enum ContentWidgetPositionPreference {
 } derive(Eq)
 
 ///|
+pub extend ContentWidgetPositionPreference with Eq::{not_equal, equal}
+
+///|
 /// Monaco `IContentWidgetPosition` (`editorBrowser.ts`): the model-space
 /// anchors, nullable placement preference order, and affinity. Affinity is
 /// retained and fed back into model-to-view conversion whenever mappings
@@ -41,12 +44,24 @@ pub(all) struct ContentWidgetDimension {
 } derive(Eq, Debug)
 
 ///|
+pub extend ContentWidgetDimension with Eq::{not_equal, equal}
+
+///|
+pub extend ContentWidgetDimension with Debug::{to_repr}
+
+///|
 /// Monaco `IContentWidgetRenderedCoordinate`, passed to `afterRender` after
 /// the write phase has selected and applied a concrete placement.
 pub struct ContentWidgetRenderedCoordinate {
   top : Double
   left : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ContentWidgetRenderedCoordinate with Eq::{not_equal, equal}
+
+///|
+pub extend ContentWidgetRenderedCoordinate with Debug::{to_repr}
 
 ///|
 /// Value-level adapter for Monaco's `IContentWidget` (`editorBrowser.ts`).
@@ -74,8 +89,8 @@ pub fn ContentWidgetHandle::ContentWidgetHandle(
   get_id : () -> String,
   get_dom_node : () -> @rdom.Element,
   get_position : () -> ContentWidgetPosition?,
-  allow_editor_overflow? : Bool = false,
-  use_display_none? : Bool = false,
+  allow_editor_overflow~ : Bool = false,
+  use_display_none~ : Bool = false,
   before_render? : () -> ContentWidgetDimension? raise,
   after_render? : (
     ContentWidgetPositionPreference?,
@@ -391,10 +406,10 @@ fn ContentWidgets::widget_ids_snapshot(self : ContentWidgets) -> Array[String] {
 pub(all) struct ContentWidgetsRenderContext {
   /// Content-space vertical offset of a view line
   /// (`ctx.getVerticalOffsetForLineNumber`).
-  vertical_offset_for_line : (Int) -> Double
+  vertical_offset_for_line : (Int32) -> Double
   /// Monaco `getLineHeightForLineNumber`; the current uniform-height product
   /// still preserves the exact queried line through this capability.
-  line_height_for_line : (Int) -> Double
+  line_height_for_line : (Int32) -> Double
   /// Monaco `RenderingContext.visibleRangeForPosition(...).left`: a rounded,
   /// DOM-measured caret x, or `None` when the line is not rendered.
   visible_range_for_position : (@base_common.Position) -> Double?
@@ -413,8 +428,8 @@ pub(all) struct ContentWidgetsRenderContext {
 /// rendering and the later DOM-read phase begin.
 fn ContentWidgets::on_before_render_widgets(
   self : ContentWidgets,
-  viewport_start : Int,
-  viewport_end : Int,
+  viewport_start : Int32,
+  viewport_end : Int32,
 ) -> Unit {
   let widget_ids = self.widget_ids_snapshot()
   for widget_id in widget_ids {
@@ -572,8 +587,8 @@ fn Widget::update_anchor_view_position(
 /// max-width write.
 fn Widget::on_before_render(
   self : Widget,
-  viewport_start : Int,
-  viewport_end : Int,
+  viewport_start : Int32,
+  viewport_end : Int32,
 ) -> Unit {
   guard self.primary_anchor.view_position is Some(primary) &&
     self.preference is Some(_) else {

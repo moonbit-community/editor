@@ -160,7 +160,7 @@ let hidden_range_decoration : @model.ModelDecorationOptions = ModelDecorationOpt
 /// directly.
 pub struct FoldingDecorationProvider {
   priv model : @model.TextModel
-  priv owner_id : Int
+  priv owner_id : Int32
   mut show_folding_controls : @editor_api.ShowFoldingControls
   mut show_folding_highlights : Bool
 }
@@ -169,7 +169,7 @@ pub struct FoldingDecorationProvider {
 #alias(new, deprecated)
 pub fn FoldingDecorationProvider::FoldingDecorationProvider(
   model : @model.TextModel,
-  owner_id? : Int = 0,
+  owner_id~ : Int32 = 0,
 ) -> FoldingDecorationProvider {
   {
     model,

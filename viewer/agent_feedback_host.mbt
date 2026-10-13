@@ -26,7 +26,7 @@
 ///|
 /// `_RESERVED_GUTTER_WIDTH` (`agentFeedbackEditorInputContribution.ts:252`):
 /// extra lane width reserved so the add glyph renders fully.
-let agent_feedback_reserved_gutter_px : Int = 18
+let agent_feedback_reserved_gutter_px : Int32 = 18
 
 ///|
 /// The overlay-widget id of the singleton input widget
@@ -226,7 +226,10 @@ fn Viewer::on_agent_feedback_mouse_move(
 ///|
 /// `_updateHoverGlyph` and its gates: a valid, non-empty line in an enabled
 /// resource whose line has no existing feedback.
-fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit {
+fn Viewer::update_agent_feedback_hover_glyph(
+  self : Viewer,
+  line : Int32,
+) -> Unit {
   guard self.agent_feedback_input_contribution() is Some(ic) else { return }
   guard self.get_model() is Some(model) else {
     self.clear_agent_feedback_hover_glyph()
@@ -280,7 +283,7 @@ fn Viewer::update_agent_feedback_hover_glyph(self : Viewer, line : Int) -> Unit 
 /// resolved item is invisible, so its line offers the add affordance again).
 fn agent_feedback_line_has_feedback(
   items : Array[@agent_feedback_api.AgentFeedback],
-  line : Int,
+  line : Int32,
 ) -> Bool {
   items.search_by(item => {
     item.state != Resolved &&
@@ -383,7 +386,7 @@ fn Viewer::on_agent_feedback_mouse_up(
 /// `_selectLine`: select the whole clicked line, focus the editor (the
 /// selection-change handler opens the input synchronously), then move focus
 /// into the input so typing can start immediately.
-fn Viewer::select_agent_feedback_line(self : Viewer, line : Int) -> Unit {
+fn Viewer::select_agent_feedback_line(self : Viewer, line : Int32) -> Unit {
   if self.agent_feedback_input_visible() && self.agent_feedback_has_draft() {
     self.focus_agent_feedback_input()
     return

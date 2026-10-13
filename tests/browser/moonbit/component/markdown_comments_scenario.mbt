@@ -271,7 +271,7 @@ fn run_markdown_comments_test() -> Unit {
 ///|
 fn poll_markdown_comments_ready(
   ctx : @support.BrowserTestContext,
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   let zones = @support.query_count(".moonbit-viewer-markdown-comment")
   let diagrams = @support.query_count(
@@ -316,7 +316,7 @@ extern "js" fn install_markdown_comments_controls(
   restore_initial : () -> Unit,
   folding_source : () -> Unit,
   offscreen_source : () -> Unit,
-  resize : (Int) -> Unit,
+  resize : (Int32) -> Unit,
   set_model_selection : () -> Unit,
   focus : () -> Unit,
   detach : () -> Unit,

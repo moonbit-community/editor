@@ -21,7 +21,7 @@ pub struct MoonCheckDiagnostics {
 pub fn MoonCheckDiagnostics::MoonCheckDiagnostics(
   root : String,
   publish : (@base_common.Uri, String, Array[@language.Diagnostic]) -> Unit,
-  moon_command? : String = "moon",
+  moon_command~ : String = "moon",
 ) -> MoonCheckDiagnostics {
   {
     root: normalize_host_path(root),
@@ -62,6 +62,11 @@ pub fn MoonCheckDiagnostics::schedule(
   }
   self.running.val = true
   spawn_task(() => {
+    // Release the single-flight flag even if the run is cancelled: `catch` in
+    // `run_once` no longer captures cancellation (moonbitlang/async >= 0.22).
+    defer {
+      self.running.val = false
+    }
     for ;; {
       self.dirty.val = false
       self.run_once()
@@ -69,7 +74,6 @@ pub fn MoonCheckDiagnostics::schedule(
         break
       }
     }
-    self.running.val = false
   })
 }
 

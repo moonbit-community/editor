@@ -33,7 +33,7 @@ pub fn Disposable::dispose(self : Disposable) -> Unit {
 
 ///|
 priv struct ListenerCell[T] {
-  id : Int
+  id : Int32
   listener : (T) -> Unit
   active : Ref[Bool]
 }
@@ -44,7 +44,7 @@ priv struct ListenerCell[T] {
 pub struct Emitter[T] {
   priv listeners : Array[ListenerCell[T]]
   priv disposed : Ref[Bool]
-  priv next_id : Ref[Int]
+  priv next_id : Ref[Int32]
 }
 
 ///|
@@ -139,7 +139,7 @@ pub struct MicrotaskEmitter[T] {
 #alias(new, deprecated)
 pub fn[T] MicrotaskEmitter::MicrotaskEmitter(
   merge? : (Array[T]) -> T,
-  schedule? : (() -> Unit) -> Unit = run => run(),
+  schedule~ : (() -> Unit) -> Unit = run => run(),
 ) -> MicrotaskEmitter[T] {
   { inner: Emitter(), queued_events: [], merge_fn: merge, schedule, }
 }

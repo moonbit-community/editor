@@ -18,8 +18,8 @@ fn both_comments() -> @languages.CommentRule {
 
 ///|
 fn block(
-  start_line_number : Int,
-  end_line_number_exclusive : Int,
+  start_line_number : Int32,
+  end_line_number_exclusive : Int32,
   markdown : String,
 ) -> @language.MarkdownCommentBlock {
   {
@@ -383,7 +383,7 @@ test "disposing an authoritative provider restores configuration fallback" {
 ///|
 priv struct ResolverMarkdownCommentProvider {
   blocks : Array[@language.MarkdownCommentBlock]
-  calls : Ref[Int]
+  calls : Ref[Int32]
 }
 
 ///|

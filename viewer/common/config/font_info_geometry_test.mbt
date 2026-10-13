@@ -18,14 +18,14 @@ fn bare(line_height : Double, font_size : Double) -> @config.BareFontInfo {
 ///|
 fn bare_variant(
   base : @config.BareFontInfo,
-  pixel_ratio? : Double = base.pixel_ratio,
-  font_family? : String = base.font_family,
-  font_weight? : String = base.font_weight,
-  font_size? : Double = base.font_size,
-  font_feature_settings? : String = base.font_feature_settings,
-  font_variation_settings? : String = base.font_variation_settings,
-  line_height? : Double = base.line_height.to_double(),
-  letter_spacing? : Double = base.letter_spacing,
+  pixel_ratio~ : Double = base.pixel_ratio,
+  font_family~ : String = base.font_family,
+  font_weight~ : String = base.font_weight,
+  font_size~ : Double = base.font_size,
+  font_feature_settings~ : String = base.font_feature_settings,
+  font_variation_settings~ : String = base.font_variation_settings,
+  line_height~ : Double = base.line_height.to_double(),
+  letter_spacing~ : Double = base.letter_spacing,
 ) -> @config.BareFontInfo {
   @config.BareFontInfo::create(
     font_family~,

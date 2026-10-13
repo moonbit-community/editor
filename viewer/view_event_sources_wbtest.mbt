@@ -11,8 +11,8 @@ fn test_configuration_changed_event(
   current_options : ViewerOptions,
   previous_font_info : @config.FontInfo,
   current_font_info : @config.FontInfo,
-  previous_soft_wrap_column : Int,
-  current_soft_wrap_column : Int,
+  previous_soft_wrap_column : Int32,
+  current_soft_wrap_column : Int32,
   layout_info_changed~ : Bool,
 ) -> @view.ViewConfigurationChangedEvent? {
   let previous = EditorConfigurationState(previous_options, previous_font_info)
@@ -42,7 +42,7 @@ fn test_configuration_changed_event(
 /// representation directly.
 extern "js" fn test_view_configuration_changed_options_length(
   event : @view.ViewConfigurationChangedEvent,
-) -> Int = "(event) => event.changed_options.length"
+) -> Int32 = "(event) => event.changed_options.length"
 
 ///|
 extern "js" fn test_view_configuration_has_changed(
@@ -53,19 +53,19 @@ extern "js" fn test_view_configuration_has_changed(
 ///|
 extern "js" fn test_view_tokens_range_count(
   event : @view.ViewTokensChangedEvent,
-) -> Int = "(event) => event.ranges.length"
+) -> Int32 = "(event) => event.ranges.length"
 
 ///|
 extern "js" fn test_view_tokens_range_from(
   event : @view.ViewTokensChangedEvent,
-  index : Int,
-) -> Int = "(event, index) => event.ranges[index].from_line_number"
+  index : Int32,
+) -> Int32 = "(event, index) => event.ranges[index].from_line_number"
 
 ///|
 extern "js" fn test_view_tokens_range_to(
   event : @view.ViewTokensChangedEvent,
-  index : Int,
-) -> Int = "(event, index) => event.ranges[index].to_line_number"
+  index : Int32,
+) -> Int32 = "(event, index) => event.ranges[index].to_line_number"
 
 ///|
 extern "js" fn test_view_scroll_width(
@@ -75,7 +75,7 @@ extern "js" fn test_view_scroll_width(
 ///|
 extern "js" fn test_view_scroll_flags(
   event : @view.ViewScrollChangedEvent,
-) -> Array[Bool] =
+) -> FixedArray[Bool] =
   #| (event) => [
   #|   event.scroll_width_changed,
   #|   event.scroll_left_changed,
@@ -86,7 +86,7 @@ extern "js" fn test_view_scroll_flags(
 ///|
 extern "js" fn test_view_cursor_selections(
   event : @view.ViewCursorStateChangedEvent,
-) -> Array[@core.Selection] = "(event) => event.selections"
+) -> FixedArray[@core.Selection] = "(event) => event.selections"
 
 ///|
 test "view configuration source preserves independent paint axes and no-op" {

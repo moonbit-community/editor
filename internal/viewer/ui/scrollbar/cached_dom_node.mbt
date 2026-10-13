@@ -12,6 +12,12 @@ pub(all) enum CssLength {
 } derive(Eq, Debug)
 
 ///|
+pub extend CssLength with Eq::{not_equal, equal}
+
+///|
+pub extend CssLength with Debug::{to_repr}
+
+///|
 /// `numberAsPixels` (`fastDomNode.ts:314-316`).
 pub fn number_as_pixels(value : CssLength) -> String {
   match value {

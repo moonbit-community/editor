@@ -8,12 +8,24 @@ pub(all) struct MarkdownCodeBlock {
 } derive(Eq, Debug)
 
 ///|
+pub extend MarkdownCodeBlock with Eq::{not_equal, equal}
+
+///|
+pub extend MarkdownCodeBlock with Debug::{to_repr}
+
+///|
 /// Safe HTML and the render fact browser consumers need for layout/class
 /// decisions.
 pub(all) struct MarkdownRenderFact {
   html : String
   has_code_block : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend MarkdownRenderFact with Eq::{not_equal, equal}
+
+///|
+pub extend MarkdownRenderFact with Debug::{to_repr}
 
 ///|
 /// Converts Markdown with cmark's safe HTML renderer. A code-block override is
@@ -99,7 +111,7 @@ fn markdown_conversion_result(
 
 ///|
 fn markdown_escape_html(text : String) -> String {
-  let escaped = StringBuilder::new(size_hint=text.length())
+  let escaped = StringBuilder(size_hint=text.length())
   for char in text {
     match char {
       '&' => escaped.write_string("&amp;")

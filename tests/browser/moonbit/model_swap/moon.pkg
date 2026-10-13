@@ -1,6 +1,5 @@
 import {
   "moonbit-community/editor/base/common" @base_common,
-  "moonbit-community/editor/language",
   "moonbit-community/editor/viewer",
   "moonbit-community/editor/viewer/common/markers",
   "moonbit-community/editor/viewer/common/model",
@@ -11,3 +10,7 @@ import {
 supported_targets = "js"
 
 pkgtype(kind: "executable")
+
+// In-repo consumer of the deprecated `@viewer` API (deprecated for external users in favour of moonbitlang/editor).
+
+warnings = "-deprecated"

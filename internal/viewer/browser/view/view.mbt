@@ -32,7 +32,7 @@ pub struct View {
 
 ///|
 pub fn View::View(
-  view_zones_configuration_reader? : () -> (Int, Double, Double) = () => {
+  view_zones_configuration_reader~ : () -> (Int32, Double, Double) = () => {
     (0, 0.0, 0.0)
   },
 ) -> View {
@@ -153,7 +153,7 @@ pub fn View::install_view_zones_context(
   self : View,
   view_model : @view_model.ViewModel,
   log_service : @log.LogHandle,
-  read_configuration : () -> (Int, Double, Double),
+  read_configuration : () -> (Int32, Double, Double),
   emit_view_zones_changed : () -> Unit,
 ) -> Unit {
   self.view_zones.install_context(
@@ -265,12 +265,12 @@ pub fn View::emit_view_zones_changed_then(
 /// editor root has DOM focus.
 fn get_editor_class_name(
   source_state : String,
-  focused? : Bool = false,
-  show_unused? : Bool = true,
-  show_deprecated? : Bool = true,
-  is_safari? : Bool = editor_browser_kind() == 1,
-  is_webkit_webview? : Bool = editor_browser_kind() == 2,
-  is_macos? : Bool = @base_common.is_macintosh,
+  focused~ : Bool = false,
+  show_unused~ : Bool = true,
+  show_deprecated~ : Bool = true,
+  is_safari~ : Bool = editor_browser_kind() == 1,
+  is_webkit_webview~ : Bool = editor_browser_kind() == 2,
+  is_macos~ : Bool = @base_common.is_macintosh,
 ) -> String {
   "monaco-editor moonbit-viewer readonly-editor" +
   " " +
@@ -304,7 +304,7 @@ fn extra_editor_class_name(
 /// Runtime browser facts use the same UA predicates as VS Code's
 /// `base/browser/browser.ts`.  `0` is the non-Safari/non-WebKit-WebView arm,
 /// `1` Safari, and `2` native WebKit WebView.
-extern "js" fn editor_browser_kind() -> Int =
+extern "js" fn editor_browser_kind() -> Int32 =
   #| () => {
   #|   if (typeof navigator === "undefined") return 0;
   #|   const userAgent = navigator.userAgent || "";
@@ -320,8 +320,8 @@ extern "js" fn editor_browser_kind() -> Int =
 /// The empty-state root classes for the Viewer-owned no-model placeholder
 /// element (the `View` itself only exists while a model is attached).
 pub fn empty_editor_class_name(
-  show_unused? : Bool = true,
-  show_deprecated? : Bool = true,
+  show_unused~ : Bool = true,
+  show_deprecated~ : Bool = true,
 ) -> String {
   get_editor_class_name("source-empty", show_unused~, show_deprecated~)
 }

@@ -18,22 +18,28 @@
 /// A whitespace (view zone) that displaces the lines after `after_line_number`.
 pub struct EditorWhitespace {
   id : String
-  mut after_line_number : Int
-  ordinal : Int
-  mut height : Int
-  min_width : Int
+  mut after_line_number : Int32
+  ordinal : Int32
+  mut height : Int32
+  min_width : Int32
   mut prefix_sum : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EditorWhitespace with Eq::{not_equal, equal}
+
+///|
+pub extend EditorWhitespace with Debug::{to_repr}
 
 ///|
 /// Constructs a whitespace; `prefix_sum` starts at 0 (lazily computed).
 #alias(new, deprecated)
 pub fn EditorWhitespace::EditorWhitespace(
   id : String,
-  after_line_number : Int,
-  ordinal : Int,
-  height : Int,
-  min_width : Int,
+  after_line_number : Int32,
+  ordinal : Int32,
+  height : Int32,
+  min_width : Int32,
 ) -> EditorWhitespace {
   { id, after_line_number, ordinal, height, min_width, prefix_sum: 0.0, }
 }
@@ -42,31 +48,43 @@ pub fn EditorWhitespace::EditorWhitespace(
 /// Lines and relative offsets positioned between two vertical offsets — the
 /// Monaco `IPartialViewLinesViewportData` shape.
 pub struct PartialViewLinesViewportData {
-  big_numbers_delta : Int
-  start_line_number : Int
-  end_line_number : Int
+  big_numbers_delta : Int32
+  start_line_number : Int32
+  end_line_number : Int32
   relative_vertical_offset : Array[Double]
-  centered_line_number : Int
-  completely_visible_start_line_number : Int
-  completely_visible_end_line_number : Int
-  line_height : Int
+  centered_line_number : Int32
+  completely_visible_start_line_number : Int32
+  completely_visible_end_line_number : Int32
+  line_height : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend PartialViewLinesViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend PartialViewLinesViewportData with Debug::{to_repr}
 
 ///|
 /// One whitespace positioned relative to a viewport — the Monaco
 /// `IViewWhitespaceViewportData` shape.
 pub struct ViewWhitespaceViewportData {
   id : String
-  after_line_number : Int
+  after_line_number : Int32
   vertical_offset : Double
-  height : Int
+  height : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend ViewWhitespaceViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend ViewWhitespaceViewportData with Debug::{to_repr}
 
 ///|
 priv struct PendingChange {
   id : String
-  new_after_line_number : Int
-  new_height : Int
+  new_after_line_number : Int32
+  new_height : Int32
 }
 
 ///|
@@ -125,14 +143,14 @@ fn PendingChanges::commit(
 
 ///|
 /// Global instance counter, mirroring Monaco's `LinesLayout.INSTANCE_COUNT`.
-let lines_layout_instance_count : Ref[Int] = Ref(0)
+let lines_layout_instance_count : Ref[Int32] = Ref(0)
 
 ///|
 /// ECMAScript ToInt32, used by LinesLayout's public-number boundary. MoonBit's
 /// `Double::to_int` saturates; JavaScript instead truncates, reduces modulo
 /// 2^32, and interprets the high half as negative. NaN, infinities, and both
 /// signed zeros canonicalize to integer zero.
-fn javascript_to_int32(value : Double) -> Int {
+fn javascript_to_int32(value : Double) -> Int32 {
   let modulus = 4294967296.0
   let signed_boundary = 2147483648.0
   let mut wrapped = value.trunc() % modulus
@@ -161,8 +179,8 @@ pub struct WhitespaceChangeAccessor {
 /// Queues a whitespace insertion; returns its freshly minted id.
 pub fn WhitespaceChangeAccessor::insert_whitespace(
   self : WhitespaceChangeAccessor,
-  after_line_number : Int,
-  ordinal : Int,
+  after_line_number : Int32,
+  ordinal : Int32,
   height_in_px : Double,
   min_width : Double,
 ) -> String {
@@ -184,7 +202,7 @@ pub fn WhitespaceChangeAccessor::insert_whitespace(
 pub fn WhitespaceChangeAccessor::change_one_whitespace(
   self : WhitespaceChangeAccessor,
   id : String,
-  new_after_line_number : Int,
+  new_after_line_number : Int32,
   new_height : Double,
 ) -> Unit {
   self.had_a_change = true
@@ -208,14 +226,14 @@ pub fn WhitespaceChangeAccessor::remove_whitespace(
 pub struct LinesLayout {
   priv instance_id : String
   priv pending_changes : PendingChanges
-  priv mut last_whitespace_id : Int
+  priv mut last_whitespace_id : Int32
   priv mut arr : Array[EditorWhitespace]
-  priv mut prefix_sum_valid_index : Int
-  priv mut min_width : Int
-  priv mut line_count : Int
-  priv mut padding_top : Int
-  priv mut padding_bottom : Int
-  priv mut default_line_height : Int
+  priv mut prefix_sum_valid_index : Int32
+  priv mut min_width : Int32
+  priv mut line_count : Int32
+  priv mut padding_top : Int32
+  priv mut padding_bottom : Int32
+  priv mut default_line_height : Int32
 }
 
 ///|
@@ -223,10 +241,10 @@ pub struct LinesLayout {
 /// parity with Monaco but ignored (uniform heights — see file deviation).
 #alias(new, deprecated)
 pub fn LinesLayout::LinesLayout(
-  line_count : Int,
-  default_line_height : Int,
-  padding_top : Int,
-  padding_bottom : Int,
+  line_count : Int32,
+  default_line_height : Int32,
+  padding_top : Int32,
+  padding_bottom : Int32,
 ) -> LinesLayout {
   lines_layout_instance_count.val = lines_layout_instance_count.val + 1
   {
@@ -250,9 +268,9 @@ pub fn LinesLayout::LinesLayout(
 /// value is already present, the index is after the existing one.
 pub fn LinesLayout::find_insertion_index(
   arr : Array[EditorWhitespace],
-  after_line_number : Int,
-  ordinal : Int,
-) -> Int {
+  after_line_number : Int32,
+  ordinal : Int32,
+) -> Int32 {
   let mut low = 0
   let mut high = arr.length()
   while low < high {
@@ -276,7 +294,7 @@ pub fn LinesLayout::find_insertion_index(
 /// Change the uniform line height in pixels.
 pub fn LinesLayout::set_default_line_height(
   self : LinesLayout,
-  line_height : Int,
+  line_height : Int32,
 ) -> Unit {
   self.default_line_height = line_height
 }
@@ -285,8 +303,8 @@ pub fn LinesLayout::set_default_line_height(
 /// Changes the padding used to calculate vertical offsets.
 pub fn LinesLayout::set_padding(
   self : LinesLayout,
-  padding_top : Int,
-  padding_bottom : Int,
+  padding_top : Int32,
+  padding_bottom : Int32,
 ) -> Unit {
   self.padding_top = padding_top
   self.padding_bottom = padding_bottom
@@ -294,7 +312,7 @@ pub fn LinesLayout::set_padding(
 
 ///|
 /// Set the number of lines (Monaco's `onFlushed`).
-pub fn LinesLayout::on_flushed(self : LinesLayout, line_count : Int) -> Unit {
+pub fn LinesLayout::on_flushed(self : LinesLayout, line_count : Int32) -> Unit {
   self.line_count = line_count
 }
 
@@ -380,7 +398,7 @@ fn LinesLayout::commit_pending_changes(
   // ECMAScript Array.prototype.sort is stable. Preserve the source array's
   // old-before-inserts sequence explicitly because MoonBit's backend sort is
   // not required to keep equal-key elements in their original order.
-  let original_sequence : Map[String, Int] = Map([])
+  let original_sequence : Map[String, Int32] = Map([])
   for index, whitespace in result {
     original_sequence[whitespace.id] = index
   }
@@ -426,7 +444,7 @@ fn LinesLayout::insert_whitespace(
 }
 
 ///|
-fn LinesLayout::find_whitespace_index(self : LinesLayout, id : String) -> Int {
+fn LinesLayout::find_whitespace_index(self : LinesLayout, id : String) -> Int32 {
   let arr = self.arr
   for i in 0..<arr.length() {
     if arr[i].id == id {
@@ -440,8 +458,8 @@ fn LinesLayout::find_whitespace_index(self : LinesLayout, id : String) -> Int {
 fn LinesLayout::change_one_whitespace(
   self : LinesLayout,
   id : String,
-  new_after_line_number : Int,
-  new_height : Int,
+  new_after_line_number : Int32,
+  new_height : Int32,
 ) -> Unit {
   let index = self.find_whitespace_index(id)
   if index == -1 {
@@ -463,7 +481,7 @@ fn LinesLayout::change_one_whitespace(
 ///|
 fn LinesLayout::remove_whitespace(
   self : LinesLayout,
-  remove_index : Int,
+  remove_index : Int32,
 ) -> Unit {
   self.arr.remove(remove_index) |> ignore
   self.prefix_sum_valid_index = self.prefix_sum_valid_index.min(
@@ -475,8 +493,8 @@ fn LinesLayout::remove_whitespace(
 /// Notify that a continuous zone of lines was deleted (inclusive bounds).
 pub fn LinesLayout::on_lines_deleted(
   self : LinesLayout,
-  from_line_number : Int,
-  to_line_number : Int,
+  from_line_number : Int32,
+  to_line_number : Int32,
 ) -> Unit {
   self.line_count = self.line_count - (to_line_number - from_line_number + 1)
   for i in 0..<self.arr.length() {
@@ -499,8 +517,8 @@ pub fn LinesLayout::on_lines_deleted(
 /// Notify that a continuous zone of lines was inserted (inclusive bounds).
 pub fn LinesLayout::on_lines_inserted(
   self : LinesLayout,
-  from_line_number : Int,
-  to_line_number : Int,
+  from_line_number : Int32,
+  to_line_number : Int32,
 ) -> Unit {
   self.line_count = self.line_count + (to_line_number - from_line_number + 1)
   for i in 0..<self.arr.length() {
@@ -525,7 +543,7 @@ pub fn LinesLayout::get_whitespaces_total_height(self : LinesLayout) -> Double {
 /// Sum of the heights of whitespaces in `[0..index]` (inclusive of `index`).
 pub fn LinesLayout::get_whitespaces_accumulated_height(
   self : LinesLayout,
-  index : Int,
+  index : Int32,
 ) -> Double {
   let mut start_index = (0).max(self.prefix_sum_valid_index + 1)
   if start_index == 0 {
@@ -557,7 +575,7 @@ pub fn LinesLayout::get_lines_total_height(self : LinesLayout) -> Double {
 /// Accumulated height of whitespaces strictly before `line_number`.
 pub fn LinesLayout::get_whitespace_accumulated_height_before_line_number(
   self : LinesLayout,
-  line_number : Int,
+  line_number : Int32,
 ) -> Double {
   let last_whitespace_before = self.find_last_whitespace_before_line_number(
     line_number,
@@ -571,8 +589,8 @@ pub fn LinesLayout::get_whitespace_accumulated_height_before_line_number(
 ///|
 fn LinesLayout::find_last_whitespace_before_line_number(
   self : LinesLayout,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   let arr = self.arr
   let mut low = 0
   let mut high = arr.length() - 1
@@ -597,8 +615,8 @@ fn LinesLayout::find_last_whitespace_before_line_number(
 ///|
 fn LinesLayout::find_first_whitespace_after_line_number(
   self : LinesLayout,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   let last_whitespace_before = self.find_last_whitespace_before_line_number(
     line_number,
   )
@@ -614,8 +632,8 @@ fn LinesLayout::find_first_whitespace_after_line_number(
 /// or -1 if there is none.
 pub fn LinesLayout::get_first_whitespace_index_after_line_number(
   self : LinesLayout,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   self.find_first_whitespace_after_line_number(line_number)
 }
 
@@ -623,8 +641,8 @@ pub fn LinesLayout::get_first_whitespace_index_after_line_number(
 /// Vertical offset (sum of heights of everything above) of `line_number`.
 pub fn LinesLayout::get_vertical_offset_for_line_number(
   self : LinesLayout,
-  line_number : Int,
-  include_view_zones? : Bool = false,
+  line_number : Int32,
+  include_view_zones~ : Bool = false,
 ) -> Double {
   let previous_lines_height = if line_number > 1 {
     self.accumulated_line_heights_including_line_number(line_number - 1)
@@ -643,8 +661,8 @@ pub fn LinesLayout::get_vertical_offset_for_line_number(
 /// The (uniform) height of `line_number`.
 pub fn LinesLayout::get_line_height_for_line_number(
   self : LinesLayout,
-  _line_number : Int,
-) -> Int {
+  _line_number : Int32,
+) -> Int32 {
   self.default_line_height
 }
 
@@ -652,8 +670,8 @@ pub fn LinesLayout::get_line_height_for_line_number(
 /// Vertical offset including `line_number`'s own height.
 pub fn LinesLayout::get_vertical_offset_after_line_number(
   self : LinesLayout,
-  line_number : Int,
-  include_view_zones? : Bool = false,
+  line_number : Int32,
+  include_view_zones~ : Bool = false,
 ) -> Double {
   let previous_lines_height = self.accumulated_line_heights_including_line_number(
     line_number,
@@ -674,7 +692,7 @@ pub fn LinesLayout::has_whitespace(self : LinesLayout) -> Bool {
 
 ///|
 /// The maximum min width over all whitespaces.
-pub fn LinesLayout::get_whitespace_min_width(self : LinesLayout) -> Int {
+pub fn LinesLayout::get_whitespace_min_width(self : LinesLayout) -> Int32 {
   if self.min_width == -1 {
     let mut min_width = 0
     for i in 0..<self.arr.length() {
@@ -724,7 +742,7 @@ pub fn LinesLayout::is_in_bottom_padding(
 pub fn LinesLayout::get_line_number_at_or_after_vertical_offset(
   self : LinesLayout,
   vertical_offset : Double,
-) -> Int {
+) -> Int32 {
   let vertical_offset = javascript_to_int32(vertical_offset)
   if vertical_offset < 0 {
     return 1
@@ -782,7 +800,7 @@ pub fn LinesLayout::get_lines_viewport_data(
   )
   let whitespace_count = self.get_whitespaces_count()
   let mut current_whitespace_height = 0
-  let mut current_whitespace_after_line_number : Int? = None
+  let mut current_whitespace_after_line_number : Int32? = None
   if whitespace_index == -1 {
     whitespace_index = whitespace_count
     current_whitespace_height = 0
@@ -907,7 +925,7 @@ pub fn LinesLayout::get_lines_viewport_data(
 /// Vertical offset of the whitespace at `whitespace_index`.
 pub fn LinesLayout::get_vertical_offset_for_whitespace_index(
   self : LinesLayout,
-  whitespace_index : Int,
+  whitespace_index : Int32,
 ) -> Double {
   let after_line_number = self.get_after_line_number_for_whitespace_index(
     whitespace_index,
@@ -933,7 +951,7 @@ pub fn LinesLayout::get_vertical_offset_for_whitespace_index(
 pub fn LinesLayout::get_whitespace_index_at_or_after_vertical_offset(
   self : LinesLayout,
   vertical_offset : Double,
-) -> Int {
+) -> Int32 {
   let vertical_offset = javascript_to_int32(vertical_offset).to_double()
   let mut min_whitespace_index = 0
   let mut max_whitespace_index = self.get_whitespaces_count() - 1
@@ -1053,7 +1071,7 @@ pub fn LinesLayout::get_whitespaces(
 
 ///|
 /// The number of whitespaces.
-pub fn LinesLayout::get_whitespaces_count(self : LinesLayout) -> Int {
+pub fn LinesLayout::get_whitespaces_count(self : LinesLayout) -> Int32 {
   self.arr.length()
 }
 
@@ -1061,7 +1079,7 @@ pub fn LinesLayout::get_whitespaces_count(self : LinesLayout) -> Int {
 /// The `id` of the whitespace at `index`.
 pub fn LinesLayout::get_id_for_whitespace_index(
   self : LinesLayout,
-  index : Int,
+  index : Int32,
 ) -> String {
   self.arr[index].id
 }
@@ -1070,8 +1088,8 @@ pub fn LinesLayout::get_id_for_whitespace_index(
 /// The `afterLineNumber` of the whitespace at `index`.
 pub fn LinesLayout::get_after_line_number_for_whitespace_index(
   self : LinesLayout,
-  index : Int,
-) -> Int {
+  index : Int32,
+) -> Int32 {
   self.arr[index].after_line_number
 }
 
@@ -1079,8 +1097,8 @@ pub fn LinesLayout::get_after_line_number_for_whitespace_index(
 /// The `height` of the whitespace at `index`.
 pub fn LinesLayout::get_height_for_whitespace_index(
   self : LinesLayout,
-  index : Int,
-) -> Int {
+  index : Int32,
+) -> Int32 {
   self.arr[index].height
 }
 
@@ -1089,7 +1107,7 @@ pub fn LinesLayout::get_height_for_whitespace_index(
 /// (`0` for `line_number <= 0`). Replaces Monaco's `LineHeightsManager`.
 fn LinesLayout::accumulated_line_heights_including_line_number(
   self : LinesLayout,
-  line_number : Int,
+  line_number : Int32,
 ) -> Double {
   if line_number <= 0 {
     0.0

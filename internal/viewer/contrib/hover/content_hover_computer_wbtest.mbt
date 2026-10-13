@@ -82,7 +82,7 @@ impl @language.HoverProvider for ComputerHoverProvider with fn provide_hover(
 
 ///|
 priv struct RecordingHoverProvider {
-  calls : Ref[Int]
+  calls : Ref[Int32]
   seen_token : Ref[@language.CancellationToken?]
 }
 
@@ -257,7 +257,7 @@ test "line-decoration selector covers whole strict relaxed and crossing ranges" 
 
 ///|
 priv struct ParticipantProbe {
-  async_calls : Ref[Int]
+  async_calls : Ref[Int32]
   sync_sources : Array[HoverStartSource]
   async_sources : Array[HoverStartSource]
 }
@@ -269,7 +269,7 @@ fn ParticipantProbe::new() -> ParticipantProbe {
 
 ///|
 priv struct ControlledHoverParticipant {
-  ordinal_value : Int
+  ordinal_value : Int32
   text : String
   probe : ParticipantProbe
 }
@@ -309,7 +309,7 @@ fn ControlledHoverParticipant::hover_participant_handle(
 
 ///|
 fn controlled_participant_with_probe(
-  ordinal_value : Int,
+  ordinal_value : Int32,
   text : String,
   probe : ParticipantProbe,
 ) -> HoverParticipantHandle {
@@ -318,7 +318,7 @@ fn controlled_participant_with_probe(
 
 ///|
 fn controlled_participant(
-  ordinal_value : Int,
+  ordinal_value : Int32,
   text : String,
 ) -> HoverParticipantHandle {
   controlled_participant_with_probe(
@@ -372,7 +372,7 @@ async fn run_hover_test_tasks_concurrently(
 
 ///|
 priv struct SuspendedHoverParticipant {
-  ordinal_value : Int
+  ordinal_value : Int32
   text : String
   started : @async.Semaphore
   release_gate : @async.Semaphore
@@ -388,9 +388,7 @@ fn SuspendedHoverParticipant::hover_participant_handle(
     _token,
   ) => {
     self.started.release()
-    self.release_gate.acquire() catch {
-      _ => return []
-    }
+    self.release_gate.acquire()
     self.finished.val = true
     [
       MarkdownHover(

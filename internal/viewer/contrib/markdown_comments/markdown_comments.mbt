@@ -158,7 +158,7 @@ pub fn resolve_markdown_comment_blocks(
 /// dropped with warning-level diagnostics; touching ranges remain distinct.
 pub fn normalize_markdown_comment_blocks(
   blocks : Array[@language.MarkdownCommentBlock],
-  model_line_count : Int,
+  model_line_count : Int32,
   log_service : @log.LogHandle,
 ) -> Array[@language.MarkdownCommentBlock] {
   let indexed : Array[IndexedBlock] = []
@@ -215,7 +215,7 @@ pub fn normalize_markdown_comment_blocks(
 ///|
 priv struct IndexedBlock {
   block : @language.MarkdownCommentBlock
-  original_index : Int
+  original_index : Int32
 }
 
 ///|
@@ -281,7 +281,7 @@ fn strip_interior_star(line : String) -> String {
 }
 
 ///|
-fn leading_indent_end(text : String) -> Int {
+fn leading_indent_end(text : String) -> Int32 {
   let mut offset = 0
   while offset < text.length() {
     let code = text[offset].to_int()
@@ -294,7 +294,7 @@ fn leading_indent_end(text : String) -> Int {
 }
 
 ///|
-fn trailing_content_end(text : String) -> Int {
+fn trailing_content_end(text : String) -> Int32 {
   let mut offset = text.length()
   while offset > 0 {
     let code = text[offset - 1].to_int()
@@ -307,7 +307,7 @@ fn trailing_content_end(text : String) -> Int {
 }
 
 ///|
-fn matches_at(text : String, offset : Int, candidate : String) -> Bool {
+fn matches_at(text : String, offset : Int32, candidate : String) -> Bool {
   if candidate == "" ||
     offset < 0 ||
     offset + candidate.length() > text.length() {
@@ -322,7 +322,7 @@ fn matches_at(text : String, offset : Int, candidate : String) -> Bool {
 }
 
 ///|
-fn find_from(text : String, candidate : String, start : Int) -> Int {
+fn find_from(text : String, candidate : String, start : Int32) -> Int32 {
   if candidate == "" {
     return -1
   }
@@ -338,7 +338,7 @@ fn find_from(text : String, candidate : String, start : Int) -> Int {
 }
 
 ///|
-fn slice(text : String, start : Int, end : Int) -> String {
+fn slice(text : String, start : Int32, end : Int32) -> String {
   text.unsafe_substring(start~, end~)
 }
 

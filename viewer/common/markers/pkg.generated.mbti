@@ -42,10 +42,13 @@ pub struct Marker {
   tags : Array[MarkerTag]?
   origin : String?
 } derive(Eq, @debug.Debug)
+pub fn Marker::equal(Self, Self) -> Bool
 pub fn Marker::from_diagnostic(String, @common.Uri, @language.Diagnostic) -> Self
 pub fn Marker::has_tag(Self, MarkerTag) -> Bool
+pub fn Marker::not_equal(Self, Self) -> Bool
 pub fn Marker::range(Self) -> @common.Range
 pub fn Marker::to_diagnostic(Self) -> @language.Diagnostic
+pub fn Marker::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MarkerData {
   code : String?
@@ -63,7 +66,10 @@ pub(all) struct MarkerData {
 } derive(Eq, @debug.Debug)
 #alias(new, deprecated)
 pub fn MarkerData::MarkerData(severity~ : MarkerSeverity, message~ : String, start_line_number~ : Int, start_column~ : Int, end_line_number~ : Int, end_column~ : Int, code? : String, source? : String, model_version_id? : Int, related_information? : Array[RelatedInformation], tags? : Array[MarkerTag], origin? : String) -> Self
+pub fn MarkerData::equal(Self, Self) -> Bool
+pub fn MarkerData::not_equal(Self, Self) -> Bool
 pub fn MarkerData::to_marker(Self, String, @common.Uri) -> Marker?
+pub fn MarkerData::to_repr(Self) -> @debug.Repr
 
 pub struct MarkerDecorationsHandle {
   // private fields
@@ -102,6 +108,9 @@ pub(all) struct MarkerReadOptions {
 } derive(Eq, @debug.Debug)
 #alias(new, deprecated)
 pub fn MarkerReadOptions::MarkerReadOptions(owner? : String, resource? : @common.Uri, severities? : Int, take? : Int, ignore_resource_filters? : Bool) -> Self
+pub fn MarkerReadOptions::equal(Self, Self) -> Bool
+pub fn MarkerReadOptions::not_equal(Self, Self) -> Bool
+pub fn MarkerReadOptions::to_repr(Self) -> @debug.Repr
 
 pub struct MarkerService {
   did_change_markers : @common.MicrotaskEmitter[Array[@common.Uri]]
@@ -140,10 +149,13 @@ pub(all) enum MarkerSeverity {
   Error
 } derive(Eq, @debug.Debug)
 pub fn MarkerSeverity::compare(Self, Self) -> Int
+pub fn MarkerSeverity::equal(Self, Self) -> Bool
 pub fn MarkerSeverity::from_diagnostic_severity(@language.DiagnosticSeverity) -> Self
 pub fn MarkerSeverity::label(Self) -> String
 pub fn MarkerSeverity::label_plural(Self) -> String
+pub fn MarkerSeverity::not_equal(Self, Self) -> Bool
 pub fn MarkerSeverity::to_diagnostic_severity(Self) -> @language.DiagnosticSeverity
+pub fn MarkerSeverity::to_repr(Self) -> @debug.Repr
 pub fn MarkerSeverity::value(Self) -> Int
 
 pub struct MarkerStatistics {
@@ -152,6 +164,9 @@ pub struct MarkerStatistics {
   mut infos : Int
   mut unknowns : Int
 } derive(Eq, @debug.Debug)
+pub fn MarkerStatistics::equal(Self, Self) -> Bool
+pub fn MarkerStatistics::not_equal(Self, Self) -> Bool
+pub fn MarkerStatistics::to_repr(Self) -> @debug.Repr
 
 type MarkerStats
 
@@ -159,8 +174,11 @@ pub(all) enum MarkerTag {
   Unnecessary
   Deprecated
 } derive(Eq, @debug.Debug)
+pub fn MarkerTag::equal(Self, Self) -> Bool
 pub fn MarkerTag::from_diagnostic_tag(@language.DiagnosticTag) -> Self
+pub fn MarkerTag::not_equal(Self, Self) -> Bool
 pub fn MarkerTag::to_diagnostic_tag(Self) -> @language.DiagnosticTag
+pub fn MarkerTag::to_repr(Self) -> @debug.Repr
 pub fn MarkerTag::value(Self) -> Int
 
 pub(all) struct RelatedInformation {
@@ -171,11 +189,17 @@ pub(all) struct RelatedInformation {
   end_line_number : Int
   end_column : Int
 } derive(Eq, @debug.Debug)
+pub fn RelatedInformation::equal(Self, Self) -> Bool
+pub fn RelatedInformation::not_equal(Self, Self) -> Bool
+pub fn RelatedInformation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ResourceMarker {
   resource : @common.Uri
   marker : MarkerData
 } derive(Eq, @debug.Debug)
+pub fn ResourceMarker::equal(Self, Self) -> Bool
+pub fn ResourceMarker::not_equal(Self, Self) -> Bool
+pub fn ResourceMarker::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SquigglyThemeColors {
   error : String?
@@ -183,8 +207,10 @@ pub(all) struct SquigglyThemeColors {
   info : String?
   hint : String?
 } derive(Eq, @debug.Debug)
+pub fn SquigglyThemeColors::equal(Self, Self) -> Bool
+pub fn SquigglyThemeColors::not_equal(Self, Self) -> Bool
+pub fn SquigglyThemeColors::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
 // Traits
-

@@ -8,22 +8,28 @@
 /// Result of `PrefixSumComputer::get_index_of`: the index whose range contains
 /// the queried sum, plus the remainder into that index.
 pub(all) struct PrefixSumIndexOfResult {
-  index : Int
-  remainder : Int
+  index : Int32
+  remainder : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend PrefixSumIndexOfResult with Eq::{not_equal, equal}
+
+///|
+pub extend PrefixSumIndexOfResult with Debug::{to_repr}
 
 ///|
 /// Incrementally-cached prefix-sum computer over a mutable array of values.
 /// `get_index_of` is O(log n); mutations invalidate only the affected suffix of
 /// the cached prefix sums.
 pub struct PrefixSumComputer {
-  mut values : Array[Int]
-  mut prefix_sum : Array[Int]
-  mut prefix_sum_valid_index : Int
+  mut values : Array[Int32]
+  mut prefix_sum : Array[Int32]
+  mut prefix_sum_valid_index : Int32
 }
 
 ///|
-pub fn PrefixSumComputer::PrefixSumComputer(values : ArrayView[Int]) -> Self {
+pub fn PrefixSumComputer::PrefixSumComputer(values : ArrayView[Int32]) -> Self {
   let owned = values.to_owned()
   {
     values: owned,
@@ -33,20 +39,20 @@ pub fn PrefixSumComputer::PrefixSumComputer(values : ArrayView[Int]) -> Self {
 }
 
 ///|
-pub fn PrefixSumComputer::new(values : Array[Int]) -> Self {
+pub fn PrefixSumComputer::new(values : Array[Int32]) -> Self {
   PrefixSumComputer(values[:])
 }
 
 ///|
-pub fn PrefixSumComputer::get_count(self : Self) -> Int {
+pub fn PrefixSumComputer::get_count(self : Self) -> Int32 {
   self.values.length()
 }
 
 ///|
 pub fn PrefixSumComputer::insert_values(
   self : Self,
-  insert_index : Int,
-  insert_values : Array[Int],
+  insert_index : Int32,
+  insert_values : Array[Int32],
 ) -> Bool {
   let old_values = self.values
   let old_prefix_sum = self.prefix_sum
@@ -80,8 +86,8 @@ pub fn PrefixSumComputer::insert_values(
 ///|
 pub fn PrefixSumComputer::set_value(
   self : Self,
-  index : Int,
-  value : Int,
+  index : Int32,
+  value : Int32,
 ) -> Bool {
   if self.values[index] == value {
     return false
@@ -96,8 +102,8 @@ pub fn PrefixSumComputer::set_value(
 ///|
 pub fn PrefixSumComputer::remove_values(
   self : Self,
-  start_index : Int,
-  count : Int,
+  start_index : Int32,
+  count : Int32,
 ) -> Bool {
   let old_values = self.values
   let old_prefix_sum = self.prefix_sum
@@ -130,7 +136,7 @@ pub fn PrefixSumComputer::remove_values(
 }
 
 ///|
-pub fn PrefixSumComputer::get_total_sum(self : Self) -> Int {
+pub fn PrefixSumComputer::get_total_sum(self : Self) -> Int32 {
   if self.values.length() == 0 {
     return 0
   }
@@ -140,7 +146,7 @@ pub fn PrefixSumComputer::get_total_sum(self : Self) -> Int {
 ///|
 /// Returns the sum of the first `index + 1` many items, i.e.
 /// `SUM(0 <= j <= index, values[j])`. A negative `index` yields 0.
-pub fn PrefixSumComputer::get_prefix_sum(self : Self, index : Int) -> Int {
+pub fn PrefixSumComputer::get_prefix_sum(self : Self, index : Int32) -> Int32 {
   if index < 0 {
     return 0
   }
@@ -148,7 +154,7 @@ pub fn PrefixSumComputer::get_prefix_sum(self : Self, index : Int) -> Int {
 }
 
 ///|
-fn PrefixSumComputer::compute_prefix_sum(self : Self, index : Int) -> Int {
+fn PrefixSumComputer::compute_prefix_sum(self : Self, index : Int32) -> Int32 {
   if index <= self.prefix_sum_valid_index {
     return self.prefix_sum[index]
   }
@@ -173,7 +179,7 @@ fn PrefixSumComputer::compute_prefix_sum(self : Self, index : Int) -> Int {
 ///|
 pub fn PrefixSumComputer::get_index_of(
   self : Self,
-  sum : Int,
+  sum : Int32,
 ) -> PrefixSumIndexOfResult {
   // Compute all sums (to get a fully valid prefix sum).
   let _ = self.get_total_sum()
@@ -201,16 +207,16 @@ pub fn PrefixSumComputer::get_index_of(
 /// O(1) amortized `get_index_of` variant that materializes a full index-by-sum
 /// table on first query and re-builds it lazily after mutations.
 pub struct ConstantTimePrefixSumComputer {
-  mut values : Array[Int]
+  mut values : Array[Int32]
   mut is_valid : Bool
-  mut valid_end_index : Int
-  mut prefix_sum : Array[Int]
-  mut index_by_sum : Array[Int]
+  mut valid_end_index : Int32
+  mut prefix_sum : Array[Int32]
+  mut index_by_sum : Array[Int32]
 }
 
 ///|
 pub fn ConstantTimePrefixSumComputer::ConstantTimePrefixSumComputer(
-  values : ArrayView[Int],
+  values : ArrayView[Int32],
 ) -> Self {
   let owned = values.to_owned()
   {
@@ -223,12 +229,12 @@ pub fn ConstantTimePrefixSumComputer::ConstantTimePrefixSumComputer(
 }
 
 ///|
-pub fn ConstantTimePrefixSumComputer::new(values : Array[Int]) -> Self {
+pub fn ConstantTimePrefixSumComputer::new(values : Array[Int32]) -> Self {
   ConstantTimePrefixSumComputer(values[:])
 }
 
 ///|
-pub fn ConstantTimePrefixSumComputer::get_total_sum(self : Self) -> Int {
+pub fn ConstantTimePrefixSumComputer::get_total_sum(self : Self) -> Int32 {
   self.ensure_valid()
   self.index_by_sum.length()
 }
@@ -237,8 +243,8 @@ pub fn ConstantTimePrefixSumComputer::get_total_sum(self : Self) -> Int {
 /// Returns the sum of the first `count` many items: `SUM(0 <= j < count, values[j])`.
 pub fn ConstantTimePrefixSumComputer::get_prefix_sum(
   self : Self,
-  count : Int,
-) -> Int {
+  count : Int32,
+) -> Int32 {
   self.ensure_valid()
   if count == 0 {
     return 0
@@ -249,7 +255,7 @@ pub fn ConstantTimePrefixSumComputer::get_prefix_sum(
 ///|
 pub fn ConstantTimePrefixSumComputer::get_index_of(
   self : Self,
-  sum : Int,
+  sum : Int32,
 ) -> PrefixSumIndexOfResult {
   self.ensure_valid()
   // A faithful re-build always fills [0, totalSum), so an out-of-range sum is
@@ -275,10 +281,10 @@ pub fn ConstantTimePrefixSumComputer::get_index_of(
 ///|
 pub fn ConstantTimePrefixSumComputer::remove_values(
   self : Self,
-  start : Int,
-  delete_count : Int,
+  start : Int32,
+  delete_count : Int32,
 ) -> Unit {
-  let next : Array[Int] = []
+  let next : Array[Int32] = []
   for i in 0..<self.values.length() {
     if i < start || i >= start + delete_count {
       next.push(self.values[i])
@@ -291,10 +297,10 @@ pub fn ConstantTimePrefixSumComputer::remove_values(
 ///|
 pub fn ConstantTimePrefixSumComputer::insert_values(
   self : Self,
-  insert_index : Int,
-  insert_arr : Array[Int],
+  insert_index : Int32,
+  insert_arr : Array[Int32],
 ) -> Unit {
-  let next : Array[Int] = []
+  let next : Array[Int32] = []
   for i in 0..<insert_index {
     next.push(self.values[i])
   }
@@ -311,8 +317,8 @@ pub fn ConstantTimePrefixSumComputer::insert_values(
 ///|
 pub fn ConstantTimePrefixSumComputer::set_value(
   self : Self,
-  index : Int,
-  value : Int,
+  index : Int32,
+  value : Int32,
 ) -> Unit {
   if self.values[index] == value {
     return
@@ -322,7 +328,10 @@ pub fn ConstantTimePrefixSumComputer::set_value(
 }
 
 ///|
-fn ConstantTimePrefixSumComputer::invalidate(self : Self, index : Int) -> Unit {
+fn ConstantTimePrefixSumComputer::invalidate(
+  self : Self,
+  index : Int32,
+) -> Unit {
   self.is_valid = false
   if index - 1 < self.valid_end_index {
     self.valid_end_index = index - 1

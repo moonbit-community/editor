@@ -11,6 +11,12 @@ pub(all) struct ScrollDimensions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScrollDimensions with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollDimensions with Debug::{to_repr}
+
+///|
 pub(all) struct ScrollDimensionsUpdate {
   width : Double?
   scroll_width : Double?
@@ -19,10 +25,22 @@ pub(all) struct ScrollDimensionsUpdate {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScrollDimensionsUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollDimensionsUpdate with Debug::{to_repr}
+
+///|
 pub(all) struct ScrollPosition {
   scroll_left : Double
   scroll_top : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ScrollPosition with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollPosition with Debug::{to_repr}
 
 ///|
 pub(all) struct ScrollPositionUpdate {
@@ -31,12 +49,24 @@ pub(all) struct ScrollPositionUpdate {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScrollPositionUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollPositionUpdate with Debug::{to_repr}
+
+///|
 pub(all) struct SmoothScrollPosition {
   scroll_left : Double
   scroll_top : Double
   width : Double
   height : Double
 } derive(Eq, Debug)
+
+///|
+pub extend SmoothScrollPosition with Eq::{not_equal, equal}
+
+///|
+pub extend SmoothScrollPosition with Debug::{to_repr}
 
 ///|
 /// Monaco `ScrollEvent` plus the compatibility facts existing viewer callers
@@ -70,6 +100,12 @@ pub(all) struct ScrollChange {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScrollChange with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollChange with Debug::{to_repr}
+
+///|
 /// Complete Monaco `ScrollState` (`scrollable.ts:43-179`). Raw positions are
 /// retained before validation so a later dimension expansion can recover a
 /// position that was temporarily clamped.
@@ -84,6 +120,12 @@ pub struct ScrollState {
   scroll_height : Double
   scroll_top : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ScrollState with Eq::{not_equal, equal}
+
+///|
+pub extend ScrollState with Debug::{to_repr}
 
 ///|
 #alias(new, deprecated)
@@ -256,6 +298,12 @@ pub struct SmoothScrollingUpdate {
   scroll_top : Double
   is_done : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend SmoothScrollingUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend SmoothScrollingUpdate with Debug::{to_repr}
 
 ///|
 #alias(new, deprecated)
@@ -451,7 +499,7 @@ pub struct Scrollable {
   priv now : () -> Double
   priv mut state : ScrollState
   priv mut smooth_scrolling : SmoothScrollingOperation?
-  priv mut operation_generation : Int
+  priv mut operation_generation : Int32
   priv on_scroll_emitter : @base_common.Emitter[ScrollChange]
 }
 
@@ -459,9 +507,9 @@ pub struct Scrollable {
 #alias(new, deprecated)
 pub fn Scrollable::Scrollable(
   force_integer_values~ : Bool,
-  smooth_scroll_duration? : Double = 0.0,
-  schedule_at_next_animation_frame? : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
-  now? : () -> Double = zero_clock,
+  smooth_scroll_duration~ : Double = 0.0,
+  schedule_at_next_animation_frame~ : (() -> Unit) -> @base_common.Disposable = no_animation_scheduler,
+  now~ : () -> Double = zero_clock,
 ) -> Scrollable {
   {
     smooth_scroll_duration,
@@ -593,7 +641,7 @@ pub fn Scrollable::set_position(
 pub fn Scrollable::set_position_smooth(
   self : Scrollable,
   update : ScrollPositionUpdate,
-  reuse_animation? : Bool = false,
+  reuse_animation~ : Bool = false,
 ) -> Unit {
   if self.smooth_scroll_duration == 0.0 {
     self.set_position_now(update) |> ignore
@@ -723,8 +771,8 @@ fn Scrollable::cancel_smooth_scrolling(self : Scrollable) -> Unit {
 ///|
 pub fn Scrollable::scroll_by(
   self : Scrollable,
-  delta_left? : Double = 0.0,
-  delta_top? : Double = 0.0,
+  delta_left~ : Double = 0.0,
+  delta_top~ : Double = 0.0,
 ) -> ScrollChange? {
   let position = self.position()
   self.set_position_now({
@@ -743,6 +791,12 @@ pub struct EditorScrollDimensions {
   content_height : Double
   scroll_height : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EditorScrollDimensions with Eq::{not_equal, equal}
+
+///|
+pub extend EditorScrollDimensions with Debug::{to_repr}
 
 ///|
 #alias(new, deprecated)
@@ -773,6 +827,12 @@ pub(all) struct ContentSizeChange {
   content_width : Double
   content_height : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ContentSizeChange with Eq::{not_equal, equal}
+
+///|
+pub extend ContentSizeChange with Debug::{to_repr}
 
 ///|
 /// Complete Monaco `EditorScrollable` (`viewLayout.ts:73-154`).
@@ -921,8 +981,8 @@ pub fn EditorScrollable::has_pending_scroll_animation(
 ///|
 pub fn EditorScrollable::scroll_by(
   self : EditorScrollable,
-  delta_left? : Double = 0.0,
-  delta_top? : Double = 0.0,
+  delta_left~ : Double = 0.0,
+  delta_top~ : Double = 0.0,
 ) -> ScrollChange? {
   self.scrollable.scroll_by(delta_left~, delta_top~)
 }

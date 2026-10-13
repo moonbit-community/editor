@@ -31,6 +31,9 @@ pub(all) struct ContentWidgetDimension {
   width : Double
   height : Double
 } derive(Eq, @debug.Debug)
+pub fn ContentWidgetDimension::equal(Self, Self) -> Bool
+pub fn ContentWidgetDimension::not_equal(Self, Self) -> Bool
+pub fn ContentWidgetDimension::to_repr(Self) -> @debug.Repr
 
 pub struct ContentWidgetHandle {
   // private fields
@@ -49,11 +52,16 @@ pub(all) enum ContentWidgetPositionPreference {
   Below
   Exact
 } derive(Eq)
+pub fn ContentWidgetPositionPreference::equal(Self, Self) -> Bool
+pub fn ContentWidgetPositionPreference::not_equal(Self, Self) -> Bool
 
 pub struct ContentWidgetRenderedCoordinate {
   top : Double
   left : Double
 } derive(Eq, @debug.Debug)
+pub fn ContentWidgetRenderedCoordinate::equal(Self, Self) -> Bool
+pub fn ContentWidgetRenderedCoordinate::not_equal(Self, Self) -> Bool
+pub fn ContentWidgetRenderedCoordinate::to_repr(Self) -> @debug.Repr
 
 pub struct ContentWidgets {
   // private fields
@@ -80,8 +88,14 @@ pub(all) struct ContentWidgetsRenderContext {
 }
 
 type CursorRenderData derive(Eq, @debug.Debug)
+pub fn CursorRenderData::equal(Self, Self) -> Bool
+pub fn CursorRenderData::not_equal(Self, Self) -> Bool
+pub fn CursorRenderData::to_repr(Self) -> @debug.Repr
 
 type DecorationOverlayPiece derive(Eq, @debug.Debug)
+pub fn DecorationOverlayPiece::equal(Self, Self) -> Bool
+pub fn DecorationOverlayPiece::not_equal(Self, Self) -> Bool
+pub fn DecorationOverlayPiece::to_repr(Self) -> @debug.Repr
 
 pub struct EditorScrollbar {
   // private fields
@@ -92,6 +106,9 @@ pub fn EditorScrollbar::scrollable(Self) -> @scrollbar.ScrollableElementDom
 pub struct HorizontalPosition {
   left : Int
 } derive(Eq, @debug.Debug)
+pub fn HorizontalPosition::equal(Self, Self) -> Bool
+pub fn HorizontalPosition::not_equal(Self, Self) -> Bool
+pub fn HorizontalPosition::to_repr(Self) -> @debug.Repr
 
 pub struct OverlayWidgets {
   // private fields
@@ -113,8 +130,11 @@ pub(all) enum PartFingerprint {
   ViewLinesGpu
 } derive(Eq, @debug.Debug)
 pub fn PartFingerprint::collect(@dom.Element?, @dom.Element) -> Bytes
+pub fn PartFingerprint::equal(Self, Self) -> Bool
 pub fn PartFingerprint::from_int(Int) -> Self
+pub fn PartFingerprint::not_equal(Self, Self) -> Bool
 pub fn PartFingerprint::to_int(Self) -> Int
+pub fn PartFingerprint::to_repr(Self) -> @debug.Repr
 
 pub struct View {
   root : @dom.Element
@@ -172,6 +192,9 @@ pub(all) enum ViewConfigurationOption {
   CursorSmoothCaretAnimation
   EffectiveEditContext
 } derive(Eq, @debug.Debug)
+pub fn ViewConfigurationOption::equal(Self, Self) -> Bool
+pub fn ViewConfigurationOption::not_equal(Self, Self) -> Bool
+pub fn ViewConfigurationOption::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ViewContext {
   measure_line_selection : (Int, Int, Int) -> Array[(Double, Double)]
@@ -234,6 +257,9 @@ pub struct ViewLineOptions {
   vertical_scrollbar_size : Double
 } derive(Eq, @debug.Debug)
 pub fn ViewLineOptions::ViewLineOptions(line_height? : Int, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
+pub fn ViewLineOptions::equal(Self, Self) -> Bool
+pub fn ViewLineOptions::not_equal(Self, Self) -> Bool
+pub fn ViewLineOptions::to_repr(Self) -> @debug.Repr
 
 pub struct ViewLines {
   // private fields
@@ -252,6 +278,9 @@ pub struct ViewLinesConfiguration {
   view_line_options : ViewLineOptions
 } derive(Eq, @debug.Debug)
 pub fn ViewLinesConfiguration::ViewLinesConfiguration(line_height? : Int, typical_halfwidth_character_width? : Double, is_viewport_wrapping? : Bool, can_use_layer_hinting? : Bool, space_width? : Double, middot_width? : Double, wsmiddot_width? : Double, use_monospace_optimizations? : Bool, can_use_halfwidth_rightwards_arrow? : Bool, stop_rendering_line_after? : Int, render_whitespace? : @editor_api.RenderWhitespace, render_control_characters? : Bool, font_ligatures? : Bool, vertical_scrollbar_size? : Double) -> Self
+pub fn ViewLinesConfiguration::equal(Self, Self) -> Bool
+pub fn ViewLinesConfiguration::not_equal(Self, Self) -> Bool
+pub fn ViewLinesConfiguration::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ViewRenderInput {
   window : @view_layout.LineWindow
@@ -296,4 +325,3 @@ pub fn ViewZones::should_render(Self) -> Bool
 // Type aliases
 
 // Traits
-

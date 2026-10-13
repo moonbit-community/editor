@@ -186,7 +186,7 @@ pub struct CancellationTokenSource {
 #alias(new, deprecated)
 pub fn CancellationTokenSource::CancellationTokenSource(
   parent? : CancellationToken,
-  schedule? : (() -> Unit) -> @base_common.Disposable = schedule_cancellation_inline,
+  schedule~ : (() -> Unit) -> @base_common.Disposable = schedule_cancellation_inline,
 ) -> CancellationTokenSource {
   let source : CancellationTokenSource = {
     token_value: None,
@@ -241,7 +241,7 @@ pub fn CancellationTokenSource::cancel(self : CancellationTokenSource) -> Unit {
 /// the shared never-cancelled token so a later `cancel` remains a no-op.
 pub fn CancellationTokenSource::dispose(
   self : CancellationTokenSource,
-  cancel? : Bool = false,
+  cancel~ : Bool = false,
 ) -> Unit {
   if cancel {
     self.cancel()

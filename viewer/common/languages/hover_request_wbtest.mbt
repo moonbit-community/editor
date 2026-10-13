@@ -1,14 +1,14 @@
 ///|
 priv struct RecordingHoverProvider {
   text : String
-  calls : Ref[Int]
+  calls : Ref[Int32]
   observed_tokens : Array[@language.CancellationToken]
   empty : Bool
 }
 
 ///|
 priv struct NoneHoverProvider {
-  calls : Ref[Int]
+  calls : Ref[Int32]
   observed_tokens : Array[@language.CancellationToken]
 }
 

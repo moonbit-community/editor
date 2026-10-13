@@ -37,7 +37,7 @@ priv struct BrowserGeometryFixture {
   name : String
   viewer : @viewer.Viewer
   model : @model.TextModel
-  view_line_count : Ref[Int]
+  view_line_count : Ref[Int32]
   mut injection_ids : Array[String]
 }
 
@@ -398,8 +398,8 @@ fn BrowserGeometryFixture::set_hidden_widest(
 ///|
 fn BrowserGeometryFixture::state_json(
   self : BrowserGeometryFixture,
-  line : Int,
-  column : Int,
+  line : Int32,
+  column : Int32,
 ) -> String {
   let layout = self.viewer.get_layout_info()
   let visible = match
@@ -538,7 +538,7 @@ fn browser_geometry_host(
 ///|
 fn poll_browser_geometry_ready(
   ctx : @support.BrowserTestContext,
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   if @support.query_count(
       ".browser-geometry-host .monaco-editor.readonly-editor",
@@ -569,10 +569,10 @@ extern "js" fn browser_geometry_pixel_ratio() -> Double =
 
 ///|
 extern "js" fn install_browser_geometry_controls(
-  state_json : (String, Int, Int) -> String,
+  state_json : (String, Int32, Int32) -> String,
   set_wrap : (String, Bool) -> Unit,
   set_scroll : (String, Double, Double) -> Unit,
-  set_position : (String, Int, Int) -> Unit,
+  set_position : (String, Int32, Int32) -> Unit,
   focus : (String) -> Unit,
   set_injected : (String, Bool) -> Unit,
   set_hidden_widest : (String, Bool) -> Unit,

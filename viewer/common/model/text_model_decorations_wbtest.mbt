@@ -24,7 +24,7 @@ fn wb_model(text : String) -> TextModel {
 ///|
 fn wb_options(
   class_name : String,
-  stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
+  stickiness~ : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   glyph_margin_class_name? : String,
   overview_ruler? : ModelDecorationOverviewRulerOptions,
 ) -> ModelDecorationOptions {
@@ -43,7 +43,7 @@ fn assert_names_eq(
   expected : Array[String],
 ) -> Unit raise {
   if actual != expected {
-    fail("got \{to_repr(actual)}, expected \{to_repr(expected)}")
+    fail("got \{Repr(actual)}, expected \{Repr(expected)}")
   }
 }
 
@@ -53,7 +53,7 @@ fn assert_range_opt_eq(
   expected : @base_common.Range?,
 ) -> Unit raise {
   if actual != expected {
-    fail("got \{to_repr(actual)}, expected \{to_repr(expected)}")
+    fail("got \{Repr(actual)}, expected \{Repr(expected)}")
   }
 }
 

@@ -14,9 +14,10 @@ pub struct JavascriptTokenizer {
 }
 #alias(new, deprecated)
 pub fn JavascriptTokenizer::JavascriptTokenizer() -> Self
+pub fn JavascriptTokenizer::initial_state(Self) -> @syntax.TokenizerState
+pub fn JavascriptTokenizer::tokenize_line(Self, String, @syntax.TokenizerState) -> (Array[@syntax.LineToken], @syntax.TokenizerState)
 pub impl @syntax.LineTokenizer for JavascriptTokenizer
 
 // Type aliases
 
 // Traits
-

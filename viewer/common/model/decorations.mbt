@@ -10,10 +10,16 @@ pub(all) enum TrackedRangeStickiness {
 } derive(Eq, Debug)
 
 ///|
+pub extend TrackedRangeStickiness with Eq::{not_equal, equal}
+
+///|
+pub extend TrackedRangeStickiness with Debug::{to_repr}
+
+///|
 /// Numeric value of the stickiness, matching Monaco's
 /// `TrackedRangeStickiness` enum values (`model.ts`) — the interval tree
 /// packs it into the node metadata byte.
-pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int {
+pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int32 {
   match self {
     AlwaysGrowsWhenTypingAtEdges => 0
     NeverGrowsWhenTypingAtEdges => 1
@@ -25,7 +31,9 @@ pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int {
 ///|
 /// Inverse of `to_int`. Values outside 0..=3 cannot come out of the 2-bit
 /// metadata field; the fallback mirrors Monaco's numeric default 0.
-pub fn TrackedRangeStickiness::from_int(value : Int) -> TrackedRangeStickiness {
+pub fn TrackedRangeStickiness::from_int(
+  value : Int32,
+) -> TrackedRangeStickiness {
   match value {
     1 => NeverGrowsWhenTypingAtEdges
     2 => GrowsOnlyWhenTypingBefore
@@ -44,11 +52,23 @@ pub(all) enum OverviewRulerLane {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverviewRulerLane with Eq::{not_equal, equal}
+
+///|
+pub extend OverviewRulerLane with Debug::{to_repr}
+
+///|
 /// Minimap decoration position, `MinimapPosition` (`model.ts`).
 pub(all) enum MinimapPosition {
   Inline
   Gutter
 } derive(Eq, Debug)
+
+///|
+pub extend MinimapPosition with Eq::{not_equal, equal}
+
+///|
+pub extend MinimapPosition with Debug::{to_repr}
 
 ///|
 /// Overview-ruler decoration options, `IModelDecorationOverviewRulerOptions`.
@@ -60,12 +80,24 @@ pub(all) struct ModelDecorationOverviewRulerOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ModelDecorationOverviewRulerOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationOverviewRulerOptions with Debug::{to_repr}
+
+///|
 /// Minimap decoration options, `IModelDecorationMinimapOptions`. `color` is a
 /// theme-color id, carried inert (plan D4).
 pub(all) struct ModelDecorationMinimapOptions {
   color : String
   position : MinimapPosition
 } derive(Eq, Debug)
+
+///|
+pub extend ModelDecorationMinimapOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationMinimapOptions with Debug::{to_repr}
 
 ///|
 /// `cleanClassName` (`textModel.ts:2355-2357`): `[^a-z0-9\-_]/gi → ' '`,
@@ -107,7 +139,7 @@ pub struct ModelDecorationOptions {
   message : String?
   inline_class_name : String?
   inline_class_name_affects_letter_spacing : Bool
-  z_index : Int
+  z_index : Int32
   is_whole_line : Bool
   show_if_collapsed : Bool
   should_fill_line_on_line_break : Bool
@@ -132,6 +164,9 @@ pub struct ModelDecorationOptions {
 } derive(Debug)
 
 ///|
+pub extend ModelDecorationOptions with Debug::{to_repr}
+
+///|
 /// `InjectedTextOptions` at the model tier (`model.ts`): the rendered
 /// content, its inline class, and the producer's attachment
 /// (`attachedData`, reduced to a source index for injected-text consumers).
@@ -143,15 +178,21 @@ pub(all) struct InjectedTextOptions {
   inline_class_name : String?
   /// `attachedData` reduced to a producer-defined index (`-1` = none), carried
   /// through the projection into hit-testing lookup.
-  attached_index : Int
+  attached_index : Int32
 } derive(Debug, Eq)
+
+///|
+pub extend InjectedTextOptions with Debug::{to_repr}
+
+///|
+pub extend InjectedTextOptions with Eq::{not_equal, equal}
 
 ///|
 /// Builds injected-text options.
 pub fn InjectedTextOptions::InjectedTextOptions(
   content : String,
   inline_class_name? : String,
-  attached_index? : Int = -1,
+  attached_index~ : Int32 = -1,
 ) -> InjectedTextOptions {
   { content, inline_class_name, attached_index, }
 }
@@ -165,15 +206,21 @@ pub(all) struct ModelDeltaDecoration {
 } derive(Debug)
 
 ///|
+pub extend ModelDeltaDecoration with Debug::{to_repr}
+
+///|
 /// A decoration query result — Monaco's `IModelDecoration` (id + ownerId +
 /// range + options). Monaco returns the tree's `IntervalNode`s cast to this
 /// interface; the port materializes value copies (same data, no aliasing).
 pub(all) struct ModelDecoration {
   id : String
-  owner_id : Int
+  owner_id : Int32
   range : @base_common.Range
   options : ModelDecorationOptions
 } derive(Debug)
+
+///|
+pub extend ModelDecoration with Debug::{to_repr}
 
 ///|
 /// `IModelDecorationsChangedEvent` (`textModelEvents.ts`), fired by
@@ -191,6 +238,12 @@ pub struct ModelDecorationsChangedEvent {
 } derive(Eq, Debug)
 
 ///|
+pub extend ModelDecorationsChangedEvent with Eq::{not_equal, equal}
+
+///|
+pub extend ModelDecorationsChangedEvent with Debug::{to_repr}
+
+///|
 /// The single decoration-options constructor. Monaco's `register`/
 /// `createDynamic`/`_normalizeOptions` collapse into this one function (plan
 /// Deviation 5 — `register` exists only to intern per-instance allocations).
@@ -202,12 +255,12 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
   class_name : String,
   message? : String,
   inline_class_name? : String,
-  inline_class_name_affects_letter_spacing? : Bool = false,
-  z_index? : Int = 0,
-  is_whole_line? : Bool = false,
-  show_if_collapsed? : Bool = false,
-  should_fill_line_on_line_break? : Bool = false,
-  stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
+  inline_class_name_affects_letter_spacing~ : Bool = false,
+  z_index~ : Int32 = 0,
+  is_whole_line~ : Bool = false,
+  show_if_collapsed~ : Bool = false,
+  should_fill_line_on_line_break~ : Bool = false,
+  stickiness~ : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   overview_ruler? : ModelDecorationOverviewRulerOptions,
   minimap? : ModelDecorationMinimapOptions,
   glyph_margin_class_name? : String,
@@ -215,8 +268,8 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
   first_line_decoration_class_name? : String,
   margin_class_name? : String,
   after_content_class_name? : String,
-  collapse_on_replace_edit? : Bool = false,
-  description? : String = "",
+  collapse_on_replace_edit~ : Bool = false,
+  description~ : String = "",
   before? : InjectedTextOptions,
   after? : InjectedTextOptions,
 ) -> ModelDecorationOptions {

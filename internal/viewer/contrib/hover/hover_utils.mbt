@@ -90,7 +90,7 @@ pub fn EventModifiers::none() -> EventModifiers {
 pub struct HoverSettings {
   enabled : HoverEnabled
   sticky : Bool
-  hiding_delay : Int
+  hiding_delay : Int32
 }
 
 ///|
@@ -168,7 +168,7 @@ pub fn should_show_hover(
 pub fn should_reschedule_hover(
   widget_visible : Bool,
   sticky : Bool,
-  hiding_delay : Int,
+  hiding_delay : Int32,
 ) -> Bool {
   widget_visible && sticky && hiding_delay > 0
 }

@@ -157,7 +157,7 @@ async fn reset_dir(path : String) -> Unit {
 ///|
 async fn wait_for_events(
   events : Array[@workspace.FileChangeType],
-  count : Int,
+  count : Int32,
 ) -> Unit {
   let mut remaining = 50
   while events.length() < count && remaining > 0 {

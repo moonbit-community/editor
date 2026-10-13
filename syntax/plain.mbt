@@ -20,6 +20,9 @@ pub impl LineTokenizer for PlainTokenizer with fn initial_state(_self) {
 }
 
 ///|
+pub extend PlainTokenizer with LineTokenizer::{initial_state, tokenize_line}
+
+///|
 /// Tokenizes one line with simple MoonBit-ish lexical classes.
 pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
   _self,
@@ -75,7 +78,7 @@ pub impl LineTokenizer for PlainTokenizer with fn tokenize_line(
 }
 
 ///|
-fn consume_string(text : String, offset : Int) -> Int {
+fn consume_string(text : String, offset : Int32) -> Int32 {
   let mut at = offset + 1
   let mut escaped = false
   while at < text.length() {
@@ -93,7 +96,11 @@ fn consume_string(text : String, offset : Int) -> Int {
 }
 
 ///|
-fn consume_while(text : String, offset : Int, pred : (Int) -> Bool) -> Int {
+fn consume_while(
+  text : String,
+  offset : Int32,
+  pred : (Int32) -> Bool,
+) -> Int32 {
   let mut at = offset
   while at < text.length() && pred(text[at].to_int()) {
     at = at + 1
@@ -102,22 +109,22 @@ fn consume_while(text : String, offset : Int, pred : (Int) -> Bool) -> Int {
 }
 
 ///|
-fn is_space(unit : Int) -> Bool {
+fn is_space(unit : Int32) -> Bool {
   unit == 9 || unit == 10 || unit == 13 || unit == 32
 }
 
 ///|
-fn is_digit(unit : Int) -> Bool {
+fn is_digit(unit : Int32) -> Bool {
   48 <= unit && unit <= 57
 }
 
 ///|
-fn is_ident_start(unit : Int) -> Bool {
+fn is_ident_start(unit : Int32) -> Bool {
   (65 <= unit && unit <= 90) || (97 <= unit && unit <= 122) || unit == 95
 }
 
 ///|
-fn is_ident_continue(unit : Int) -> Bool {
+fn is_ident_continue(unit : Int32) -> Bool {
   is_ident_start(unit) || is_digit(unit)
 }
 

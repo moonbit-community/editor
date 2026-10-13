@@ -37,14 +37,14 @@ fn async_hover_mouse_target() -> @editor_browser.MouseTarget {
 
 ///|
 struct ManualHoverTimeout {
-  due_ms : Int
+  due_ms : Int32
   callback : () -> Unit
   mut active : Bool
 }
 
 ///|
 struct ManualHoverScheduler {
-  mut now_ms : Int
+  mut now_ms : Int32
   tasks : Array[ManualHoverTimeout]
 }
 
@@ -57,7 +57,7 @@ fn ManualHoverScheduler::new() -> ManualHoverScheduler {
 fn ManualHoverScheduler::schedule(
   self : ManualHoverScheduler,
   callback : () -> Unit,
-  delay_ms : Int,
+  delay_ms : Int32,
 ) -> @base_common.Disposable {
   let task : ManualHoverTimeout = {
     due_ms: self.now_ms + delay_ms,
@@ -71,9 +71,9 @@ fn ManualHoverScheduler::schedule(
 ///|
 fn ManualHoverScheduler::next_due_index(
   self : ManualHoverScheduler,
-  target_ms : Int,
-) -> Int? {
-  let mut result : Int? = None
+  target_ms : Int32,
+) -> Int32? {
+  let mut result : Int32? = None
   let mut earliest = target_ms + 1
   for index, task in self.tasks {
     if task.active && task.due_ms <= target_ms && task.due_ms < earliest {
@@ -87,7 +87,7 @@ fn ManualHoverScheduler::next_due_index(
 ///|
 fn ManualHoverScheduler::advance_to(
   self : ManualHoverScheduler,
-  target_ms : Int,
+  target_ms : Int32,
 ) -> Unit {
   match self.next_due_index(target_ms) {
     Some(index) => {
@@ -102,7 +102,7 @@ fn ManualHoverScheduler::advance_to(
 }
 
 ///|
-fn ManualHoverScheduler::active_count(self : ManualHoverScheduler) -> Int {
+fn ManualHoverScheduler::active_count(self : ManualHoverScheduler) -> Int32 {
   let mut count = 0
   for task in self.tasks {
     if task.active {

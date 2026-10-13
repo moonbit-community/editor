@@ -5,8 +5,8 @@
 
 ///|
 fn markdown_contribution_block(
-  start_line_number : Int,
-  end_line_number_exclusive : Int,
+  start_line_number : Int32,
+  end_line_number_exclusive : Int32,
   markdown : String,
 ) -> @language.MarkdownCommentBlock {
   {
@@ -199,12 +199,12 @@ extern "js" fn markdown_contribution_test_parent(
 ) -> @rdom.Element = "element => element.parentNode"
 
 ///|
-extern "js" fn markdown_contribution_test_disconnect_count() -> Int = "() => globalThis.__markdownContributionDisconnectCount"
+extern "js" fn markdown_contribution_test_disconnect_count() -> Int32 = "() => globalThis.__markdownContributionDisconnectCount"
 
 ///|
 extern "js" fn markdown_contribution_test_trigger_resize(
   target : @rdom.Element,
-  height : Int,
+  height : Int32,
   connected : Bool,
 ) -> Unit =
   #| (target, height, connected) => {
@@ -220,7 +220,7 @@ fn with_markdown_contribution_viewer(
   text : String,
   body : (Viewer, Ref[Array[@language.MarkdownCommentBlock]]) -> Unit raise,
   provider_blocks? : Array[@language.MarkdownCommentBlock],
-  configure_line_comments? : Bool = false,
+  configure_line_comments~ : Bool = false,
 ) -> Unit raise {
   install_mounted_test_browser()
   defer restore_mounted_test_browser()

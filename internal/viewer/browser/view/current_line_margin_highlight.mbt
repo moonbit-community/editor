@@ -30,7 +30,7 @@ fn CurrentLineMarginHighlightOverlay::CurrentLineMarginHighlightOverlay() -> Cur
 fn prepare_current_line_margin_render(
   viewport : @view_layout.ViewportData,
   view_model : @view_model.ViewModel?,
-  cursor_view_line : Int?,
+  cursor_view_line : Int32?,
   selection_is_empty : Bool,
   editor_has_focus : Bool,
   word_wrap : Bool,
@@ -82,9 +82,9 @@ fn prepare_current_line_margin_render(
 /// the margin twin of the content source unit's `current_line_span`.
 fn margin_current_line_span(
   view_model : @view_model.ViewModel?,
-  cursor_view_line : Int,
+  cursor_view_line : Int32,
   word_wrap : Bool,
-) -> (Int, Int) {
+) -> (Int32, Int32) {
   if !word_wrap {
     return (cursor_view_line, cursor_view_line)
   }

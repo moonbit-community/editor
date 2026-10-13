@@ -7,6 +7,12 @@ pub struct CursorState {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorState with Eq::{not_equal, equal}
+
+///|
+pub extend CursorState with Debug::{to_repr}
+
+///|
 /// Retains a complete model/view pair.
 #alias(new, deprecated)
 pub fn CursorState::CursorState(
@@ -24,6 +30,12 @@ pub struct PartialModelCursorState {
 } derive(Eq, Debug)
 
 ///|
+pub extend PartialModelCursorState with Eq::{not_equal, equal}
+
+///|
+pub extend PartialModelCursorState with Debug::{to_repr}
+
+///|
 #alias(new, deprecated)
 pub fn PartialModelCursorState::PartialModelCursorState(
   model_state : SingleCursorState,
@@ -37,6 +49,12 @@ pub struct PartialViewCursorState {
   model_state : SingleCursorState?
   view_state : SingleCursorState
 } derive(Eq, Debug)
+
+///|
+pub extend PartialViewCursorState with Eq::{not_equal, equal}
+
+///|
+pub extend PartialViewCursorState with Debug::{to_repr}
 
 ///|
 #alias(new, deprecated)
@@ -56,6 +74,12 @@ pub enum PartialCursorState {
   ModelCursorState(PartialModelCursorState)
   ViewCursorState(PartialViewCursorState)
 } derive(Eq, Debug)
+
+///|
+pub extend PartialCursorState with Eq::{not_equal, equal}
+
+///|
+pub extend PartialCursorState with Debug::{to_repr}
 
 ///|
 pub fn CursorState::from_model_state(
@@ -125,8 +149,8 @@ pub fn PartialCursorState::view_state(
 pub struct CursorStateChange {
   old_selections : Array[@core.Selection]?
   selections : Array[@core.Selection]
-  old_model_version_id : Int
-  model_version_id : Int
+  old_model_version_id : Int32
+  model_version_id : Int32
   source : String
   reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
@@ -134,9 +158,15 @@ pub struct CursorStateChange {
 } derive(Debug)
 
 ///|
+pub extend CursorStateChange with Debug::{to_repr}
+
+///|
 /// Internal equality snapshot used by `CursorsController` to distinguish a
 /// full no-op, a view-only change, and a public model-state change.
 struct CursorModelState {
-  model_version_id : Int
+  model_version_id : Int32
   cursor_state : CursorState
 } derive(Eq)
+
+///|
+pub extend CursorModelState with Eq::{not_equal, equal}

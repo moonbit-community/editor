@@ -51,7 +51,7 @@ pub fn Viewer::remove_decorations(
 /// `renderValidationDecorations` option.
 pub fn Viewer::get_line_decorations(
   self : Viewer,
-  line_number : Int,
+  line_number : Int32,
 ) -> Array[@model.ModelDecoration] {
   guard self.get_model() is Some(model) else { return [] }
   model.get_line_decorations(
@@ -94,7 +94,7 @@ pub struct EditorDecorationsCollection {
 /// `createDecorationsCollection` (`codeEditorWidget.ts:1389`).
 pub fn Viewer::create_decorations_collection(
   self : Viewer,
-  decorations? : Array[@model.ModelDeltaDecoration] = [],
+  decorations~ : Array[@model.ModelDeltaDecoration] = [],
 ) -> EditorDecorationsCollection {
   let collection : EditorDecorationsCollection = {
     viewer: self,
@@ -143,7 +143,7 @@ pub fn EditorDecorationsCollection::clear(
 /// The decoration count.
 pub fn EditorDecorationsCollection::length(
   self : EditorDecorationsCollection,
-) -> Int {
+) -> Int32 {
   self.decoration_ids.length()
 }
 
@@ -152,7 +152,7 @@ pub fn EditorDecorationsCollection::length(
 /// index is out of bounds or the decoration no longer resolves.
 pub fn EditorDecorationsCollection::get_range(
   self : EditorDecorationsCollection,
-  index : Int,
+  index : Int32,
 ) -> @base_common.Range? {
   guard index >= 0 && index < self.decoration_ids.length() else { return None }
   guard self.viewer.get_model() is Some(model) else { return None }

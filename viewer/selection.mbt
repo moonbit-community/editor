@@ -37,7 +37,7 @@ fn Viewer::view_selection(self : Viewer) -> @core.Selection? {
 pub fn Viewer::set_position(
   self : Viewer,
   position : @base_common.Position,
-  source? : String = "api",
+  source~ : String = "api",
 ) -> Unit {
   self.apply_selection(Selection(position, position), source, NotSet)
 }
@@ -55,7 +55,7 @@ pub fn Viewer::set_position(
 pub fn Viewer::set_selection(
   self : Viewer,
   selection : @core.Selection,
-  source? : String = "api",
+  source~ : String = "api",
 ) -> Unit {
   self.apply_selection(selection, source, NotSet)
 }
@@ -90,8 +90,8 @@ fn Viewer::apply_selection(
 pub fn Viewer::set_selections(
   self : Viewer,
   selections : Array[@core.Selection],
-  source? : String = "api",
-  reason? : @editor_api.CursorChangeReason = NotSet,
+  source~ : String = "api",
+  reason~ : @editor_api.CursorChangeReason = NotSet,
 ) -> Unit {
   guard selections.length() > 0 else { return }
   guard self.get_view_model() is Some(view_model) else { return }

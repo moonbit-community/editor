@@ -78,7 +78,7 @@ fn Viewer::folding_enabled(self : Viewer) -> Bool {
 
 ///|
 /// `FoldingAction.getSelectedLines` (`folding.ts:571`).
-fn Viewer::folding_selected_lines(self : Viewer) -> Array[Int] {
+fn Viewer::folding_selected_lines(self : Viewer) -> Array[Int32] {
   self.get_selections().unwrap_or([]).map(s => s.start().line_number)
 }
 

@@ -38,8 +38,8 @@ pub fn ExtUri::compare(
   self : ExtUri,
   uri1 : Uri,
   uri2 : Uri,
-  ignore_fragment? : Bool = false,
-) -> Int {
+  ignore_fragment~ : Bool = false,
+) -> Int32 {
   if physical_equal(uri1, uri2) {
     return 0
   }
@@ -55,7 +55,7 @@ pub fn ExtUri::is_equal(
   self : ExtUri,
   uri1 : Uri?,
   uri2 : Uri?,
-  ignore_fragment? : Bool = false,
+  ignore_fragment~ : Bool = false,
 ) -> Bool {
   match (uri1, uri2) {
     (None, None) => true
@@ -73,7 +73,7 @@ pub fn ExtUri::is_equal(
 pub fn ExtUri::get_comparison_key(
   self : ExtUri,
   uri : Uri,
-  ignore_fragment? : Bool = false,
+  ignore_fragment~ : Bool = false,
 ) -> String {
   let path : String? = if (self.ignore_path_casing_fn)(uri) {
     Some(to_lower_js(uri.path))
@@ -98,7 +98,7 @@ pub fn ExtUri::is_equal_or_parent(
   self : ExtUri,
   base : Uri,
   parent_candidate : Uri,
-  ignore_fragment? : Bool = false,
+  ignore_fragment~ : Bool = false,
 ) -> Bool {
   if base.scheme == parent_candidate.scheme {
     if base.scheme == schemas_file {
@@ -404,13 +404,13 @@ pub let ext_uri_ignore_path_case : ExtUri = ExtUri(_uri => true)
 pub fn is_equal(
   uri1 : Uri?,
   uri2 : Uri?,
-  ignore_fragment? : Bool = false,
+  ignore_fragment~ : Bool = false,
 ) -> Bool {
   ext_uri.is_equal(uri1, uri2, ignore_fragment~)
 }
 
 ///|
-pub fn get_comparison_key(uri : Uri, ignore_fragment? : Bool = false) -> String {
+pub fn get_comparison_key(uri : Uri, ignore_fragment~ : Bool = false) -> String {
   ext_uri.get_comparison_key(uri, ignore_fragment~)
 }
 

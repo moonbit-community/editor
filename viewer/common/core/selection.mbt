@@ -8,6 +8,12 @@ pub(all) enum SelectionDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend SelectionDirection with Eq::{not_equal, equal}
+
+///|
+pub extend SelectionDirection with Debug::{to_repr}
+
+///|
 /// A selection in the editor: a range that carries an orientation. Mirrors
 /// Monaco's `core/selection.ts` `Selection`. Both endpoints are model
 /// positions (one-based `line_number`, UTF-16 `column`); `selection_start` is
@@ -22,6 +28,12 @@ pub struct Selection {
   selection_start : @base_common.Position
   position : @base_common.Position
 } derive(Eq, Debug)
+
+///|
+pub extend Selection with Eq::{not_equal, equal}
+
+///|
+pub extend Selection with Debug::{to_repr}
 
 ///|
 /// Builds a selection from its anchor (`selection_start`) and active
@@ -99,8 +111,8 @@ pub fn Selection::is_empty(self : Selection) -> Bool {
 /// the orientation is kept.
 pub fn Selection::set_start_position(
   self : Selection,
-  start_line_number : Int,
-  start_column : Int,
+  start_line_number : Int32,
+  start_column : Int32,
 ) -> Selection {
   let new_start : @base_common.Position = Position(
     start_line_number, start_column,
@@ -117,8 +129,8 @@ pub fn Selection::set_start_position(
 /// the orientation is kept.
 pub fn Selection::set_end_position(
   self : Selection,
-  end_line_number : Int,
-  end_column : Int,
+  end_line_number : Int32,
+  end_column : Int32,
 ) -> Selection {
   let new_end : @base_common.Position = Position(end_line_number, end_column)
   if self.direction() == LTR {

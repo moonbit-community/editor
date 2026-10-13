@@ -4,11 +4,17 @@ pub(all) enum HoverPart {
   MarkdownHover(
     range~ : @base_common.Range,
     contents~ : Array[@language.HoverContent],
-    ordinal~ : Int
+    ordinal~ : Int32
   )
   MarkerHover(range~ : @base_common.Range, marker~ : @markers.Marker)
   LoadingHover(range~ : @base_common.Range, message~ : String)
 } derive(Eq, Debug)
+
+///|
+pub extend HoverPart with Eq::{not_equal, equal}
+
+///|
+pub extend HoverPart with Debug::{to_repr}
 
 ///|
 /// Complete hover result after participant parts have been merged and sorted.
@@ -16,6 +22,12 @@ pub struct ComputedHover {
   range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq, Debug)
+
+///|
+pub extend ComputedHover with Eq::{not_equal, equal}
+
+///|
+pub extend ComputedHover with Debug::{to_repr}
 
 ///|
 /// Inputs shared by synchronous and asynchronous hover participants. Mirrors
@@ -88,7 +100,7 @@ fn hover_line_decorations(
 /// pointer position
 /// (`internal/viewer/contrib/hover/browser/hover_events.mbt` extracts them).
 pub struct HoverParticipantHandle {
-  ordinal : Int
+  ordinal : Int32
   suggest_hover_anchor : ((
     @view_model.InjectedText?,
     @base_common.Range,
@@ -107,7 +119,7 @@ pub struct HoverParticipantHandle {
 /// Monaco's absent-member branches; closures capture any concrete participant
 /// state they need at this construction boundary.
 pub fn HoverParticipantHandle::HoverParticipantHandle(
-  ordinal : Int,
+  ordinal : Int32,
   compute_sync : (HoverComputeContext) -> Array[HoverPart],
   suggest_hover_anchor? : (
     @view_model.InjectedText?,
@@ -340,7 +352,7 @@ pub fn ContentHoverComputer::compute_sync(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  source? : HoverStartSource = HoverStartMouse,
+  source~ : HoverStartSource = HoverStartMouse,
 ) -> ComputedHover? {
   let ctx : HoverComputeContext = {
     model,
@@ -361,9 +373,9 @@ pub async fn ContentHoverComputer::compute_async(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  source? : HoverStartSource = HoverStartMouse,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
-  is_current? : () -> Bool = () => true,
+  source~ : HoverStartSource = HoverStartMouse,
+  token~ : @language.CancellationToken = @language.CancellationToken::none(),
+  is_current~ : () -> Bool = () => true,
 ) -> ComputedHover? noraise {
   if token.is_cancellation_requested() || !is_current() {
     return None
@@ -402,10 +414,10 @@ pub async fn ContentHoverComputer::compute_async_each(
   self : ContentHoverComputer,
   model : @model.TextModel,
   anchor : HoverAnchor,
-  source? : HoverStartSource = HoverStartMouse,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
-  is_current? : () -> Bool = () => true,
-  run_tasks? : async (Array[async () -> Unit]) -> Unit = @base_common.run_async_tasks_sequentially,
+  source~ : HoverStartSource = HoverStartMouse,
+  token~ : @language.CancellationToken = @language.CancellationToken::none(),
+  is_current~ : () -> Bool = () => true,
+  run_tasks~ : async (Array[async () -> Unit]) -> Unit = @base_common.run_async_tasks_sequentially,
   emit~ : (Array[HoverPart]) -> Unit,
 ) -> Unit noraise {
   if token.is_cancellation_requested() || !is_current() {
@@ -480,7 +492,7 @@ fn computed_hover_from_parts(
 /// Carry the arrival index as the final comparator key so equal participant
 /// ordinal/range-start parts retain provider completion order on every target.
 fn sort_hover_parts_stably(parts : Array[HoverPart]) -> Array[HoverPart] {
-  let indexed : Array[(Int, HoverPart)] = []
+  let indexed : Array[(Int32, HoverPart)] = []
   for index, part in parts {
     indexed.push((index, part))
   }
@@ -499,7 +511,7 @@ fn sort_hover_parts_stably(parts : Array[HoverPart]) -> Array[HoverPart] {
 /// Orders hover parts by participant ordinal, then by start offset. Exposed for
 /// the viewer core's hover controller, which merges late-arriving async parts
 /// into an already-shown hover.
-pub fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int {
+pub fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int32 {
   let ordinal = hover_part_ordinal(left) - hover_part_ordinal(right)
   if ordinal != 0 {
     ordinal
@@ -512,7 +524,7 @@ pub fn compare_hover_parts(left : HoverPart, right : HoverPart) -> Int {
 }
 
 ///|
-fn hover_part_ordinal(part : HoverPart) -> Int {
+fn hover_part_ordinal(part : HoverPart) -> Int32 {
   match part {
     MarkdownHover(ordinal~, ..) => ordinal
     MarkerHover(_) => 0

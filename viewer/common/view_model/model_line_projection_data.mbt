@@ -4,33 +4,45 @@
 /// segment's rendered view line (Monaco's `getMinOutputOffset`): `0` for a model
 /// line's first segment, the model line's wrapped indent for continuations.
 pub struct ModelLineProjectionSegment {
-  model_line_number : Int
-  start_offset : Int
-  end_offset : Int
-  start_column : Int
-  end_column : Int
+  model_line_number : Int32
+  start_offset : Int32
+  end_offset : Int32
+  start_column : Int32
+  end_column : Int32
   /// Monaco `breakOffsetsVisibleColumn[k - 1]` for segment `k` (`0` for the
   /// first): fractional when `columnsForFullWidthChar` is (full-width
   /// advance / half-width advance) of a measured font.
   start_visible_column : Double
   continues_with_wrapped_line : Bool
-  wrapped_text_indent_length : Int
+  wrapped_text_indent_length : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend ModelLineProjectionSegment with Eq::{not_equal, equal}
+
+///|
+pub extend ModelLineProjectionSegment with Debug::{to_repr}
 
 ///|
 /// Projection data for one model line.
 pub struct ModelLineProjectionData {
-  model_line_number : Int
-  line_length : Int
+  model_line_number : Int32
+  line_length : Int32
   projected_line : ProjectedTextLine
   segments : Array[ModelLineProjectionSegment]
 } derive(Eq, Debug)
 
 ///|
+pub extend ModelLineProjectionData with Eq::{not_equal, equal}
+
+///|
+pub extend ModelLineProjectionData with Debug::{to_repr}
+
+///|
 /// Builds projection data for one model line.
 pub fn ModelLineProjectionData::ModelLineProjectionData(
-  model_line_number : Int,
-  line_length : Int,
+  model_line_number : Int32,
+  line_length : Int32,
   projected_line : ProjectedTextLine,
   segments : Array[ModelLineProjectionSegment],
 ) -> ModelLineProjectionData {
@@ -41,7 +53,7 @@ pub fn ModelLineProjectionData::ModelLineProjectionData(
 /// Number of view-line segments for this model line.
 pub fn ModelLineProjectionData::view_line_count(
   self : ModelLineProjectionData,
-) -> Int {
+) -> Int32 {
   self.segments.length()
 }
 
@@ -49,7 +61,7 @@ pub fn ModelLineProjectionData::view_line_count(
 /// Segment at a zero-based view-line index, clamped into range.
 pub fn ModelLineProjectionData::segment_at_view_line_index(
   self : ModelLineProjectionData,
-  index : Int,
+  index : Int32,
 ) -> ModelLineProjectionSegment {
   let index = @base_common.clamp_int(index, 0, self.segments.length() - 1)
   self.segments[index]
@@ -59,8 +71,8 @@ pub fn ModelLineProjectionData::segment_at_view_line_index(
 /// View-line index containing the given model column.
 pub fn ModelLineProjectionData::view_line_index_for_model_column(
   self : ModelLineProjectionData,
-  column : Int,
-) -> Int {
+  column : Int32,
+) -> Int32 {
   let column = @base_common.clamp_int(column, 0, self.line_length)
   let projected_column = self.projected_line.model_column_to_projected_column(
     column,
@@ -77,9 +89,9 @@ pub fn ModelLineProjectionData::view_line_index_for_model_column(
 /// other affinity starts the next segment with it (`[start, end)`).
 pub fn ModelLineProjectionData::view_line_index_for_projected_column(
   self : ModelLineProjectionData,
-  column : Int,
+  column : Int32,
   affinity? : @model.PositionAffinity,
-) -> Int {
+) -> Int32 {
   let column = @base_common.clamp_int(
     column,
     0,
@@ -102,12 +114,12 @@ pub fn ModelLineProjectionData::view_line_index_for_projected_column(
 
 ///|
 fn model_line_projection_segment(
-  model_line_number : Int,
-  start_offset : Int,
-  end_offset : Int,
+  model_line_number : Int32,
+  start_offset : Int32,
+  end_offset : Int32,
   start_visible_column : Double,
   continues_with_wrapped_line : Bool,
-  wrapped_text_indent_length : Int,
+  wrapped_text_indent_length : Int32,
 ) -> ModelLineProjectionSegment {
   {
     model_line_number,

@@ -89,8 +89,8 @@ fn TestDecorationProvider::access(
 /// `(line, type)` pairs of the provider's live decorations, by position.
 fn TestDecorationProvider::get_decorations(
   self : TestDecorationProvider,
-) -> Array[(Int, String)] {
-  let res : Array[(Int, String)] = []
+) -> Array[(Int32, String)] {
+  let res : Array[(Int32, String)] = []
   for decoration in self.model.get_all_decorations() {
     match decoration.options.description {
       "test-hidden" => res.push((decoration.range.start_line_number, "hidden"))
@@ -136,10 +136,10 @@ fn ws_then_exact(rest : String) -> (String) -> Bool {
 /// isCollapsed).
 fn assert_model_ranges(
   folding_model : FoldingModel,
-  expected : Array[(Int, Int, Bool)],
+  expected : Array[(Int32, Int32, Bool)],
   message : String,
 ) -> Unit raise {
-  let actual_ranges : Array[(Int, Int, Bool)] = []
+  let actual_ranges : Array[(Int32, Int32, Bool)] = []
   let actual = folding_model.regions()
   for i in 0..<actual.length() {
     actual_ranges.push(
@@ -151,7 +151,7 @@ fn assert_model_ranges(
     )
   }
   if actual_ranges != expected {
-    fail("\{message}: \{to_repr(actual_ranges)} != \{to_repr(expected)}")
+    fail("\{message}: \{Repr(actual_ranges)} != \{Repr(expected)}")
   }
 }
 
@@ -160,10 +160,10 @@ fn assert_model_ranges(
 /// (start, end)).
 fn assert_folded_ranges(
   folding_model : FoldingModel,
-  expected : Array[(Int, Int)],
+  expected : Array[(Int32, Int32)],
   message : String,
 ) -> Unit raise {
-  let actual_ranges : Array[(Int, Int)] = []
+  let actual_ranges : Array[(Int32, Int32)] = []
   let actual = folding_model.regions()
   for i in 0..<actual.length() {
     if actual.is_collapsed(i) {
@@ -173,7 +173,7 @@ fn assert_folded_ranges(
     }
   }
   if actual_ranges != expected {
-    fail("\{message}: \{to_repr(actual_ranges)} != \{to_repr(expected)}")
+    fail("\{message}: \{Repr(actual_ranges)} != \{Repr(expected)}")
   }
 }
 
@@ -181,14 +181,14 @@ fn assert_folded_ranges(
 /// The suite's `assertRegions` over a region list.
 fn assert_regions_list(
   actual : Array[FoldingRegion],
-  expected : Array[(Int, Int, Bool)],
+  expected : Array[(Int32, Int32, Bool)],
   message : String,
 ) -> Unit raise {
   let mapped = actual.map(r => {
     (r.start_line_number(), r.end_line_number(), r.is_collapsed())
   })
   if mapped != expected {
-    fail("\{message}: \{to_repr(mapped)} != \{to_repr(expected)}")
+    fail("\{message}: \{Repr(mapped)} != \{Repr(expected)}")
   }
 }
 
@@ -196,7 +196,7 @@ fn assert_regions_list(
 /// The suite's `assertRegion` over an optional region.
 fn assert_region_opt(
   actual : FoldingRegion?,
-  expected : (Int, Int, Bool)?,
+  expected : (Int32, Int32, Bool)?,
   message : String,
 ) -> Unit raise {
   match (actual, expected) {
@@ -208,7 +208,7 @@ fn assert_region_opt(
         region.is_collapsed(),
       )
       if got != expected {
-        fail("\{message}: \{to_repr(got)} != \{to_repr(expected)}")
+        fail("\{message}: \{Repr(got)} != \{Repr(expected)}")
       }
     }
     _ => fail("\{message}: presence mismatch")
@@ -266,15 +266,15 @@ test "collapse" {
   let r2 = (4, 7, false)
   let r3 = (5, 6, false)
   assert_model_ranges(folding_model, [r1, r2, r3], "initial")
-  guard folding_model.get_region_at_line(1) is Some(region1)
+  guard! folding_model.get_region_at_line(1) is Some(region1)
   folding_model.toggle_collapse_state([region1])
   folding_model.update(ranges)
   assert_model_ranges(folding_model, [(1, 3, true), r2, r3], "1")
-  guard folding_model.get_region_at_line(5) is Some(region5)
+  guard! folding_model.get_region_at_line(5) is Some(region5)
   folding_model.toggle_collapse_state([region5])
   folding_model.update(ranges)
   assert_model_ranges(folding_model, [(1, 3, true), r2, (5, 6, true)], "2")
-  guard folding_model.get_region_at_line(7) is Some(region7)
+  guard! folding_model.get_region_at_line(7) is Some(region7)
   folding_model.toggle_collapse_state([region7])
   folding_model.update(ranges)
   assert_model_ranges(
@@ -679,7 +679,7 @@ test "folding decoration" {
       #|[(1, "expanded"), (2, "expanded"), (3, "expanded")]
     ),
   )
-  guard folding_model.get_region_at_line(2) is Some(region2)
+  guard! folding_model.get_region_at_line(2) is Some(region2)
   folding_model.toggle_collapse_state([region2])
   assert_model_ranges(folding_model, [r1, (2, 5, true), r3], "1")
   debug_inspect(
@@ -696,7 +696,7 @@ test "folding decoration" {
       #|[(1, "expanded"), (2, "collapsed"), (3, "hidden")]
     ),
   )
-  guard folding_model.get_region_at_line(1) is Some(region1)
+  guard! folding_model.get_region_at_line(1) is Some(region1)
   folding_model.toggle_collapse_state([region1])
   assert_model_ranges(folding_model, [(1, 6, true), (2, 5, true), r3], "3")
   debug_inspect(
@@ -713,8 +713,8 @@ test "folding decoration" {
       #|[(1, "collapsed"), (2, "hidden"), (3, "hidden")]
     ),
   )
-  guard folding_model.get_region_at_line(1) is Some(region1b)
-  guard folding_model.get_region_at_line(3) is Some(region3)
+  guard! folding_model.get_region_at_line(1) is Some(region1b)
+  guard! folding_model.get_region_at_line(3) is Some(region3)
   folding_model.toggle_collapse_state([region1b, region3])
   assert_model_ranges(folding_model, [r1, (2, 5, true), (3, 4, true)], "5")
   debug_inspect(

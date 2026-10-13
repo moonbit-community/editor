@@ -17,8 +17,14 @@
 /// `modified_end_line_number == 0` encodes a deletion, with the respective
 /// start line number naming the line *before* the gap.
 pub(all) struct Change {
-  original_start_line_number : Int
-  original_end_line_number : Int
-  modified_start_line_number : Int
-  modified_end_line_number : Int
+  original_start_line_number : Int32
+  original_end_line_number : Int32
+  modified_start_line_number : Int32
+  modified_end_line_number : Int32
 } derive(Eq, Debug)
+
+///|
+pub extend Change with Eq::{not_equal, equal}
+
+///|
+pub extend Change with Debug::{to_repr}

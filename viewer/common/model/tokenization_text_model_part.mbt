@@ -17,8 +17,8 @@ pub(all) struct ModelTokensChangedEvent {
 ///|
 /// One inclusive changed line range.
 pub(all) struct ModelTokensChangedRange {
-  from_line_number : Int
-  to_line_number : Int
+  from_line_number : Int32
+  to_line_number : Int32
 }
 
 ///|
@@ -62,7 +62,7 @@ fn TokenizationTextModelPart::new_with_support_resolver(
   model_state : TokenizationModelState,
   attached_views : AttachedViews,
   resolve_support : (String) -> InternalTokenizationSupportAdapter?,
-  subscribe_registry? : Bool = false,
+  subscribe_registry~ : Bool = false,
 ) -> TokenizationTextModelPart {
   let backend = TokenizerSyntaxTokenBackend::new_with_support_resolver(
     model_state,
@@ -119,7 +119,7 @@ fn TokenizationTextModelPart::assert_not_disposed(
 /// Validates the inclusive one-based model-line domain.
 fn TokenizationTextModelPart::validate_line_number(
   self : TokenizationTextModelPart,
-  line_number : Int,
+  line_number : Int32,
 ) -> Unit {
   if line_number < 1 || line_number > self.model_state.snapshot.val.line_count() {
     abort("Illegal value for lineNumber")
@@ -130,7 +130,7 @@ fn TokenizationTextModelPart::validate_line_number(
 /// Passive stored/default syntactic tokens; never invokes the lexer.
 pub fn TokenizationTextModelPart::get_line_tokens(
   self : TokenizationTextModelPart,
-  line_number : Int,
+  line_number : Int32,
 ) -> @common_tokens.LineTokens {
   self.validate_line_number(line_number)
   self.backend.get_line_tokens(line_number)
@@ -158,7 +158,7 @@ fn TokenizationTextModelPart::handle_did_change_attached(
 /// lexer calls, including initial attach and token-change notification paths.
 pub fn TokenizationTextModelPart::token_count(
   self : TokenizationTextModelPart,
-) -> Int {
+) -> Int32 {
   self.assert_not_disposed()
   let mut count = 0
   for line_number in 1..<=self.model_state.snapshot.val.line_count() {

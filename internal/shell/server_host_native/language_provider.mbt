@@ -13,7 +13,7 @@ pub(all) struct MoonWorkspaceLanguageProvider {
 /// Creates a moon-command language provider rooted at `root`.
 pub fn MoonWorkspaceLanguageProvider::MoonWorkspaceLanguageProvider(
   root : String,
-  moon_command? : String = "moon",
+  moon_command~ : String = "moon",
 ) -> MoonWorkspaceLanguageProvider {
   { root: normalize_host_path(root), moon_command, }
 }

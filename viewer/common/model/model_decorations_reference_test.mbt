@@ -71,10 +71,10 @@ fn create_this_model() -> @model.TextModel {
 /// `addDecoration`.
 fn add_decoration(
   model : @model.TextModel,
-  start_line_number : Int,
-  start_column : Int,
-  end_line_number : Int,
-  end_column : Int,
+  start_line_number : Int32,
+  start_column : Int32,
+  end_line_number : Int32,
+  end_column : Int32,
   class_name : String,
 ) -> String {
   model.change_decorations(accessor => {
@@ -89,7 +89,7 @@ fn add_decoration(
 /// `modelHasDecorations`: (range, className) rows sorted by range starts.
 fn model_has_decorations(
   model : @model.TextModel,
-  decorations : Array[(Int, Int, Int, Int, String)],
+  decorations : Array[(Int32, Int32, Int32, Int32, String)],
 ) -> Unit raise {
   let model_decorations = model
     .get_all_decorations()
@@ -115,10 +115,10 @@ fn model_has_decorations(
 ///|
 fn model_has_decoration(
   model : @model.TextModel,
-  start_line_number : Int,
-  start_column : Int,
-  end_line_number : Int,
-  end_column : Int,
+  start_line_number : Int32,
+  start_column : Int32,
+  end_line_number : Int32,
+  end_column : Int32,
   class_name : String,
 ) -> Unit raise {
   model_has_decorations(model, [
@@ -135,8 +135,8 @@ fn model_has_no_decorations(model : @model.TextModel) -> Unit raise {
 /// `lineHasDecorations`: (startColumn, endColumn, className) rows.
 fn line_has_decorations(
   model : @model.TextModel,
-  line_number : Int,
-  decorations : Array[(Int, Int, String)],
+  line_number : Int32,
+  decorations : Array[(Int32, Int32, String)],
 ) -> Unit raise {
   let actual = model
     .get_line_decorations(line_number)
@@ -149,7 +149,7 @@ fn line_has_decorations(
 ///|
 fn line_has_no_decorations(
   model : @model.TextModel,
-  line_number : Int,
+  line_number : Int32,
 ) -> Unit raise {
   line_has_decorations(model, line_number, [])
 }
@@ -157,9 +157,9 @@ fn line_has_no_decorations(
 ///|
 fn line_has_decoration(
   model : @model.TextModel,
-  line_number : Int,
-  start : Int,
-  end : Int,
+  line_number : Int32,
+  start : Int32,
+  end : Int32,
   class_name : String,
 ) -> Unit raise {
   line_has_decorations(model, line_number, [(start, end, class_name)])
@@ -344,10 +344,10 @@ priv struct LightWeightDecoration {
 ///|
 fn decoration(
   id : String,
-  start_line_number : Int,
-  start_column : Int,
-  end_line_number : Int,
-  end_column : Int,
+  start_line_number : Int32,
+  start_column : Int32,
+  end_line_number : Int32,
+  end_column : Int32,
 ) -> LightWeightDecoration {
   {
     id,

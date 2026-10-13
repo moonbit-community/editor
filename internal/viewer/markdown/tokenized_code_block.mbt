@@ -29,7 +29,7 @@ pub fn render_tokenized_code_block(
       codec,
       language_id=encoded_language_id,
     )
-    let pairs : Array[UInt] = []
+    let pairs : Array[UInt32] = []
     for index in 0..<line_tokens.get_count() {
       pairs.push(line_tokens.get_start_offset(index).reinterpret_as_uint())
       pairs.push(line_tokens.get_metadata(index))

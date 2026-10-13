@@ -1,9 +1,9 @@
 ///|
 fn test_change(
-  original_start : Int,
-  original_end : Int,
-  modified_start : Int,
-  modified_end : Int,
+  original_start : Int32,
+  original_end : Int32,
+  modified_start : Int32,
+  modified_end : Int32,
 ) -> @diff.Change {
   {
     original_start_line_number: original_start,

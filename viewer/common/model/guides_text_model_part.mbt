@@ -23,9 +23,9 @@
 ///|
 /// Active indent-guide span for a line. Mirrors Monaco's `IActiveIndentGuideInfo`.
 pub struct ActiveIndentGuideInfo {
-  start_line_number : Int
-  end_line_number : Int
-  indent : Int
+  start_line_number : Int32
+  end_line_number : Int32
+  indent : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -38,8 +38,8 @@ pub extend ActiveIndentGuideInfo with Debug::{to_repr}
 /// `model.guides` — indent-guide queries over a text snapshot.
 pub struct GuidesTextModelPart {
   text_model : TextSnapshot
-  tab_size : Int
-  indent_size : Int
+  tab_size : Int32
+  indent_size : Int32
   off_side : Bool
 }
 
@@ -47,9 +47,9 @@ pub struct GuidesTextModelPart {
 #alias(new, deprecated)
 pub fn GuidesTextModelPart::GuidesTextModelPart(
   text_model : TextSnapshot,
-  tab_size? : Int = 4,
-  indent_size? : Int = 4,
-  off_side? : Bool = false,
+  tab_size~ : Int32 = 4,
+  indent_size~ : Int32 = 4,
+  off_side~ : Bool = false,
 ) -> GuidesTextModelPart {
   { text_model, tab_size, indent_size, off_side, }
 }
@@ -61,8 +61,8 @@ pub fn GuidesTextModelPart::GuidesTextModelPart(
 /// zero-based, as in Monaco.
 fn GuidesTextModelPart::compute_indent_level(
   self : GuidesTextModelPart,
-  line_index : Int,
-) -> Int {
+  line_index : Int32,
+) -> Int32 {
   compute_indent_level(self.text_model.line_text(line_index), self.tab_size)
 }
 
@@ -70,9 +70,9 @@ fn GuidesTextModelPart::compute_indent_level(
 fn GuidesTextModelPart::get_indent_level_for_whitespace_line(
   self : GuidesTextModelPart,
   off_side : Bool,
-  above_content_line_indent : Int,
-  below_content_line_indent : Int,
-) -> Int {
+  above_content_line_indent : Int32,
+  below_content_line_indent : Int32,
+) -> Int32 {
   if above_content_line_indent == -1 || below_content_line_indent == -1 {
     // At the top or bottom of the file
     0
@@ -96,9 +96,9 @@ fn GuidesTextModelPart::get_indent_level_for_whitespace_line(
 /// (1-based, inclusive). Mirrors `getLinesIndentGuides`.
 pub fn GuidesTextModelPart::get_lines_indent_guides(
   self : GuidesTextModelPart,
-  start_line_number : Int,
-  end_line_number : Int,
-) -> Array[Int] {
+  start_line_number : Int32,
+  end_line_number : Int32,
+) -> Array[Int32] {
   let line_count = self.text_model.line_count()
   guard start_line_number >= 1 && start_line_number <= line_count else {
     abort("Illegal value for startLineNumber")
@@ -170,9 +170,9 @@ pub fn GuidesTextModelPart::get_lines_indent_guides(
 /// `[min_line_number, max_line_number]`. Mirrors `getActiveIndentGuide`.
 pub fn GuidesTextModelPart::get_active_indent_guide(
   self : GuidesTextModelPart,
-  line_number : Int,
-  min_line_number : Int,
-  max_line_number : Int,
+  line_number : Int32,
+  min_line_number : Int32,
+  max_line_number : Int32,
 ) -> ActiveIndentGuideInfo {
   let line_count = self.text_model.line_count()
   guard line_number >= 1 && line_number <= line_count else {
@@ -185,7 +185,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
   let mut up_above_content_line_indent = -1
   let mut up_below_content_line_index = -2
   let mut up_below_content_line_indent = -1
-  let up_resolve_indents = fn(line_number : Int) -> Unit {
+  let up_resolve_indents = fn(line_number : Int32) -> Unit {
     if up_above_content_line_index != -1 &&
       (
         up_above_content_line_index == -2 ||
@@ -225,7 +225,7 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
   let mut down_above_content_line_indent = -1
   let mut down_below_content_line_index = -2
   let mut down_below_content_line_indent = -1
-  let down_resolve_indents = fn(line_number : Int) -> Unit {
+  let down_resolve_indents = fn(line_number : Int32) -> Unit {
     if down_above_content_line_index == -2 {
       down_above_content_line_index = -1
       down_above_content_line_indent = -1
@@ -369,13 +369,13 @@ pub fn GuidesTextModelPart::get_active_indent_guide(
 ///|
 /// `ceil(a / b)` for `a >= 0`, `b > 0` (Monaco's `Math.ceil` over number
 /// division).
-fn ceil_div(a : Int, b : Int) -> Int {
+fn ceil_div(a : Int32, b : Int32) -> Int32 {
   (a + b - 1) / b
 }
 
 ///|
 /// `floor(a / b)` for `a >= 0`, `b > 0` (Monaco's `Math.floor` over number
 /// division).
-fn floor_div(a : Int, b : Int) -> Int {
+fn floor_div(a : Int32, b : Int32) -> Int32 {
   a / b
 }

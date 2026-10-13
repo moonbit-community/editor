@@ -21,7 +21,7 @@ let default_options : @diff.LinesDiffComputerOptions = {
 fn compute(
   original : Array[String],
   modified : Array[String],
-  options? : @diff.LinesDiffComputerOptions = default_options,
+  options~ : @diff.LinesDiffComputerOptions = default_options,
 ) -> @diff.LinesDiff {
   @diff.get_default().compute_diff(original, modified, options)
 }
@@ -37,10 +37,10 @@ fn hunks(result : @diff.LinesDiff) -> String {
 /// The `{[originalStart,originalEndExclusive)->[modifiedStart,
 /// modifiedEndExclusive)}` rendering of one expected hunk.
 fn hunk(
-  original_start : Int,
-  original_end_exclusive : Int,
-  modified_start : Int,
-  modified_end_exclusive : Int,
+  original_start : Int32,
+  original_end_exclusive : Int32,
+  modified_start : Int32,
+  modified_end_exclusive : Int32,
 ) -> String {
   "{[\{original_start},\{original_end_exclusive})->[\{modified_start},\{modified_end_exclusive})}"
 }

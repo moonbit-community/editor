@@ -1,5 +1,5 @@
 ///|
-fn pos(line : Int, column : Int) -> @base_common.Position {
+fn pos(line : Int32, column : Int32) -> @base_common.Position {
   Position(line, column)
 }
 

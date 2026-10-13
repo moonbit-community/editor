@@ -4,7 +4,7 @@
 /// the generation before cleanup but deliberately keeps `current` installed
 /// until `ModelData::dispose` has completed.
 priv struct ViewerModelSlot {
-  mut generation : Int
+  mut generation : Int32
   mut current : ModelData?
 }
 
@@ -15,7 +15,7 @@ fn ViewerModelSlot::ViewerModelSlot() -> ViewerModelSlot {
 
 ///|
 /// Advances the callback generation before one model attach begins.
-fn ViewerModelSlot::begin_attach_generation(self : ViewerModelSlot) -> Int {
+fn ViewerModelSlot::begin_attach_generation(self : ViewerModelSlot) -> Int32 {
   self.generation += 1
   self.generation
 }
@@ -50,7 +50,7 @@ fn ViewerModelSlot::clear_current_after_dispose(self : ViewerModelSlot) -> Unit 
 ///|
 fn ViewerModelSlot::is_current_generation(
   self : ViewerModelSlot,
-  generation : Int,
+  generation : Int32,
 ) -> Bool {
   self.current is Some(_) && self.generation == generation
 }

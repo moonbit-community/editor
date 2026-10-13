@@ -61,61 +61,61 @@ pub extend NodeColor with Debug::{to_repr}
 ///|
 /// `Constants` bit layout of the packed `metadata` byte
 /// (`intervalTree.ts:29-56`).
-const COLOR_MASK : Int = 0b00000001
+const COLOR_MASK : Int32 = 0b00000001
 
 ///|
-const COLOR_MASK_INVERSE : Int = 0b11111110
+const COLOR_MASK_INVERSE : Int32 = 0b11111110
 
 ///|
-const COLOR_OFFSET : Int = 0
+const COLOR_OFFSET : Int32 = 0
 
 ///|
-const IS_VISITED_MASK : Int = 0b00000010
+const IS_VISITED_MASK : Int32 = 0b00000010
 
 ///|
-const IS_VISITED_MASK_INVERSE : Int = 0b11111101
+const IS_VISITED_MASK_INVERSE : Int32 = 0b11111101
 
 ///|
-const IS_VISITED_OFFSET : Int = 1
+const IS_VISITED_OFFSET : Int32 = 1
 
 ///|
-const IS_FOR_VALIDATION_MASK : Int = 0b00000100
+const IS_FOR_VALIDATION_MASK : Int32 = 0b00000100
 
 ///|
-const IS_FOR_VALIDATION_MASK_INVERSE : Int = 0b11111011
+const IS_FOR_VALIDATION_MASK_INVERSE : Int32 = 0b11111011
 
 ///|
-const IS_FOR_VALIDATION_OFFSET : Int = 2
+const IS_FOR_VALIDATION_OFFSET : Int32 = 2
 
 ///|
-const STICKINESS_MASK_INVERSE : Int = 0b11100111
+const STICKINESS_MASK_INVERSE : Int32 = 0b11100111
 
 ///|
-const STICKINESS_OFFSET : Int = 3
+const STICKINESS_OFFSET : Int32 = 3
 
 ///|
-const COLLAPSE_ON_REPLACE_EDIT_MASK_INVERSE : Int = 0b11011111
+const COLLAPSE_ON_REPLACE_EDIT_MASK_INVERSE : Int32 = 0b11011111
 
 ///|
-const COLLAPSE_ON_REPLACE_EDIT_OFFSET : Int = 5
+const COLLAPSE_ON_REPLACE_EDIT_OFFSET : Int32 = 5
 
 ///|
-const IS_MARGIN_MASK : Int = 0b01000000
+const IS_MARGIN_MASK : Int32 = 0b01000000
 
 ///|
-const IS_MARGIN_MASK_INVERSE : Int = 0b10111111
+const IS_MARGIN_MASK_INVERSE : Int32 = 0b10111111
 
 ///|
-const IS_MARGIN_OFFSET : Int = 6
+const IS_MARGIN_OFFSET : Int32 = 6
 
 ///|
-const AFFECTS_FONT_MASK : Int = 0b10000000
+const AFFECTS_FONT_MASK : Int32 = 0b10000000
 
 ///|
-const AFFECTS_FONT_MASK_INVERSE : Int = 0b01111111
+const AFFECTS_FONT_MASK_INVERSE : Int32 = 0b01111111
 
 ///|
-const AFFECTS_FONT_OFFSET : Int = 7
+const AFFECTS_FONT_OFFSET : Int32 = 7
 
 ///|
 /// Delta safety bounds (`intervalTree.ts:58-78`). Deletion hands deltas off
@@ -123,19 +123,19 @@ const AFFECTS_FONT_OFFSET : Int = 7
 /// bounds the tree schedules a `normalize_delta` pass. The source picks
 /// ±(1<<30) as the v8 SMI bound; the same constant keeps MoonBit's 32-bit
 /// `Int` arithmetic overflow-free for real document offsets.
-const MIN_SAFE_DELTA : Int = -(1 << 30)
+const MIN_SAFE_DELTA : Int32 = -(1 << 30)
 
 ///|
-const MAX_SAFE_DELTA : Int = 1 << 30
+const MAX_SAFE_DELTA : Int32 = 1 << 30
 
 ///|
 /// Stable identities for interval nodes. TypeScript's object `===` is part of
 /// the tree algorithm; MoonBit's `physical_equal` is only an optimization hint
 /// and cannot carry that semantic contract across targets.
-let interval_node_identity_counter : Ref[Int] = Ref(0)
+let interval_node_identity_counter : Ref[Int32] = Ref(0)
 
 ///|
-fn next_interval_node_identity() -> Int {
+fn next_interval_node_identity() -> Int32 {
   interval_node_identity_counter.val += 1
   interval_node_identity_counter.val
 }
@@ -216,7 +216,7 @@ fn set_node_affects_font(node : IntervalNode, value : Bool) -> Unit {
 
 ///|
 /// `_setNodeStickiness` (`intervalTree.ts:124-128`).
-fn set_node_stickiness_int(node : IntervalNode, stickiness : Int) -> Unit {
+fn set_node_stickiness_int(node : IntervalNode, stickiness : Int32) -> Unit {
   node.metadata = (node.metadata & STICKINESS_MASK_INVERSE) |
     (stickiness << STICKINESS_OFFSET)
 }
@@ -234,21 +234,21 @@ fn set_collapse_on_replace_edit(node : IntervalNode, value : Bool) -> Unit {
 /// affectsFont. Link fields are `IntervalNode?` behind unwrap accessors (see
 /// header deviation note); everything else matches the source field list.
 pub(all) struct IntervalNode {
-  priv identity : Int
-  mut metadata : Int
+  priv identity : Int32
+  mut metadata : Int32
   mut parent_ : IntervalNode?
   mut left_ : IntervalNode?
   mut right_ : IntervalNode?
-  mut start : Int
-  mut end : Int
-  mut delta : Int
-  mut max_end : Int
+  mut start : Int32
+  mut end : Int32
+  mut delta : Int32
+  mut max_end : Int32
   id : String
-  mut owner_id : Int
+  mut owner_id : Int32
   mut options : ModelDecorationOptions?
-  mut cached_version_id : Int
-  mut cached_absolute_start : Int
-  mut cached_absolute_end : Int
+  mut cached_version_id : Int32
+  mut cached_absolute_start : Int32
+  mut cached_absolute_end : Int32
   mut range : @base_common.Range?
 }
 
@@ -287,8 +287,8 @@ fn IntervalNode::set_right(self : IntervalNode, v : IntervalNode) -> Unit {
 #alias(new, deprecated)
 pub fn IntervalNode::IntervalNode(
   id : String,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> IntervalNode {
   let node : IntervalNode = {
     identity: next_interval_node_identity(),
@@ -340,9 +340,9 @@ fn same_interval_node(left : IntervalNode, right : IntervalNode) -> Bool {
 /// `reset` (`intervalTree.ts:197-205`).
 pub fn IntervalNode::reset(
   self : IntervalNode,
-  version_id : Int,
-  start : Int,
-  end : Int,
+  version_id : Int32,
+  start : Int32,
+  end : Int32,
   range : @base_common.Range?,
 ) -> Unit {
   self.start = start
@@ -380,9 +380,9 @@ pub fn IntervalNode::set_options(
 /// `setCachedOffsets` (`intervalTree.ts:221-228`).
 pub fn IntervalNode::set_cached_offsets(
   self : IntervalNode,
-  absolute_start : Int,
-  absolute_end : Int,
-  cached_version_id : Int,
+  absolute_start : Int32,
+  absolute_end : Int32,
+  cached_version_id : Int32,
 ) -> Unit {
   if self.cached_version_id != cached_version_id {
     self.range = None
@@ -430,12 +430,12 @@ pub fn IntervalTree::IntervalTree() -> IntervalTree {
 /// `intervalSearch` (`intervalTree.ts:253-258`).
 pub fn IntervalTree::interval_search(
   self : IntervalTree,
-  start : Int,
-  end : Int,
-  filter_owner_id : Int,
+  start : Int32,
+  end : Int32,
+  filter_owner_id : Int32,
   filter_out_validation : Bool,
   filter_font_decorations : Bool,
-  cached_version_id : Int,
+  cached_version_id : Int32,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
   if same_interval_node(self.root, sentinel) {
@@ -451,10 +451,10 @@ pub fn IntervalTree::interval_search(
 /// `search` (`intervalTree.ts:260-265`).
 pub fn IntervalTree::search(
   self : IntervalTree,
-  filter_owner_id : Int,
+  filter_owner_id : Int32,
   filter_out_validation : Bool,
   filter_font_decorations : Bool,
-  cached_version_id : Int,
+  cached_version_id : Int32,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
   if same_interval_node(self.root, sentinel) {
@@ -471,7 +471,7 @@ pub fn IntervalTree::search(
 /// `cached_absolute_start` nor `cached_absolute_end` on the returned nodes!
 pub fn IntervalTree::collect_nodes_from_owner(
   self : IntervalTree,
-  owner_id : Int,
+  owner_id : Int32,
 ) -> Array[IntervalNode] {
   collect_nodes_from_owner(self, owner_id)
 }
@@ -505,7 +505,7 @@ pub fn IntervalTree::delete(self : IntervalTree, node : IntervalNode) -> Unit {
 pub fn IntervalTree::resolve_node(
   self : IntervalTree,
   node : IntervalNode,
-  cached_version_id : Int,
+  cached_version_id : Int32,
 ) -> Unit {
   let initial_node = node
   let mut node = node
@@ -588,7 +588,7 @@ fn normalize_delta(t : IntervalTree) -> Unit {
 /// `collectNodesFromOwner` (`intervalTree.ts:638-674`).
 fn collect_nodes_from_owner(
   t : IntervalTree,
-  owner_id : Int,
+  owner_id : Int32,
 ) -> Array[IntervalNode] {
   let mut node = t.root
   let result : Array[IntervalNode] = []
@@ -662,10 +662,10 @@ fn collect_nodes_post_order(t : IntervalTree) -> Array[IntervalNode] {
 /// include filters and caching absolute offsets.
 fn search(
   t : IntervalTree,
-  filter_owner_id : Int,
+  filter_owner_id : Int32,
   filter_out_validation : Bool,
   filter_font_decorations : Bool,
-  cached_version_id : Int,
+  cached_version_id : Int32,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
   let mut node = t.root
@@ -732,12 +732,12 @@ fn search(
 /// a), delta accumulation, and the four include filters.
 fn interval_search(
   t : IntervalTree,
-  interval_start : Int,
-  interval_end : Int,
-  filter_owner_id : Int,
+  interval_start : Int32,
+  interval_end : Int32,
+  filter_owner_id : Int32,
   filter_out_validation : Bool,
   filter_font_decorations : Bool,
-  cached_version_id : Int,
+  cached_version_id : Int32,
   only_margin_decorations : Bool,
 ) -> Array[IntervalNode] {
   // https://en.wikipedia.org/wiki/Interval_tree#Augmented_tree
@@ -1175,7 +1175,7 @@ fn right_rotate(t : IntervalTree, y : IntervalNode) -> Unit {
 
 ///|
 /// `computeMaxEnd` (`intervalTree.ts:1236-1251`).
-fn compute_max_end(node : IntervalNode) -> Int {
+fn compute_max_end(node : IntervalNode) -> Int32 {
   let mut max_end = node.end
   if !same_interval_node(node.left(), sentinel) {
     let left_max_end = node.left().max_end
@@ -1220,11 +1220,11 @@ fn recompute_max_end_walk_to_root(node : IntervalNode) -> Unit {
 ///|
 /// `intervalCompare` (`intervalTree.ts:1275-1280`): start-major, end-minor.
 pub fn interval_compare(
-  a_start : Int,
-  a_end : Int,
-  b_start : Int,
-  b_end : Int,
-) -> Int {
+  a_start : Int32,
+  a_end : Int32,
+  b_start : Int32,
+  b_end : Int32,
+) -> Int32 {
   if a_start == b_start {
     return a_end - b_end
   }

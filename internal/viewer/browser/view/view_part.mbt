@@ -27,7 +27,7 @@ pub extend PartFingerprint with Eq::{not_equal, equal}
 pub extend PartFingerprint with Debug::{to_repr}
 
 ///|
-pub fn PartFingerprint::to_int(self : PartFingerprint) -> Int {
+pub fn PartFingerprint::to_int(self : PartFingerprint) -> Int32 {
   match self {
     None => 0
     ContentWidgets => 1
@@ -44,7 +44,7 @@ pub fn PartFingerprint::to_int(self : PartFingerprint) -> Int {
 }
 
 ///|
-pub fn PartFingerprint::from_int(value : Int) -> PartFingerprint {
+pub fn PartFingerprint::from_int(value : Int32) -> PartFingerprint {
   match value {
     1 => ContentWidgets
     2 => OverflowingContentWidgets
@@ -104,7 +104,7 @@ extern "js" fn is_document_body(el : @rdom.Element) -> Bool =
   #| (el) => el === el.ownerDocument.body
 
 ///|
-extern "js" fn read_data_mprt(el : @rdom.Element) -> Int =
+extern "js" fn read_data_mprt(el : @rdom.Element) -> Int32 =
   #| (el) => {
   #|   const r = el.getAttribute("data-mprt");
   #|   return r === null ? 0 : (parseInt(r, 10) | 0);

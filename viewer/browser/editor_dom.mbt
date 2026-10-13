@@ -146,9 +146,9 @@ pub struct EditorDomMouseEvent {
   left_button : Bool
   middle_button : Bool
   right_button : Bool
-  buttons : Int
+  buttons : Int32
   target : @rdom.Element?
-  mut detail : Int
+  mut detail : Int32
   posx : Double
   posy : Double
   ctrl_key : Bool
@@ -242,7 +242,7 @@ pub fn EditorDomMouseEvent::relative_pos(
 /// setter.
 pub fn EditorDomMouseEvent::set_detail(
   self : EditorDomMouseEvent,
-  detail : Int,
+  detail : Int32,
 ) -> Unit {
   self.detail = detail
 }
@@ -320,7 +320,7 @@ pub fn EditorMouseEventFactory::on_mouse_down(
 pub fn EditorMouseEventFactory::on_pointer_down(
   self : EditorMouseEventFactory,
   target : @rdom.Element,
-  callback : (EditorDomMouseEvent, Int) -> Unit,
+  callback : (EditorDomMouseEvent, Int32) -> Unit,
 ) -> @base_common.Disposable {
   let handler = (event : @rdom.Event) => {
     match event.to_mouse_event() {
@@ -409,8 +409,8 @@ pub fn GlobalEditorPointerMoveMonitor::dispose(
 pub fn GlobalEditorPointerMoveMonitor::start_monitoring(
   self : GlobalEditorPointerMoveMonitor,
   initial_element : @rdom.Element,
-  pointer_id : Int,
-  initial_buttons : Int,
+  pointer_id : Int32,
+  initial_buttons : Int32,
   pointer_move_callback : (EditorDomMouseEvent) -> Unit,
   on_stop_callback : (@rdom.Event?) -> Unit,
 ) -> Unit {

@@ -64,7 +64,7 @@ pub struct AgentFeedbackEditorWidget {
   priv markdown_disposables : Map[String, @base_common.Disposable]
   mut expanded : Bool
   mut disposed : Bool
-  mut start_line : Int
+  mut start_line : Int32
 }
 
 ///|
@@ -148,14 +148,14 @@ pub fn AgentFeedbackEditorWidget::widget_id(
 /// The group's anchor line, stored by the glue's `layout`.
 pub fn AgentFeedbackEditorWidget::anchor_line(
   self : AgentFeedbackEditorWidget,
-) -> Int {
+) -> Int32 {
   self.start_line
 }
 
 ///|
 pub fn AgentFeedbackEditorWidget::set_anchor_line(
   self : AgentFeedbackEditorWidget,
-  line : Int,
+  line : Int32,
 ) -> Unit {
   self.start_line = line
 }
@@ -783,7 +783,10 @@ fn feedback_comment_target_key(comment_id : String) -> String {
 }
 
 ///|
-fn feedback_reply_target_key(comment_id : String, reply_index : Int) -> String {
+fn feedback_reply_target_key(
+  comment_id : String,
+  reply_index : Int32,
+) -> String {
   "reply:" + comment_id + ":" + reply_index.to_string()
 }
 

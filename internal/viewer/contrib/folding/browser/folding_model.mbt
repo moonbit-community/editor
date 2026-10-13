@@ -129,12 +129,12 @@ pub fn FoldingModel::toggle_collapse_state(
   let processed : Map[String, Bool] = Map([])
   self.decoration_access.change_decorations(accessor => {
     // index from [0 ... this.regions.length]
-    let k : Ref[Int] = { val: 0, }
+    let k : Ref[Int32] = { val: 0, }
     // end of the range where decorations need to be updated
-    let dirty_region_end_line : Ref[Int] = { val: -1, }
+    let dirty_region_end_line : Ref[Int32] = { val: -1, }
     // the end of the last hidden lines
-    let last_hidden_line : Ref[Int] = { val: -1, }
-    let update_decorations_until = (index : Int) => {
+    let last_hidden_line : Ref[Int32] = { val: -1, }
+    let update_decorations_until = (index : Int32) => {
       while k.val < index {
         let end_line_number = self.regions.get_end_line_number(k.val)
         let is_collapsed = self.regions.is_collapsed(k.val)
@@ -319,8 +319,8 @@ pub fn FoldingModel::dispose(self : FoldingModel) -> Unit {
 /// `(region, level)` (level 1 = innermost).
 pub fn FoldingModel::get_all_regions_at_line(
   self : FoldingModel,
-  line_number : Int,
-  filter? : (FoldingRegion, Int) -> Bool,
+  line_number : Int32,
+  filter? : (FoldingRegion, Int32) -> Bool,
 ) -> Array[FoldingRegion] {
   let result : Array[FoldingRegion] = []
   let mut index = self.regions.find_range(line_number)
@@ -342,7 +342,7 @@ pub fn FoldingModel::get_all_regions_at_line(
 /// `line_number`.
 pub fn FoldingModel::get_region_at_line(
   self : FoldingModel,
-  line_number : Int,
+  line_number : Int32,
 ) -> FoldingRegion? {
   let index = self.regions.find_range(line_number)
   if index >= 0 {
@@ -357,7 +357,7 @@ pub fn FoldingModel::get_region_at_line(
 /// depth relative to `region` with a stack.
 pub(all) enum RegionFilter {
   RegionFilter((FoldingRegion) -> Bool)
-  RegionFilterWithLevel((FoldingRegion, Int) -> Bool)
+  RegionFilterWithLevel((FoldingRegion, Int32) -> Bool)
 }
 
 ///|
@@ -426,8 +426,8 @@ pub fn FoldingModel::get_regions_inside(
 /// the innermost region at each location.
 pub fn toggle_collapse_state(
   folding_model : FoldingModel,
-  levels : Int,
-  line_numbers : Array[Int],
+  levels : Int32,
+  line_numbers : Array[Int32],
 ) -> Unit {
   let to_toggle : Array[FoldingRegion] = []
   for line_number in line_numbers {
@@ -458,8 +458,8 @@ pub fn toggle_collapse_state(
 pub fn set_collapse_state_levels_down(
   folding_model : FoldingModel,
   do_collapse : Bool,
-  levels? : Int = 0x7FFFFFFF,
-  line_numbers? : Array[Int],
+  levels~ : Int32 = 0x7FFFFFFF,
+  line_numbers? : Array[Int32],
 ) -> Unit {
   let to_toggle : Array[FoldingRegion] = []
   match line_numbers {
@@ -502,8 +502,8 @@ pub fn set_collapse_state_levels_down(
 pub fn set_collapse_state_levels_up(
   folding_model : FoldingModel,
   do_collapse : Bool,
-  levels : Int,
-  line_numbers : Array[Int],
+  levels : Int32,
+  line_numbers : Array[Int32],
 ) -> Unit {
   let to_toggle : Array[FoldingRegion] = []
   for line_number in line_numbers {
@@ -522,7 +522,7 @@ pub fn set_collapse_state_levels_up(
 pub fn set_collapse_state_up(
   folding_model : FoldingModel,
   do_collapse : Bool,
-  line_numbers : Array[Int],
+  line_numbers : Array[Int32],
 ) -> Unit {
   let to_toggle : Array[FoldingRegion] = []
   for line_number in line_numbers {
@@ -543,9 +543,9 @@ pub fn set_collapse_state_up(
 /// blocked line.
 pub fn set_collapse_state_at_level(
   folding_model : FoldingModel,
-  fold_level : Int,
+  fold_level : Int32,
   do_collapse : Bool,
-  blocked_line_numbers : Array[Int],
+  blocked_line_numbers : Array[Int32],
 ) -> Unit {
   let filter = RegionFilterWithLevel((region, level) => {
     level == fold_level &&
@@ -562,7 +562,7 @@ pub fn set_collapse_state_at_level(
 pub fn set_collapse_state_for_rest(
   folding_model : FoldingModel,
   do_collapse : Bool,
-  blocked_line_numbers : Array[Int],
+  blocked_line_numbers : Array[Int32],
 ) -> Unit {
   let filtered_regions : Array[FoldingRegion] = []
   for line_number in blocked_line_numbers {
@@ -639,10 +639,10 @@ pub fn set_collapse_state_for_type(
 /// `getParentFoldLine` (`foldingModel.ts:456`): the start line of the fold
 /// enclosing the fold at `line_number`.
 pub fn get_parent_fold_line(
-  line_number : Int,
+  line_number : Int32,
   folding_model : FoldingModel,
-) -> Int? {
-  let mut start_line_number : Int? = None
+) -> Int32? {
+  let mut start_line_number : Int32? = None
   let folding_region = folding_model.get_region_at_line(line_number)
   if folding_region is Some(region) {
     start_line_number = Some(region.start_line_number())
@@ -666,9 +666,9 @@ pub fn get_parent_fold_line(
 /// `getPreviousFoldLine` (`foldingModel.ts:481`): the start line of the
 /// previous fold at the same nesting level.
 pub fn get_previous_fold_line(
-  line_number : Int,
+  line_number : Int32,
   folding_model : FoldingModel,
-) -> Int? {
+) -> Int32? {
   let regions = folding_model.regions()
   let mut folding_region = folding_model.get_region_at_line(line_number)
   // If on the folding range start line, go to previous sibling.
@@ -717,9 +717,9 @@ pub fn get_previous_fold_line(
 /// fold at the same nesting level. (The source's walk reads one index past
 /// the end — harmless on a JS typed array; the port bounds the walk.)
 pub fn get_next_fold_line(
-  line_number : Int,
+  line_number : Int32,
   folding_model : FoldingModel,
-) -> Int? {
+) -> Int32? {
   let regions = folding_model.regions()
   let mut folding_region = folding_model.get_region_at_line(line_number)
   // If on the folding range start line, go to next sibling.

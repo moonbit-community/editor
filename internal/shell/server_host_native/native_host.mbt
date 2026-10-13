@@ -1,7 +1,7 @@
 ///|
 /// Native filesystem host for the reference remote server.
 pub struct NativeServerHost {
-  priv poll_interval_ms : Int
+  priv poll_interval_ms : Int32
 }
 
 ///|
@@ -13,7 +13,7 @@ pub fn NativeServerHost::NativeServerHost() -> NativeServerHost {
 ///|
 /// Creates the native host with a clamped polling interval.
 pub fn NativeServerHost::with_poll_interval(
-  poll_interval_ms : Int,
+  poll_interval_ms : Int32,
 ) -> NativeServerHost {
   {
     poll_interval_ms: if poll_interval_ms < 10 {
@@ -154,7 +154,7 @@ async fn read_native_directory(
 async fn poll_native_file_watch(
   root : String,
   path : @workspace.SourcePath,
-  poll_interval_ms : Int,
+  poll_interval_ms : Int32,
   disposed : Ref[Bool],
   listener : async (@workspace.FileChangeType) -> Unit,
 ) -> Unit {
@@ -276,8 +276,8 @@ fn skip_workspace_entry(path~ : String, name~ : String) -> Bool {
 /// Live protocol websocket outboxes, keyed by session id. Server-initiated
 /// pushes (diagnostics) broadcast one encoded frame to every session.
 priv struct ProtocolSessions {
-  next_session_id : Ref[Int]
-  outboxes : Map[Int, @aqueue.Queue[String]]
+  next_session_id : Ref[Int32]
+  outboxes : Map[Int32, @aqueue.Queue[String]]
 }
 
 ///|
@@ -289,14 +289,14 @@ fn ProtocolSessions::new() -> ProtocolSessions {
 fn ProtocolSessions::attach(
   self : ProtocolSessions,
   outbox : @aqueue.Queue[String],
-) -> Int {
+) -> Int32 {
   self.next_session_id.val = self.next_session_id.val + 1
   self.outboxes.set(self.next_session_id.val, outbox)
   self.next_session_id.val
 }
 
 ///|
-fn ProtocolSessions::detach(self : ProtocolSessions, session : Int) -> Unit {
+fn ProtocolSessions::detach(self : ProtocolSessions, session : Int32) -> Unit {
   self.outboxes.remove(session)
 }
 
@@ -319,10 +319,10 @@ fn enqueue(queue : @aqueue.Queue[String], message : String) -> Unit {
 /// workspace protocol over WebSocket.
 pub async fn run_native_editor_server(
   root : String,
-  port? : Int = 5173,
-  asset_dir? : String = "web/dist",
-  moon_command? : String = "moon",
-  log? : (String) -> Unit = println,
+  port~ : Int32 = 5173,
+  asset_dir~ : String = "web/dist",
+  moon_command~ : String = "moon",
+  log~ : (String) -> Unit = println,
 ) -> Unit {
   let host = NativeServerHost::NativeServerHost()
   let root = realpath_or_normalized(root)

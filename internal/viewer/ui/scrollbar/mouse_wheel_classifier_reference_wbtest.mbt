@@ -7,7 +7,7 @@
 fn run_classifier_trace(
   label : String,
   expected_physical : Bool,
-  skip_first? : Bool = false,
+  skip_first~ : Bool = false,
 ) -> Unit raise {
   let classifier = MouseWheelClassifier()
   let trace = load_classifier_trace(label)

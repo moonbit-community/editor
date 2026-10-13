@@ -6,7 +6,7 @@
 /// (`markerDecorationsService.ts:216`). A producer sets a marker's `end_column`
 /// to this to request the full-line first-non-whitespace snap. Int max stands in
 /// for the JS float sentinel.
-pub let max_value_column : Int = 2147483647
+pub let max_value_column : Int32 = 2147483647
 
 ///|
 /// Severity of a marker, with Monaco's load-bearing bit values
@@ -30,7 +30,7 @@ pub extend MarkerSeverity with Debug::{to_repr}
 ///|
 /// The marker severity's bit value (`Hint=1, Info=2, Warning=4, Error=8`),
 /// `markers.ts:56-61`.
-pub fn MarkerSeverity::value(self : MarkerSeverity) -> Int {
+pub fn MarkerSeverity::value(self : MarkerSeverity) -> Int32 {
   match self {
     Hint => 1
     Info => 2
@@ -41,7 +41,7 @@ pub fn MarkerSeverity::value(self : MarkerSeverity) -> Int {
 
 ///|
 /// `b - a`, `MarkerSeverity.compare` (`markers.ts:65`).
-pub fn MarkerSeverity::compare(a : MarkerSeverity, b : MarkerSeverity) -> Int {
+pub fn MarkerSeverity::compare(a : MarkerSeverity, b : MarkerSeverity) -> Int32 {
   b.value() - a.value()
 }
 
@@ -112,7 +112,7 @@ pub extend MarkerTag with Debug::{to_repr}
 
 ///|
 /// The tag's bit value (`Unnecessary=1, Deprecated=2`), `markers.ts:51`.
-pub fn MarkerTag::value(self : MarkerTag) -> Int {
+pub fn MarkerTag::value(self : MarkerTag) -> Int32 {
   match self {
     Unnecessary => 1
     Deprecated => 2
@@ -146,10 +146,10 @@ pub fn MarkerTag::to_diagnostic_tag(
 pub(all) struct RelatedInformation {
   resource : @base_common.Uri
   message : String
-  start_line_number : Int
-  start_column : Int
-  end_line_number : Int
-  end_column : Int
+  start_line_number : Int32
+  start_column : Int32
+  end_line_number : Int32
+  end_column : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -167,11 +167,11 @@ pub(all) struct MarkerData {
   severity : MarkerSeverity
   message : String
   source : String?
-  start_line_number : Int
-  start_column : Int
-  end_line_number : Int
-  end_column : Int
-  model_version_id : Int?
+  start_line_number : Int32
+  start_column : Int32
+  end_line_number : Int32
+  end_column : Int32
+  model_version_id : Int32?
   related_information : Array[RelatedInformation]?
   tags : Array[MarkerTag]?
   origin : String?
@@ -190,13 +190,13 @@ pub extend MarkerData with Debug::{to_repr}
 pub fn MarkerData::MarkerData(
   severity~ : MarkerSeverity,
   message~ : String,
-  start_line_number~ : Int,
-  start_column~ : Int,
-  end_line_number~ : Int,
-  end_column~ : Int,
+  start_line_number~ : Int32,
+  start_column~ : Int32,
+  end_line_number~ : Int32,
+  end_column~ : Int32,
   code? : String,
   source? : String,
-  model_version_id? : Int,
+  model_version_id? : Int32,
   related_information? : Array[RelatedInformation],
   tags? : Array[MarkerTag],
   origin? : String,
@@ -290,11 +290,11 @@ pub struct Marker {
   code : String?
   message : String
   source : String?
-  mut start_column : Int
-  start_line_number : Int
-  end_line_number : Int
-  end_column : Int
-  model_version_id : Int?
+  mut start_column : Int32
+  start_line_number : Int32
+  end_line_number : Int32
+  end_column : Int32
+  model_version_id : Int32?
   related_information : Array[RelatedInformation]?
   tags : Array[MarkerTag]?
   origin : String?
@@ -330,10 +330,10 @@ pub fn Marker::has_tag(self : Marker, tag : MarkerTag) -> Bool {
 ///|
 /// Aggregate per-severity counts, `MarkerStatistics` (`markers.ts:146`).
 pub struct MarkerStatistics {
-  mut errors : Int
-  mut warnings : Int
-  mut infos : Int
-  mut unknowns : Int
+  mut errors : Int32
+  mut warnings : Int32
+  mut infos : Int32
+  mut unknowns : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -347,8 +347,8 @@ pub extend MarkerStatistics with Debug::{to_repr}
 pub(all) struct MarkerReadOptions {
   owner : String?
   resource : @base_common.Uri?
-  severities : Int?
-  take : Int?
+  severities : Int32?
+  take : Int32?
   ignore_resource_filters : Bool
 } derive(Eq, Debug)
 
@@ -365,9 +365,9 @@ pub extend MarkerReadOptions with Debug::{to_repr}
 pub fn MarkerReadOptions::MarkerReadOptions(
   owner? : String,
   resource? : @base_common.Uri,
-  severities? : Int,
-  take? : Int,
-  ignore_resource_filters? : Bool = false,
+  severities? : Int32,
+  take? : Int32,
+  ignore_resource_filters~ : Bool = false,
 ) -> MarkerReadOptions {
   { owner, resource, severities, take, ignore_resource_filters, }
 }

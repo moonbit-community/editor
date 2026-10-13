@@ -69,7 +69,7 @@ pub extend NullLogger with Logger::{flush, log}
 /// In-memory logger used by tests and harness-facing diagnostics.
 pub struct MemoryLogger {
   entries : Array[LogEntry]
-  flush_count : Ref[Int]
+  flush_count : Ref[Int32]
 }
 
 ///|
@@ -87,7 +87,7 @@ pub fn MemoryLogger::entries(self : MemoryLogger) -> Array[LogEntry] {
 
 ///|
 /// Number of flush calls observed by the memory sink.
-pub fn MemoryLogger::flush_count(self : MemoryLogger) -> Int {
+pub fn MemoryLogger::flush_count(self : MemoryLogger) -> Int32 {
   self.flush_count.val
 }
 
@@ -161,8 +161,8 @@ pub struct LogHandle {
 /// Creates a log service with an optional threshold and sink.
 #alias(new, deprecated)
 pub fn LogService::LogService(
-  level? : LogLevel = Info,
-  logger? : &Logger = NullLogger(),
+  level~ : LogLevel = Info,
+  logger~ : &Logger = NullLogger(),
 ) -> LogService {
   { level, logger, }
 }
@@ -188,7 +188,7 @@ pub fn LogHandle::warn(
   self : LogHandle,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   (self.warn_callback)(category, message, details)
 }
@@ -199,7 +199,7 @@ pub fn LogHandle::error(
   self : LogHandle,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   (self.error_callback)(category, message, details)
 }
@@ -218,7 +218,7 @@ pub fn LogService::trace(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Trace, category, message, details, })
 }
@@ -229,7 +229,7 @@ pub fn LogService::debug(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Debug, category, message, details, })
 }
@@ -240,7 +240,7 @@ pub fn LogService::info(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Info, category, message, details, })
 }
@@ -251,7 +251,7 @@ pub fn LogService::warn(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Warning, category, message, details, })
 }
@@ -262,7 +262,7 @@ pub fn LogService::error(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Error, category, message, details, })
 }
@@ -300,7 +300,7 @@ fn should_log(configured : LogLevel, entry : LogLevel) -> Bool {
 }
 
 ///|
-fn level_rank(level : LogLevel) -> Int {
+fn level_rank(level : LogLevel) -> Int32 {
   match level {
     Off => 99
     Trace => 0

@@ -16,7 +16,7 @@
 /// Builds a TextModel from raw text. The analog of `instantiateTextModel`.
 fn test_model(
   text : String,
-  language_id? : String = "plaintext",
+  language_id~ : String = "plaintext",
 ) -> @model.TextModel {
   TextModel(
     try! @base_common.Uri::from(
@@ -45,7 +45,7 @@ fn test_model(
 fn with_test_viewer(
   text : String,
   body : (Viewer) -> Unit raise,
-  options? : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
+  options~ : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
 ) -> Unit raise {
   let viewer = Viewer::Viewer(options~) // NOTE: deliberately no attach()
   viewer.set_model(Some(test_model(text)))
@@ -230,11 +230,11 @@ extern "js" fn run_one_mounted_test_frame() -> Unit =
   #| }
 
 ///|
-extern "js" fn mounted_test_frame_count() -> Int =
+extern "js" fn mounted_test_frame_count() -> Int32 =
   #| () => globalThis.__mountedTestFrames.size
 
 ///|
-extern "js" fn mounted_test_child_count(element : @rdom.Element) -> Int =
+extern "js" fn mounted_test_child_count(element : @rdom.Element) -> Int32 =
   #| (element) => element.childNodes.length
 
 ///|
@@ -266,7 +266,7 @@ extern "js" fn mounted_test_node_value(node : @rdom.Element) -> String =
 fn with_mounted_test_viewer(
   text : String,
   body : (Viewer) -> Unit raise,
-  options? : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
+  options~ : ViewerOptions = ViewerOptions(font_size=12, line_height=18),
 ) -> Unit raise {
   install_mounted_test_browser()
   defer restore_mounted_test_browser()
@@ -306,7 +306,7 @@ fn Viewer::test_window(self : Viewer) -> @view_layout.LineWindow {
 /// `ViewerOptions` carries no wrap-column field (the real column is measured
 /// from the DOM via `soft_wrap_column_for_content_width`), so a headless wrap
 /// test sets the private column directly. Requires `options.soft_wrap`.
-fn Viewer::test_set_soft_wrap_column(self : Viewer, column : Int) -> Unit {
+fn Viewer::test_set_soft_wrap_column(self : Viewer, column : Int32) -> Unit {
   self.configuration.commit_soft_wrap_column(column) |> ignore
   self.on_configuration_changed()
 }
@@ -334,7 +334,7 @@ fn Viewer::test_set_viewport(
 
 ///|
 /// A document of `line_count` distinct one-line entries, for windowing tests.
-fn long_document(line_count : Int) -> String {
+fn long_document(line_count : Int32) -> String {
   let out = StringBuilder()
   for i in 0..<line_count {
     if i > 0 {
@@ -566,7 +566,7 @@ test "model change fires before outgoing owner decorations are swept" {
 /// encoder's gap fill makes every non-empty line exactly two tokens, so the
 /// token count discriminates a registry hit (2) from the null fallback (1).
 priv struct FirstCharKeywordToy {
-  calls : Ref[Int]
+  calls : Ref[Int32]
 }
 
 ///|
@@ -608,8 +608,8 @@ test "initial-build and token-change telemetry read token counts passively" {
     language_id="telemetry-passive-toy",
   )
   defer model.dispose()
-  let lexer_calls_at_event : Array[Int] = []
-  let token_counts : Array[Int] = []
+  let lexer_calls_at_event : Array[Int32] = []
+  let token_counts : Array[Int32] = []
   let subscription = debug_on_did_build_view_model(viewer, event => {
     lexer_calls_at_event.push(calls.val)
     token_counts.push(event.token_count)

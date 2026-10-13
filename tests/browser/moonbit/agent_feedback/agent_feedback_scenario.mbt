@@ -99,7 +99,7 @@ fn run_agent_feedback_test() -> Unit {
 fn seed_item(
   id : String,
   uri : @base_common.Uri,
-  line : Int,
+  line : Int32,
   text : String,
 ) -> @agent_feedback_api.AgentFeedback {
   {
@@ -117,7 +117,7 @@ fn seed_item(
 fn poll_rendered(
   ctx : @support.BrowserTestContext,
   done : Ref[Bool],
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   if done.val {
     return

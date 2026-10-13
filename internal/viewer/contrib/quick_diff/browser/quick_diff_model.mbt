@@ -52,8 +52,8 @@ pub fn to_line_changes(
 pub fn compute_changes(
   original_lines : Array[String],
   modified_lines : Array[String],
-  ignore_trim_whitespace? : Bool = false,
-  max_computation_time_ms? : Int = 1000,
+  ignore_trim_whitespace~ : Bool = false,
+  max_computation_time_ms~ : Int32 = 1000,
 ) -> Array[@diff.Change] {
   let result = @diff.get_default().compute_diff(
     original_lines,

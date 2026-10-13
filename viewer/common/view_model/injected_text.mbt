@@ -4,7 +4,7 @@ pub struct InjectedText {
   position : @base_common.Position
   text : String
   class_name : String
-  source_index : Int
+  source_index : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -19,7 +19,7 @@ pub fn InjectedText::InjectedText(
   position : @base_common.Position,
   text : String,
   class_name : String,
-  source_index? : Int = -1,
+  source_index~ : Int32 = -1,
 ) -> InjectedText {
   { position, text, class_name, source_index, }
 }
@@ -27,10 +27,10 @@ pub fn InjectedText::InjectedText(
 ///|
 /// Segment kind inside a projected line: source text or injected text.
 pub enum ProjectedLinePartKind {
-  SourceSegment(model_start~ : Int, model_end~ : Int)
+  SourceSegment(model_start~ : Int32, model_end~ : Int32)
   InjectedSegment(
-    model_column~ : Int,
-    injected_text_index~ : Int,
+    model_column~ : Int32,
+    injected_text_index~ : Int32,
     class_name~ : String
   )
 } derive(Eq, Debug)
@@ -44,8 +44,8 @@ pub extend ProjectedLinePartKind with Debug::{to_repr}
 ///|
 /// Half-open projected text segment with its source/injected identity.
 pub struct ProjectedLinePart {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   kind : ProjectedLinePartKind
 } derive(Eq, Debug)
 
@@ -70,10 +70,10 @@ pub extend ProjectedLinePart with Debug::{to_repr}
 /// branches.
 pub struct ProjectedTextLine {
   text : String
-  model_line_length : Int
-  model_columns : Array[Int]
-  injected_text_indices : Array[Int]
-  model_to_projected_columns : Array[Int]
+  model_line_length : Int32
+  model_columns : Array[Int32]
+  injected_text_indices : Array[Int32]
+  model_to_projected_columns : Array[Int32]
   parts : Array[ProjectedLinePart]
 } derive(Eq, Debug)
 
@@ -100,8 +100,8 @@ pub fn ProjectedTextLine::from_injected_text(
     return identity_projected_text_line(line_text)
   }
   let builder = StringBuilder()
-  let model_columns : Array[Int] = [0]
-  let injected_text_indices : Array[Int] = []
+  let model_columns : Array[Int32] = [0]
+  let injected_text_indices : Array[Int32] = []
   let model_to_projected_columns = initial_model_to_projected_columns(
     line_text.length(),
   )
@@ -162,9 +162,9 @@ pub fn ProjectedTextLine::from_injected_text(
 /// the first-write-wins lookup table already encodes.
 pub fn ProjectedTextLine::model_column_to_projected_column(
   self : ProjectedTextLine,
-  model_column : Int,
+  model_column : Int32,
   affinity? : @model.PositionAffinity,
-) -> Int {
+) -> Int32 {
   let column = @base_common.clamp_int(model_column, 0, self.model_line_length)
   let projected = match self.model_to_projected_columns.get(column) {
     Some(projected_column) => projected_column
@@ -199,9 +199,9 @@ pub fn ProjectedTextLine::model_column_to_projected_column(
 /// already are cursor stops.
 pub fn ProjectedTextLine::normalize_projected_column_around_injections(
   self : ProjectedTextLine,
-  projected_column : Int,
+  projected_column : Int32,
   affinity : @model.PositionAffinity,
-) -> Int {
+) -> Int32 {
   let parts = self.parts
   let mut found = -1
   for index in 0..<parts.length() {
@@ -259,7 +259,7 @@ pub fn ProjectedTextLine::normalize_projected_column_around_injections(
 }
 
 ///|
-fn injected_part_anchor(part : ProjectedLinePart) -> Int {
+fn injected_part_anchor(part : ProjectedLinePart) -> Int32 {
   match part.kind {
     InjectedSegment(model_column~, ..) => model_column
     SourceSegment(..) => -1
@@ -270,8 +270,8 @@ fn injected_part_anchor(part : ProjectedLinePart) -> Int {
 /// Maps a projected display column back to a model column.
 pub fn ProjectedTextLine::projected_column_to_model_column(
   self : ProjectedTextLine,
-  projected_column : Int,
-) -> Int {
+  projected_column : Int32,
+) -> Int32 {
   let column = @base_common.clamp_int(projected_column, 0, self.text.length())
   match self.model_columns.get(column) {
     Some(model_column) => model_column
@@ -284,8 +284,8 @@ pub fn ProjectedTextLine::projected_column_to_model_column(
 /// `-1` for source text.
 pub fn ProjectedTextLine::injected_text_index_at_projected_column(
   self : ProjectedTextLine,
-  projected_column : Int,
-) -> Int {
+  projected_column : Int32,
+) -> Int32 {
   let column = @base_common.clamp_int(projected_column, 0, self.text.length())
   match self.injected_text_indices.get(column) {
     Some(index) => index
@@ -295,9 +295,9 @@ pub fn ProjectedTextLine::injected_text_index_at_projected_column(
 
 ///|
 fn identity_projected_text_line(line_text : String) -> ProjectedTextLine {
-  let model_columns : Array[Int] = []
-  let injected_text_indices : Array[Int] = []
-  let model_to_projected_columns : Array[Int] = []
+  let model_columns : Array[Int32] = []
+  let injected_text_indices : Array[Int32] = []
+  let model_to_projected_columns : Array[Int32] = []
   for column in 0..<=line_text.length() {
     model_columns.push(column)
     model_to_projected_columns.push(column)
@@ -350,8 +350,8 @@ fn normalize_injected_text(
 }
 
 ///|
-fn initial_model_to_projected_columns(line_length : Int) -> Array[Int] {
-  let columns : Array[Int] = []
+fn initial_model_to_projected_columns(line_length : Int32) -> Array[Int32] {
+  let columns : Array[Int32] = []
   for _ in 0..<=line_length {
     columns.push(-1)
   }
@@ -363,13 +363,13 @@ fn initial_model_to_projected_columns(line_length : Int) -> Array[Int] {
 fn append_source_text(
   builder : StringBuilder,
   line_text : String,
-  start_column : Int,
-  end_column : Int,
-  model_columns : Array[Int],
-  injected_text_indices : Array[Int],
-  model_to_projected_columns : Array[Int],
+  start_column : Int32,
+  end_column : Int32,
+  model_columns : Array[Int32],
+  injected_text_indices : Array[Int32],
+  model_to_projected_columns : Array[Int32],
   parts : Array[ProjectedLinePart],
-  view_cursor : Int,
+  view_cursor : Int32,
 ) -> Unit {
   builder.write_string(line_text[start_column:end_column].to_owned())
   let mut view = view_cursor
@@ -392,11 +392,11 @@ fn append_source_text(
 fn append_injected_text(
   builder : StringBuilder,
   item : InjectedText,
-  model_column : Int,
-  model_columns : Array[Int],
-  injected_text_indices : Array[Int],
+  model_column : Int32,
+  model_columns : Array[Int32],
+  injected_text_indices : Array[Int32],
   parts : Array[ProjectedLinePart],
-  view_cursor : Int,
+  view_cursor : Int32,
 ) -> Unit {
   builder.write_string(item.text)
   let mut view = view_cursor
@@ -418,8 +418,8 @@ fn append_injected_text(
 
 ///|
 fn fill_unmapped_model_columns(
-  model_to_projected_columns : Array[Int],
-  fallback : Int,
+  model_to_projected_columns : Array[Int32],
+  fallback : Int32,
 ) -> Unit {
   let mut last = fallback
   for index in 0..<model_to_projected_columns.length() {

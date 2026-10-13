@@ -23,7 +23,7 @@ pub extend HoverAnchorType with Debug::{to_repr}
 /// port mints an explicit identity so copying or rebuilding a participant
 /// handle cannot change anchor equality or adoption.
 pub struct HoverParticipantOwner {
-  priv id : Int
+  priv id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -33,7 +33,7 @@ pub extend HoverParticipantOwner with Eq::{not_equal, equal}
 pub extend HoverParticipantOwner with Debug::{to_repr}
 
 ///|
-let next_hover_participant_owner_id : Ref[Int] = Ref(0)
+let next_hover_participant_owner_id : Ref[Int32] = Ref(0)
 
 ///|
 /// Mints one logical participant identity. A factory that rebuilds handles for
@@ -55,15 +55,15 @@ pub fn HoverParticipantOwner::HoverParticipantOwner() -> HoverParticipantOwner {
 /// (`MouseCloserState`, Phase 4 increment 2).
 pub(all) enum HoverAnchor {
   HoverRangeAnchor(
-    priority~ : Int,
+    priority~ : Int32,
     range~ : @base_common.Range,
     initial_mouse_pos_x~ : Double?,
     initial_mouse_pos_y~ : Double?
   )
   HoverForeignElementAnchor(
-    priority~ : Int,
+    priority~ : Int32,
     owner~ : HoverParticipantOwner,
-    injected_text_index~ : Int,
+    injected_text_index~ : Int32,
     range~ : @base_common.Range,
     initial_mouse_pos_x~ : Double?,
     initial_mouse_pos_y~ : Double?,
@@ -86,7 +86,7 @@ pub fn HoverAnchor::anchor_type(self : HoverAnchor) -> HoverAnchorType {
 }
 
 ///|
-pub fn HoverAnchor::priority(self : HoverAnchor) -> Int {
+pub fn HoverAnchor::priority(self : HoverAnchor) -> Int32 {
   match self {
     HoverRangeAnchor(priority~, ..)
     | HoverForeignElementAnchor(priority~, ..) => priority

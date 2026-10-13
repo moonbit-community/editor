@@ -25,7 +25,7 @@ pub extend LineCommentRule with Debug::{to_repr}
 /// form, with the object form's `noIndent` flag available when needed.
 pub fn LineCommentRule::LineCommentRule(
   comment : String,
-  no_indent? : Bool = false,
+  no_indent~ : Bool = false,
 ) -> LineCommentRule {
   { comment, no_indent, }
 }

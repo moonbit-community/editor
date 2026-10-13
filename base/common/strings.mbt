@@ -5,14 +5,14 @@
 ///|
 /// `0xD800 <= charCode <= 0xDBFF`. Mirrors `strings.isHighSurrogate`; the std
 /// `Int::is_leading_surrogate` is the identical range check.
-pub fn is_high_surrogate(char_code : Int) -> Bool {
+pub fn is_high_surrogate(char_code : Int32) -> Bool {
   char_code.is_leading_surrogate()
 }
 
 ///|
 /// `0xDC00 <= charCode <= 0xDFFF`. Mirrors `strings.isLowSurrogate`; the std
 /// `Int::is_trailing_surrogate` is the identical range check.
-pub fn is_low_surrogate(char_code : Int) -> Bool {
+pub fn is_low_surrogate(char_code : Int32) -> Bool {
   char_code.is_trailing_surrogate()
 }
 
@@ -37,7 +37,7 @@ pub fn contains_rtl(text : String) -> Bool {
 ///|
 /// Index of the first non-whitespace (non-space, non-tab) character, or `-1`.
 /// Mirrors `strings.firstNonWhitespaceIndex`.
-pub fn first_non_whitespace_index(text : String) -> Int {
+pub fn first_non_whitespace_index(text : String) -> Int32 {
   for i in 0..<text.length() {
     let code = text[i].to_int()
     if code != 32 && code != 9 {
@@ -50,7 +50,7 @@ pub fn first_non_whitespace_index(text : String) -> Int {
 ///|
 /// Index of the last non-whitespace (non-space, non-tab) character, or `-1`.
 /// Mirrors `strings.lastNonWhitespaceIndex`.
-pub fn last_non_whitespace_index(text : String) -> Int {
+pub fn last_non_whitespace_index(text : String) -> Int32 {
   for i = text.length() - 1; i >= 0; i = i - 1 {
     let code = text[i].to_int()
     if code != 32 && code != 9 {
@@ -63,7 +63,7 @@ pub fn last_non_whitespace_index(text : String) -> Int {
 ///|
 /// Whether `char_code` is a full-width character (CJK and related blocks).
 /// Mirrors `strings.isFullWidthCharacter`.
-pub fn is_full_width_character(char_code : Int) -> Bool {
+pub fn is_full_width_character(char_code : Int32) -> Bool {
   (char_code >= 0x2E80 && char_code <= 0xD7AF) ||
   (char_code >= 0xF900 && char_code <= 0xFAFF) ||
   (char_code >= 0xFF01 && char_code <= 0xFF5E) ||
@@ -74,13 +74,13 @@ pub fn is_full_width_character(char_code : Int) -> Bool {
 /// Maps `n` to a single letter (`a..z` then `A..Z`, wrapping). Mirrors
 /// `strings.singleLetterHash`; Monaco uses it to prefix per-instance id
 /// namespaces (model decoration ids, whitespace ids).
-pub fn single_letter_hash(n : Int) -> String {
+pub fn single_letter_hash(n : Int32) -> String {
   let letters_cnt = 'Z'.to_int() - 'A'.to_int() + 1
   let n = n % (2 * letters_cnt)
   if n < letters_cnt {
-    Int::unsafe_to_char('a'.to_int() + n).to_string()
+    Int32::unsafe_to_char('a'.to_int() + n).to_string()
   } else {
-    Int::unsafe_to_char('A'.to_int() + n - letters_cnt).to_string()
+    Int32::unsafe_to_char('A'.to_int() + n - letters_cnt).to_string()
   }
 }
 
@@ -88,7 +88,7 @@ pub fn single_letter_hash(n : Int) -> String {
 /// Mirrors `strings.compare` (strings.ts:343): JS `<`/`>` on strings is
 /// charwise UTF-16 code-unit lexicographic. Required because MoonBit's
 /// built-in `String` compare is length-first (`"z" > "aa"` here, not there).
-pub fn compare(a : String, b : String) -> Int {
+pub fn compare(a : String, b : String) -> Int32 {
   let a_len = a.length()
   let b_len = b.length()
   let len = if a_len < b_len { a_len } else { b_len }
@@ -115,11 +115,11 @@ pub fn compare(a : String, b : String) -> Int {
 pub fn compare_substring(
   a : String,
   b : String,
-  a_start? : Int = 0,
-  a_end? : Int = -1,
-  b_start? : Int = 0,
-  b_end? : Int = -1,
-) -> Int {
+  a_start~ : Int32 = 0,
+  a_end~ : Int32 = -1,
+  b_start~ : Int32 = 0,
+  b_end~ : Int32 = -1,
+) -> Int32 {
   let a_end = if a_end < 0 { a.length() } else { a_end }
   let b_end = if b_end < 0 { b.length() } else { b_end }
   let mut a_start = a_start
@@ -153,7 +153,7 @@ pub fn compare_substring(
 /// fullwidth Latin; other scripts and the rare length-changing mappings
 /// (e.g. `İ`) pass through unchanged — a documented deviation from the full
 /// Unicode table JS applies.
-fn to_lower_code_unit(code : Int) -> Int {
+fn to_lower_code_unit(code : Int32) -> Int32 {
   if code >= 'A'.to_int() && code <= 'Z'.to_int() {
     return code + 32
   }
@@ -215,7 +215,7 @@ fn to_lower_js(s : String) -> String {
       if chunk_start < i {
         sb.write_string(s[chunk_start:i].to_owned())
       }
-      sb.write_char(Int::unsafe_to_char(lowered))
+      sb.write_char(Int32::unsafe_to_char(lowered))
       chunk_start = i + 1
     }
   }
@@ -253,13 +253,13 @@ pub fn split_lines(text : String) -> Array[String] {
 
 ///|
 /// Mirrors `strings.isLowerAsciiLetter` (strings.ts:428).
-pub fn is_lower_ascii_letter(code : Int) -> Bool {
+pub fn is_lower_ascii_letter(code : Int32) -> Bool {
   code >= 'a'.to_int() && code <= 'z'.to_int()
 }
 
 ///|
 /// Mirrors `strings.isUpperAsciiLetter` (strings.ts:432).
-pub fn is_upper_ascii_letter(code : Int) -> Bool {
+pub fn is_upper_ascii_letter(code : Int32) -> Bool {
   code >= 'A'.to_int() && code <= 'Z'.to_int()
 }
 
@@ -270,11 +270,11 @@ pub fn is_upper_ascii_letter(code : Int) -> Bool {
 pub fn compare_substring_ignore_case(
   a : String,
   b : String,
-  a_start? : Int = 0,
-  a_end? : Int = -1,
-  b_start? : Int = 0,
-  b_end? : Int = -1,
-) -> Int {
+  a_start~ : Int32 = 0,
+  a_end~ : Int32 = -1,
+  b_start~ : Int32 = 0,
+  b_end~ : Int32 = -1,
+) -> Int32 {
   let a_end = if a_end < 0 { a.length() } else { a_end }
   let b_end = if b_end < 0 { b.length() } else { b_end }
   let mut a_start = a_start

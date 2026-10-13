@@ -60,11 +60,11 @@ pub extend NavigationCommandRevealType with Debug::{to_repr}
 pub(all) struct MouseDispatchData {
   position : @base_common.Position
   /// Desired visual viewport column (`IMouseTarget.mouseColumn`).
-  mouse_column : Int
+  mouse_column : Int32
   reveal_type : NavigationCommandRevealType
   started_on_line_numbers : Bool
   in_selection_mode : Bool
-  mouse_down_count : Int
+  mouse_down_count : Int32
   alt_key : Bool
   ctrl_key : Bool
   meta_key : Bool
@@ -96,9 +96,9 @@ pub(all) struct PointerHandlerHelper {
   get_last_render_data : () -> PointerHandlerLastRenderData
   render_now : () -> Unit
   should_suppress_mouse_down_on_view_zone : (String) -> Bool
-  get_position_from_dom_info : (@rdom.Element, Int) -> @base_common.Position?
-  visible_range_for_position : (Int, Int) -> @view.HorizontalPosition?
-  get_line_width : (Int) -> Double
+  get_position_from_dom_info : (@rdom.Element, Int32) -> @base_common.Position?
+  visible_range_for_position : (Int32, Int32) -> @view.HorizontalPosition?
+  get_line_width : (Int32) -> Double
   // --- ViewContext substitutes (deviation, see header) ---
   /// The attached view model; `None` while the viewer has no model (Monaco's
   /// pointer handler only exists while a view — and thus a model — does).
@@ -395,7 +395,7 @@ fn MouseHandler::on_mouse_up(
 fn MouseHandler::on_mouse_down(
   self : MouseHandler,
   e : @editor_browser.EditorDomMouseEvent,
-  pointer_id : Int,
+  pointer_id : Int32,
 ) -> Unit {
   let t = self.create_mouse_target(e, true)
   let target_type = t.type_()
@@ -541,7 +541,7 @@ fn MouseDownOperation::start(
   self : MouseDownOperation,
   target_type : @editor_browser.MouseTargetType,
   e : @editor_browser.EditorDomMouseEvent,
-  pointer_id : Int,
+  pointer_id : Int32,
 ) -> Unit {
   self.mouse_state.set_started_on_line_numbers(target_type is GutterLineNumbers)
   self.mouse_state.set_start_buttons(e)
@@ -798,8 +798,8 @@ pub struct MouseDownState {
   priv mut middle_button_flag : Bool
   priv mut started_on_line_numbers_flag : Bool
   priv mut last_mouse_down_position : @base_common.Position?
-  priv mut last_mouse_down_position_equal_count : Int
-  priv mut last_mouse_down_count : Int
+  priv mut last_mouse_down_position_equal_count : Int32
+  priv mut last_mouse_down_count : Int32
   priv mut last_set_mouse_down_count_time : Double
 }
 
@@ -861,7 +861,7 @@ pub fn MouseDownState::started_on_line_numbers(self : MouseDownState) -> Bool {
 }
 
 ///|
-pub fn MouseDownState::count(self : MouseDownState) -> Int {
+pub fn MouseDownState::count(self : MouseDownState) -> Int32 {
   self.last_mouse_down_count
 }
 
@@ -898,7 +898,7 @@ fn MouseDownState::set_started_on_line_numbers(
 /// the source reads `new Date().getTime()`.
 pub fn MouseDownState::try_set_count(
   self : MouseDownState,
-  set_mouse_down_count : Int,
+  set_mouse_down_count : Int32,
   new_mouse_down_position : @base_common.Position,
   now? : Double,
 ) -> Unit {

@@ -3,7 +3,7 @@
 #deprecated("Use `moonbitlang/editor` instead.", skip_current_package=true)
 pub struct ViewerOptions {
   priv soft_wrap : Bool
-  priv tab_size : Int
+  priv tab_size : Int32
   priv wrapping_indent : @editor_api.WrappingIndent
   priv render_whitespace : @editor_api.RenderWhitespace
   priv render_control_characters : Bool
@@ -26,12 +26,12 @@ pub struct ViewerOptions {
   /// (default `10`, `editorOptions.ts:3304-3307`). Features that draw gutter
   /// decorations (e.g. agent feedback) reserve extra lane width on top
   /// through `update_options`.
-  priv line_decorations_width : Int
+  priv line_decorations_width : Int32
   /// Minimum digit slots reserved by the line-number band — Monaco's
   /// `lineNumbersMinChars` editor option (default `5`, minimum `1`,
   /// `editorOptions.ts:6379-6381`). The band widens past this when the model
   /// has more-digit line numbers.
-  priv line_numbers_min_chars : Int
+  priv line_numbers_min_chars : Int32
   /// Monaco's `folding` editor option (default `true`): whether code folding
   /// is enabled.
   priv folding : Bool
@@ -42,7 +42,7 @@ pub struct ViewerOptions {
   /// folded ranges get the `folded-background` highlight.
   priv folding_highlight : Bool
   /// Monaco's `foldingMaximumRegions` editor option (default `5000`).
-  priv folding_maximum_regions : Int
+  priv folding_maximum_regions : Int32
   /// Monaco's `unfoldOnClickAfterEndOfLine` editor option (default `false`).
   priv unfold_on_click_after_end_of_line : Bool
   /// Monaco's `smoothScrolling` option (`false` by default). Physical mouse
@@ -86,31 +86,31 @@ pub extend ViewerOptions with Debug::{to_repr}
 /// `render_line_highlight_only_when_focus` to `false`, Monaco's defaults for
 /// the current-line highlight (`editorOptions.ts`).
 pub fn ViewerOptions::ViewerOptions(
-  soft_wrap? : Bool = false,
-  tab_size? : Int = 2,
-  wrapping_indent? : @editor_api.WrappingIndent = Same,
-  render_whitespace? : @editor_api.RenderWhitespace = Selection,
-  render_control_characters? : Bool = true,
-  render_line_highlight? : @editor_api.RenderLineHighlight = Line,
-  render_line_highlight_only_when_focus? : Bool = false,
-  render_validation_decorations? : @editor_api.RenderValidationDecorations = On,
-  theme? : String = "dark",
-  placeholder? : String = "",
-  line_decorations_width? : Int = 10,
-  line_numbers_min_chars? : Int = 5,
-  folding? : Bool = true,
-  show_folding_controls? : @editor_api.ShowFoldingControls = Mouseover,
-  folding_highlight? : Bool = true,
-  folding_maximum_regions? : Int = 5000,
-  unfold_on_click_after_end_of_line? : Bool = false,
-  smooth_scrolling? : Bool = false,
-  show_unused? : Bool = true,
-  show_deprecated? : Bool = true,
-  font_family? : String = @config.editor_font_defaults.font_family,
-  font_weight? : String = @config.editor_font_defaults.font_weight,
-  font_size? : Double = @config.editor_font_defaults.font_size,
-  line_height? : Double = @config.editor_font_defaults.line_height,
-  letter_spacing? : Double = @config.editor_font_defaults.letter_spacing,
+  soft_wrap~ : Bool = false,
+  tab_size~ : Int32 = 2,
+  wrapping_indent~ : @editor_api.WrappingIndent = Same,
+  render_whitespace~ : @editor_api.RenderWhitespace = Selection,
+  render_control_characters~ : Bool = true,
+  render_line_highlight~ : @editor_api.RenderLineHighlight = Line,
+  render_line_highlight_only_when_focus~ : Bool = false,
+  render_validation_decorations~ : @editor_api.RenderValidationDecorations = On,
+  theme~ : String = "dark",
+  placeholder~ : String = "",
+  line_decorations_width~ : Int32 = 10,
+  line_numbers_min_chars~ : Int32 = 5,
+  folding~ : Bool = true,
+  show_folding_controls~ : @editor_api.ShowFoldingControls = Mouseover,
+  folding_highlight~ : Bool = true,
+  folding_maximum_regions~ : Int32 = 5000,
+  unfold_on_click_after_end_of_line~ : Bool = false,
+  smooth_scrolling~ : Bool = false,
+  show_unused~ : Bool = true,
+  show_deprecated~ : Bool = true,
+  font_family~ : String = @config.editor_font_defaults.font_family,
+  font_weight~ : String = @config.editor_font_defaults.font_weight,
+  font_size~ : Double = @config.editor_font_defaults.font_size,
+  line_height~ : Double = @config.editor_font_defaults.line_height,
+  letter_spacing~ : Double = @config.editor_font_defaults.letter_spacing,
 ) -> ViewerOptions {
   {
     soft_wrap,
@@ -233,7 +233,7 @@ pub fn ViewerOptions::with_render_validation_decorations(
 /// Returns a copy with the tab size changed, normalized to at least one.
 pub fn ViewerOptions::with_tab_size(
   self : ViewerOptions,
-  tab_size : Int,
+  tab_size : Int32,
 ) -> ViewerOptions {
   { ..self, tab_size: tab_size.max(1), }
 }
@@ -252,7 +252,7 @@ pub fn ViewerOptions::with_soft_wrap(
 /// to at least one.
 pub fn ViewerOptions::with_line_numbers_min_chars(
   self : ViewerOptions,
-  line_numbers_min_chars : Int,
+  line_numbers_min_chars : Int32,
 ) -> ViewerOptions {
   { ..self, line_numbers_min_chars: line_numbers_min_chars.max(1), }
 }
@@ -262,7 +262,7 @@ pub fn ViewerOptions::with_line_numbers_min_chars(
 /// a non-negative value.
 pub fn ViewerOptions::with_line_decorations_width(
   self : ViewerOptions,
-  line_decorations_width : Int,
+  line_decorations_width : Int32,
 ) -> ViewerOptions {
   { ..self, line_decorations_width: line_decorations_width.max(0), }
 }
@@ -316,7 +316,7 @@ fn ViewerOptions::soft_wrap_column_for_content_width(
   self : ViewerOptions,
   content_width : Double,
   char_width : Double,
-) -> Int {
+) -> Int32 {
   if !self.soft_wrap || content_width <= 0.0 || char_width <= 0.0 {
     0
   } else {
@@ -330,9 +330,9 @@ fn ViewerOptions::soft_wrap_column_for_content_width(
 /// not an option field, so it rides in as an argument.
 fn ViewerOptions::view_model_options(
   self : ViewerOptions,
-  soft_wrap_column : Int,
+  soft_wrap_column : Int32,
   font_info~ : @config.FontInfo,
-  editor_id? : Int = 0,
+  editor_id~ : Int32 = 0,
 ) -> @view_model.ViewModelOptions {
   if self.soft_wrap && soft_wrap_column > 0 {
     ViewModelOptions(

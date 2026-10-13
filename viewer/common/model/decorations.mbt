@@ -19,7 +19,7 @@ pub extend TrackedRangeStickiness with Debug::{to_repr}
 /// Numeric value of the stickiness, matching Monaco's
 /// `TrackedRangeStickiness` enum values (`model.ts`) — the interval tree
 /// packs it into the node metadata byte.
-pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int {
+pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int32 {
   match self {
     AlwaysGrowsWhenTypingAtEdges => 0
     NeverGrowsWhenTypingAtEdges => 1
@@ -31,7 +31,9 @@ pub fn TrackedRangeStickiness::to_int(self : TrackedRangeStickiness) -> Int {
 ///|
 /// Inverse of `to_int`. Values outside 0..=3 cannot come out of the 2-bit
 /// metadata field; the fallback mirrors Monaco's numeric default 0.
-pub fn TrackedRangeStickiness::from_int(value : Int) -> TrackedRangeStickiness {
+pub fn TrackedRangeStickiness::from_int(
+  value : Int32,
+) -> TrackedRangeStickiness {
   match value {
     1 => NeverGrowsWhenTypingAtEdges
     2 => GrowsOnlyWhenTypingBefore
@@ -137,7 +139,7 @@ pub struct ModelDecorationOptions {
   message : String?
   inline_class_name : String?
   inline_class_name_affects_letter_spacing : Bool
-  z_index : Int
+  z_index : Int32
   is_whole_line : Bool
   show_if_collapsed : Bool
   should_fill_line_on_line_break : Bool
@@ -176,7 +178,7 @@ pub(all) struct InjectedTextOptions {
   inline_class_name : String?
   /// `attachedData` reduced to a producer-defined index (`-1` = none), carried
   /// through the projection into hit-testing lookup.
-  attached_index : Int
+  attached_index : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -190,7 +192,7 @@ pub extend InjectedTextOptions with Eq::{not_equal, equal}
 pub fn InjectedTextOptions::InjectedTextOptions(
   content : String,
   inline_class_name? : String,
-  attached_index? : Int = -1,
+  attached_index~ : Int32 = -1,
 ) -> InjectedTextOptions {
   { content, inline_class_name, attached_index, }
 }
@@ -212,7 +214,7 @@ pub extend ModelDeltaDecoration with Debug::{to_repr}
 /// interface; the port materializes value copies (same data, no aliasing).
 pub(all) struct ModelDecoration {
   id : String
-  owner_id : Int
+  owner_id : Int32
   range : @base_common.Range
   options : ModelDecorationOptions
 } derive(Debug)
@@ -253,12 +255,12 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
   class_name : String,
   message? : String,
   inline_class_name? : String,
-  inline_class_name_affects_letter_spacing? : Bool = false,
-  z_index? : Int = 0,
-  is_whole_line? : Bool = false,
-  show_if_collapsed? : Bool = false,
-  should_fill_line_on_line_break? : Bool = false,
-  stickiness? : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
+  inline_class_name_affects_letter_spacing~ : Bool = false,
+  z_index~ : Int32 = 0,
+  is_whole_line~ : Bool = false,
+  show_if_collapsed~ : Bool = false,
+  should_fill_line_on_line_break~ : Bool = false,
+  stickiness~ : TrackedRangeStickiness = AlwaysGrowsWhenTypingAtEdges,
   overview_ruler? : ModelDecorationOverviewRulerOptions,
   minimap? : ModelDecorationMinimapOptions,
   glyph_margin_class_name? : String,
@@ -266,8 +268,8 @@ pub fn ModelDecorationOptions::ModelDecorationOptions(
   first_line_decoration_class_name? : String,
   margin_class_name? : String,
   after_content_class_name? : String,
-  collapse_on_replace_edit? : Bool = false,
-  description? : String = "",
+  collapse_on_replace_edit~ : Bool = false,
+  description~ : String = "",
   before? : InjectedTextOptions,
   after? : InjectedTextOptions,
 ) -> ModelDecorationOptions {

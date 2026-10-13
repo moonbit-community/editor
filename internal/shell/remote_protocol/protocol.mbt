@@ -1,7 +1,7 @@
 ///|
 /// Current client/server protocol version. Both sides reject packets carrying a
 /// different version.
-pub fn protocol_version() -> Int {
+pub fn protocol_version() -> Int32 {
   4
 }
 
@@ -66,7 +66,7 @@ pub(all) struct DocumentPositionRequest {
   id : String
   uri : @base_common.Uri
   document_revision : String
-  offset : Int
+  offset : Int32
 } derive(Debug)
 
 ///|
@@ -165,8 +165,8 @@ pub extend DefinitionResultPayload with Debug::{to_repr}
 pub(all) struct ReferenceItem {
   uri : @base_common.Uri
   range : @base_common.Range
-  line : Int
-  column : Int
+  line : Int32
+  column : Int32
   line_text : String
 } derive(Debug)
 
@@ -237,7 +237,7 @@ pub extend ServerPacketDecodeResult with Debug::{to_repr}
 ///|
 /// Version-negotiation result used before opening a long-lived connection.
 pub enum ProtocolNegotiation {
-  ProtocolAccepted(Int)
+  ProtocolAccepted(Int32)
   ProtocolRejected(ProtocolError)
 } derive(Debug)
 
@@ -249,8 +249,8 @@ pub extend ProtocolNegotiation with Debug::{to_repr}
 pub fn ProtocolError::ProtocolError(
   code : ProtocolErrorCode,
   message : String,
-  request_id? : String = "",
-  provider_code? : String = "",
+  request_id~ : String = "",
+  provider_code~ : String = "",
 ) -> ProtocolError {
   let message = if message == "" { code.to_string() } else { message }
   { code, message, request_id, provider_code, }
@@ -261,7 +261,7 @@ pub fn ProtocolError::ProtocolError(
 /// the provider error code.
 pub fn ProtocolError::from_file_system_error(
   error : @workspace.FileSystemProviderError,
-  request_id? : String = "",
+  request_id~ : String = "",
 ) -> ProtocolError {
   ProtocolError(
     ProtocolProviderError,
@@ -301,7 +301,7 @@ pub fn ProtocolErrorCode::from_string(code : String) -> ProtocolErrorCode {
 
 ///|
 /// Accepts only the exact current protocol version.
-pub fn negotiate_protocol_version(version : Int) -> ProtocolNegotiation {
+pub fn negotiate_protocol_version(version : Int32) -> ProtocolNegotiation {
   if version == protocol_version() {
     ProtocolAccepted(version)
   } else {
@@ -879,7 +879,7 @@ fn parse_source_document(value : Json, id : String) -> ProtocolDocumentResult {
 ///|
 fn document_request_json(kind : String, request : DocumentRequest) -> Json {
   let fields = packet_fields(kind, request.id)
-  fields["uri"] = request.uri.to_string().to_json()
+  fields["uri"] = Json(request.uri.to_string())
   Json::object(fields)
 }
 
@@ -889,9 +889,9 @@ fn position_request_json(
   request : DocumentPositionRequest,
 ) -> Json {
   let fields = packet_fields(kind, request.id)
-  fields["uri"] = request.uri.to_string().to_json()
-  fields["documentRevision"] = request.document_revision.to_json()
-  fields["offset"] = request.offset.to_json()
+  fields["uri"] = Json(request.uri.to_string())
+  fields["documentRevision"] = Json(request.document_revision)
+  fields["offset"] = Json(request.offset)
   Json::object(fields)
 }
 
@@ -901,8 +901,8 @@ fn revision_request_json(
   request : DocumentRevisionRequest,
 ) -> Json {
   let fields = packet_fields(kind, request.id)
-  fields["uri"] = request.uri.to_string().to_json()
-  fields["documentRevision"] = request.document_revision.to_json()
+  fields["uri"] = Json(request.uri.to_string())
+  fields["documentRevision"] = Json(request.document_revision)
   Json::object(fields)
 }
 
@@ -925,9 +925,9 @@ fn directory_resolved_json(payload : DirectoryResolvedPayload) -> Json {
 /// the decoder can tell "not resolved" (`None`) from "empty" (`[]`).
 fn workspace_stat_json(stat : @workspace.WorkspaceStat) -> Json {
   let fields : Map[String, Json] = {
-    "uri": stat.uri.to_string().to_json(),
-    "name": stat.name.to_json(),
-    "kind": stat.kind.to_string().to_json(),
+    "uri": Json(stat.uri.to_string()),
+    "name": Json(stat.name),
+    "kind": Json(stat.kind.to_string()),
   }
   match stat.children {
     Some(children) =>
@@ -972,8 +972,8 @@ fn parse_workspace_stat(value : Json) -> @workspace.WorkspaceStat? {
 ///|
 fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
   let fields = packet_fields("Diagnostics", "")
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
+  fields["uri"] = Json(payload.uri.to_string())
+  fields["documentRevision"] = Json(payload.revision)
   fields["diagnostics"] = Json::array(payload.diagnostics.map(diagnostic_json))
   Json::object(fields)
 }
@@ -981,8 +981,8 @@ fn diagnostics_payload_json(payload : DiagnosticsPayload) -> Json {
 ///|
 fn hover_result_json(payload : HoverResultPayload) -> Json {
   let fields = packet_fields("HoverResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
+  fields["uri"] = Json(payload.uri.to_string())
+  fields["documentRevision"] = Json(payload.revision)
   fields["hover"] = match payload.hover {
     Some(hover) => hover_json(hover)
     None => Json::null()
@@ -993,8 +993,8 @@ fn hover_result_json(payload : HoverResultPayload) -> Json {
 ///|
 fn definition_result_json(payload : DefinitionResultPayload) -> Json {
   let fields = packet_fields("DefinitionResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
+  fields["uri"] = Json(payload.uri.to_string())
+  fields["documentRevision"] = Json(payload.revision)
   fields["location"] = match payload.location {
     Some(location) => location_json(location)
     None => Json::null()
@@ -1005,8 +1005,8 @@ fn definition_result_json(payload : DefinitionResultPayload) -> Json {
 ///|
 fn references_result_json(payload : ReferencesResultPayload) -> Json {
   let fields = packet_fields("ReferencesResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
+  fields["uri"] = Json(payload.uri.to_string())
+  fields["documentRevision"] = Json(payload.revision)
   fields["references"] = Json::array(
     payload.references.map(reference_item_json),
   )
@@ -1016,19 +1016,19 @@ fn references_result_json(payload : ReferencesResultPayload) -> Json {
 ///|
 fn reference_item_json(item : ReferenceItem) -> Json {
   {
-    "uri": item.uri.to_string().to_json(),
+    "uri": Json(item.uri.to_string()),
     "range": range_json(item.range),
-    "line": item.line.to_json(),
-    "column": item.column.to_json(),
-    "lineText": item.line_text.to_json(),
+    "line": Json(item.line),
+    "column": Json(item.column),
+    "lineText": Json(item.line_text),
   }
 }
 
 ///|
 fn document_symbols_result_json(payload : DocumentSymbolsResultPayload) -> Json {
   let fields = packet_fields("DocumentSymbolsResult", payload.id)
-  fields["uri"] = payload.uri.to_string().to_json()
-  fields["documentRevision"] = payload.revision.to_json()
+  fields["uri"] = Json(payload.uri.to_string())
+  fields["documentRevision"] = Json(payload.revision)
   fields["symbols"] = Json::array(payload.symbols.map(document_symbol_json))
   Json::object(fields)
 }
@@ -1044,12 +1044,12 @@ fn error_packet_json(error : ProtocolError) -> Json {
 /// JSON error payload used inside `RemoteError` server packets.
 pub impl ToJson for ProtocolError with fn to_json(self) {
   let fields : Map[String, Json] = {
-    "code": self.code.to_string().to_json(),
-    "message": self.message.to_json(),
-    "requestId": self.request_id.to_json(),
+    "code": Json(self.code.to_string()),
+    "message": Json(self.message),
+    "requestId": Json(self.request_id),
   }
   if self.provider_code != "" {
-    fields["providerCode"] = self.provider_code.to_json()
+    fields["providerCode"] = Json(self.provider_code)
   }
   Json::object(fields)
 }
@@ -1060,11 +1060,11 @@ pub extend ProtocolError with ToJson::{to_json}
 ///|
 fn packet_fields(kind : String, id : String) -> Map[String, Json] {
   let fields : Map[String, Json] = {
-    "version": protocol_version().to_json(),
-    "type": kind.to_json(),
+    "version": Json(protocol_version()),
+    "type": Json(kind),
   }
   if id != "" {
-    fields["id"] = id.to_json()
+    fields["id"] = Json(id)
   }
   fields
 }
@@ -1073,12 +1073,12 @@ fn packet_fields(kind : String, id : String) -> Map[String, Json] {
 fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
   let fields : Map[String, Json] = {
     "range": range_json(diagnostic.range),
-    "severity": diagnostic.severity.label().to_json(),
-    "message": diagnostic.message.to_json(),
+    "severity": Json(diagnostic.severity.label()),
+    "message": Json(diagnostic.message),
   }
   match diagnostic.tags {
     Some(tags) =>
-      fields["tags"] = Json::array(tags.map(tag => tag.label().to_json()))
+      fields["tags"] = Json::array(tags.map(tag => Json(tag.label())))
     None => ()
   }
   Json::object(fields)
@@ -1087,8 +1087,8 @@ fn diagnostic_json(diagnostic : @language.Diagnostic) -> Json {
 ///|
 fn document_symbol_json(symbol : @language.DocumentSymbol) -> Json {
   {
-    "name": symbol.name.to_json(),
-    "kind": symbol.kind.to_json(),
+    "name": Json(symbol.name),
+    "kind": Json(symbol.kind),
     "range": range_json(symbol.range),
   }
 }
@@ -1105,18 +1105,14 @@ fn hover_json(hover : @language.Hover) -> Json {
 fn hover_content_json(content : @language.HoverContent) -> Json {
   match content {
     PlainText(text) =>
-      { "kind": Json::string("plaintext"), "value": text.to_json() }
-    Markdown(text) =>
-      { "kind": Json::string("markdown"), "value": text.to_json() }
+      { "kind": Json::string("plaintext"), "value": Json(text) }
+    Markdown(text) => { "kind": Json::string("markdown"), "value": Json(text) }
   }
 }
 
 ///|
 fn location_json(location : @language.Location) -> Json {
-  {
-    "uri": location.uri.to_string().to_json(),
-    "range": range_json(location.range),
-  }
+  { "uri": Json(location.uri.to_string()), "range": range_json(location.range) }
 }
 
 ///|
@@ -1124,10 +1120,10 @@ fn location_json(location : @language.Location) -> Json {
 /// (Location, DocumentSymbol, ReferenceItem).
 fn range_json(range : @base_common.Range) -> Json {
   {
-    "startLineNumber": range.start_line_number.to_json(),
-    "startColumn": range.start_column.to_json(),
-    "endLineNumber": range.end_line_number.to_json(),
-    "endColumn": range.end_column.to_json(),
+    "startLineNumber": Json(range.start_line_number),
+    "startColumn": Json(range.start_column),
+    "endLineNumber": Json(range.end_line_number),
+    "endColumn": Json(range.end_column),
   }
 }
 
@@ -1367,7 +1363,7 @@ fn json_string_field(value : Json, key : String) -> String? {
 }
 
 ///|
-fn json_int_field(value : Json, key : String) -> Int? {
+fn json_int_field(value : Json, key : String) -> Int32? {
   match json_field(value, key) {
     Some(Number(number, repr=_)) => Some(number.to_int())
     _ => None

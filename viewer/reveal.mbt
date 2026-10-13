@@ -10,19 +10,22 @@
 
 ///|
 /// Reveals a 1-based model line, aligning its top into view (`Simple`).
-pub fn Viewer::reveal_line(self : Viewer, line_number : Int) -> Unit {
+pub fn Viewer::reveal_line(self : Viewer, line_number : Int32) -> Unit {
   self.reveal_line_with(line_number, Simple)
 }
 
 ///|
 /// Reveals a 1-based model line, centering it (`Center`).
-pub fn Viewer::reveal_line_in_center(self : Viewer, line_number : Int) -> Unit {
+pub fn Viewer::reveal_line_in_center(
+  self : Viewer,
+  line_number : Int32,
+) -> Unit {
   self.reveal_line_with(line_number, Center)
 }
 
 ///|
 /// Reveals a 1-based model line near the top of the viewport (`NearTop`).
-pub fn Viewer::reveal_line_near_top(self : Viewer, line_number : Int) -> Unit {
+pub fn Viewer::reveal_line_near_top(self : Viewer, line_number : Int32) -> Unit {
   self.reveal_line_with(line_number, NearTop)
 }
 
@@ -31,7 +34,7 @@ pub fn Viewer::reveal_line_near_top(self : Viewer, line_number : Int) -> Unit {
 /// viewport (`CenterIfOutsideViewport`).
 pub fn Viewer::reveal_line_in_center_if_outside_viewport(
   self : Viewer,
-  line_number : Int,
+  line_number : Int32,
 ) -> Unit {
   self.reveal_line_with(line_number, CenterIfOutsideViewport)
 }
@@ -42,8 +45,8 @@ pub fn Viewer::reveal_line_in_center_if_outside_viewport(
 /// horizontal scroll is not adjusted.
 pub fn Viewer::reveal_lines(
   self : Viewer,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
 ) -> Unit {
   self.reveal_lines_with(start_line_number, end_line_number, Simple)
 }
@@ -52,8 +55,8 @@ pub fn Viewer::reveal_lines(
 /// Reveals a model line span `[start, end]` (1-based), centering it (`Center`).
 pub fn Viewer::reveal_lines_in_center(
   self : Viewer,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
 ) -> Unit {
   self.reveal_lines_with(start_line_number, end_line_number, Center)
 }
@@ -62,8 +65,8 @@ pub fn Viewer::reveal_lines_in_center(
 /// Reveals a model line span `[start, end]` (1-based) near the top (`NearTop`).
 pub fn Viewer::reveal_lines_near_top(
   self : Viewer,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
 ) -> Unit {
   self.reveal_lines_with(start_line_number, end_line_number, NearTop)
 }
@@ -73,8 +76,8 @@ pub fn Viewer::reveal_lines_near_top(
 /// currently outside the viewport (`CenterIfOutsideViewport`).
 pub fn Viewer::reveal_lines_in_center_if_outside_viewport(
   self : Viewer,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
 ) -> Unit {
   self.reveal_lines_with(
     start_line_number,
@@ -183,7 +186,7 @@ pub fn Viewer::reveal_range_at_top(
 ///|
 fn Viewer::reveal_line_with(
   self : Viewer,
-  line_number : Int,
+  line_number : Int32,
   vertical_type : @view_layout.VerticalRevealType,
 ) -> Unit {
   // Monaco's `_revealLine`: a single-line collapsed range, no horizontal reveal.
@@ -194,8 +197,8 @@ fn Viewer::reveal_line_with(
 ///|
 fn Viewer::reveal_lines_with(
   self : Viewer,
-  start_line_number : Int,
-  end_line_number : Int,
+  start_line_number : Int32,
+  end_line_number : Int32,
   vertical_type : @view_layout.VerticalRevealType,
 ) -> Unit {
   // Monaco's `_revealLines`: a multi-line range, no horizontal reveal.
@@ -233,9 +236,9 @@ fn Viewer::send_reveal_range(
   model_range : @base_common.Range,
   vertical_type : @view_layout.VerticalRevealType,
   reveal_horizontal~ : Bool,
-  source? : String = "",
-  minimal_reveal? : Bool = false,
-  scroll_type? : CursorRevealScrollType = Immediate,
+  source~ : String = "",
+  minimal_reveal~ : Bool = false,
+  scroll_type~ : CursorRevealScrollType = Immediate,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   // (1) Model range → view range: the wrapping-aware step (with word-wrap on,
@@ -262,9 +265,9 @@ fn Viewer::send_reveal_range(
 fn Viewer::reveal_view_cursor(
   self : Viewer,
   horizontal~ : Bool,
-  source? : String = "",
-  minimal_reveal? : Bool = false,
-  scroll_type? : CursorRevealScrollType = Immediate,
+  source~ : String = "",
+  minimal_reveal~ : Bool = false,
+  scroll_type~ : CursorRevealScrollType = Immediate,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   let position = view_model.cursor.view_state().position
@@ -290,7 +293,7 @@ fn Viewer::reveal_view_cursor(
 fn cursor_reveal_should_smooth(
   scroll_type : CursorRevealScrollType,
   scroll_top_delta : Double,
-  line_height : Int,
+  line_height : Int32,
 ) -> Bool {
   scroll_type == Smooth && scroll_top_delta > line_height.to_double()
 }
@@ -363,9 +366,9 @@ fn Viewer::send_reveal_view_range(
   view_range : @base_common.Range,
   vertical_type : @view_layout.VerticalRevealType,
   reveal_horizontal~ : Bool,
-  source? : String = "",
-  minimal_reveal? : Bool = false,
-  scroll_type? : CursorRevealScrollType = Immediate,
+  source~ : String = "",
+  minimal_reveal~ : Bool = false,
+  scroll_type~ : CursorRevealScrollType = Immediate,
 ) -> Unit {
   guard self.get_view_model() is Some(view_model) else { return }
   // (2) Minimal vertical scroll for the view range.

@@ -7,9 +7,9 @@
 
 ///|
 fn range_anchor(
-  line : Int,
-  start_column : Int,
-  end_column : Int,
+  line : Int32,
+  start_column : Int32,
+  end_column : Int32,
 ) -> HoverAnchor {
   HoverRangeAnchor(
     priority=0,
@@ -24,9 +24,9 @@ let test_foreign_owner : HoverParticipantOwner = HoverParticipantOwner()
 
 ///|
 fn foreign_anchor(
-  injected_text_index : Int,
-  supports_marker_hover? : Bool = true,
-  owner? : HoverParticipantOwner = test_foreign_owner,
+  injected_text_index : Int32,
+  supports_marker_hover~ : Bool = true,
+  owner~ : HoverParticipantOwner = test_foreign_owner,
 ) -> HoverAnchor {
   HoverForeignElementAnchor(
     priority=10,
@@ -284,7 +284,7 @@ test "marker participant isolates distinct live models sharing one URI" {
     marker_decorations.marker_decorations_handle(),
   ).hover_participant_handle()
 
-  let compute = (model : @model.TextModel, column : Int) => {
+  let compute = (model : @model.TextModel, column : Int32) => {
     (participant.compute_sync)({
       model,
       anchor: range_anchor(1, column, column),

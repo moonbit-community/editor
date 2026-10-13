@@ -107,9 +107,9 @@ pub(open) trait FileSystemProvider {
 /// Builds file content while allowing providers to omit derived metadata.
 pub fn DocumentContent::DocumentContent(
   text : String,
-  display_name? : String = "",
-  language_id? : String = "",
-  revision? : String = "",
+  display_name~ : String = "",
+  language_id~ : String = "",
+  revision~ : String = "",
 ) -> DocumentContent {
   { text, display_name, language_id, revision, }
 }
@@ -184,14 +184,14 @@ pub fn watch_file(
 /// reference server.
 pub impl ToJson for FileSystemProviderError with fn to_json(self) {
   let fields : Map[String, Json] = {
-    "code": self.code.to_string().to_json(),
-    "message": self.message.to_json(),
-    "status": self.status().to_json(),
+    "code": Json(self.code.to_string()),
+    "message": Json(self.message),
+    "status": Json(self.status()),
   }
   match self.uri {
     Some(uri) => {
-      fields["uri"] = uri.to_string().to_json()
-      fields["displayName"] = @base_common.basename_or_authority(uri).to_json()
+      fields["uri"] = Json(uri.to_string())
+      fields["displayName"] = Json(@base_common.basename_or_authority(uri))
     }
     None => ()
   }
@@ -204,7 +204,7 @@ pub extend FileSystemProviderError with ToJson::{to_json}
 ///|
 /// HTTP-like status used by the reference server when serializing provider
 /// failures.
-pub fn FileSystemProviderError::status(self : FileSystemProviderError) -> Int {
+pub fn FileSystemProviderError::status(self : FileSystemProviderError) -> Int32 {
   match self.code {
     FileNotFound => 404
     FileExists => 409
@@ -259,8 +259,8 @@ pub fn FileSystemProviderErrorCode::from_string(
 /// JSON shape for watch events.
 pub impl ToJson for FileChange with fn to_json(self) {
   {
-    "uri": self.uri.to_string().to_json(),
-    "type": self.change_type.to_string().to_json(),
+    "uri": Json(self.uri.to_string()),
+    "type": Json(self.change_type.to_string()),
   }
 }
 

@@ -6,7 +6,7 @@ pub struct DocumentSnapshot {
   language_id : String
   revision : String
   text : String
-  line_starts : Array[Int]
+  line_starts : Array[Int32]
 } derive(Debug)
 
 ///|
@@ -137,14 +137,14 @@ pub fn DocumentSnapshot::from_content(
 
 ///|
 /// Snapshot length in the repo's JavaScript-compatible UTF-16 indexing model.
-pub fn DocumentSnapshot::length(self : DocumentSnapshot) -> Int {
+pub fn DocumentSnapshot::length(self : DocumentSnapshot) -> Int32 {
   self.text.length()
 }
 
 ///|
 /// Number of logical lines, including the final empty line after a trailing
 /// newline.
-pub fn DocumentSnapshot::line_count(self : DocumentSnapshot) -> Int {
+pub fn DocumentSnapshot::line_count(self : DocumentSnapshot) -> Int32 {
   self.line_starts.length()
 }
 
@@ -152,8 +152,8 @@ pub fn DocumentSnapshot::line_count(self : DocumentSnapshot) -> Int {
 /// Start offset for `line`, clamped into the snapshot's line range.
 pub fn DocumentSnapshot::line_start_offset(
   self : DocumentSnapshot,
-  line : Int,
-) -> Int {
+  line : Int32,
+) -> Int32 {
   let line = @base_common.clamp_int(line, 0, self.line_count() - 1)
   self.line_starts[line]
 }
@@ -163,8 +163,8 @@ pub fn DocumentSnapshot::line_start_offset(
 /// the line break. CRLF lines exclude both the `\r` and `\n`.
 pub fn DocumentSnapshot::line_end_offset(
   self : DocumentSnapshot,
-  line : Int,
-) -> Int {
+  line : Int32,
+) -> Int32 {
   let line = @base_common.clamp_int(line, 0, self.line_count() - 1)
   let raw_end = if line + 1 < self.line_count() {
     self.line_starts[line + 1] - 1
@@ -182,7 +182,7 @@ pub fn DocumentSnapshot::line_end_offset(
 /// Text of one logical line without its line break.
 pub fn DocumentSnapshot::line_text(
   self : DocumentSnapshot,
-  line : Int,
+  line : Int32,
 ) -> String {
   let start = self.line_start_offset(line)
   let end = self.line_end_offset(line)
@@ -205,8 +205,8 @@ pub fn DocumentSnapshot::slice(
 /// the snapshot.
 pub fn DocumentSnapshot::line_at_offset(
   self : DocumentSnapshot,
-  offset : Int,
-) -> Int {
+  offset : Int32,
+) -> Int32 {
   let offset = @base_common.clamp_int(offset, 0, self.length())
   let mut found = 0
   for i in 0..<self.line_starts.length() {
@@ -222,7 +222,7 @@ pub fn DocumentSnapshot::line_at_offset(
 /// convention; the offset↔position boundary adds +1 on both axes).
 pub fn DocumentSnapshot::position_at_offset(
   self : DocumentSnapshot,
-  offset : Int,
+  offset : Int32,
 ) -> @base_common.Position {
   let offset = @base_common.clamp_int(offset, 0, self.length())
   let line = self.line_at_offset(offset)
@@ -235,7 +235,7 @@ pub fn DocumentSnapshot::position_at_offset(
 pub fn DocumentSnapshot::offset_at_position(
   self : DocumentSnapshot,
   position : @base_common.Position,
-) -> Int {
+) -> Int32 {
   let line = @base_common.clamp_int(
     position.line_number - 1,
     0,
@@ -250,11 +250,11 @@ pub fn DocumentSnapshot::offset_at_position(
 /// JSON shape emitted to browser harnesses and remote protocol adapters.
 pub impl ToJson for DocumentSnapshot with fn to_json(self) {
   {
-    "uri": self.uri.to_string().to_json(),
-    "displayName": self.display_name.to_json(),
-    "languageId": self.language_id.to_json(),
-    "revision": self.revision.to_json(),
-    "text": self.text.to_json(),
+    "uri": Json(self.uri.to_string()),
+    "displayName": Json(self.display_name),
+    "languageId": Json(self.language_id),
+    "revision": Json(self.revision),
+    "text": Json(self.text),
   }
 }
 
@@ -267,7 +267,7 @@ pub impl ToJson for DocumentReadResult with fn to_json(self) {
   match self {
     DocumentLoaded(document) => { "ok": true, "document": document.to_json() }
     DocumentNotFound(uri) =>
-      { "ok": false, "notFound": true, "uri": uri.to_string().to_json() }
+      { "ok": false, "notFound": true, "uri": Json(uri.to_string()) }
     DocumentReadFailed(error) => { "ok": false, "error": error.to_json() }
   }
 }
@@ -279,14 +279,14 @@ pub extend DocumentReadResult with ToJson::{to_json}
 /// JSON shape for document errors.
 pub impl ToJson for DocumentError with fn to_json(self) {
   let fields : Map[String, Json] = {
-    "code": self.code.to_string().to_json(),
-    "message": self.message.to_json(),
-    "status": self.status().to_json(),
+    "code": Json(self.code.to_string()),
+    "message": Json(self.message),
+    "status": Json(self.status()),
   }
   match self.uri {
     Some(uri) => {
-      fields["uri"] = uri.to_string().to_json()
-      fields["displayName"] = @base_common.basename_or_authority(uri).to_json()
+      fields["uri"] = Json(uri.to_string())
+      fields["displayName"] = Json(@base_common.basename_or_authority(uri))
     }
     None => ()
   }
@@ -299,7 +299,7 @@ pub extend DocumentError with ToJson::{to_json}
 ///|
 /// HTTP-like status used by the reference server when serializing document
 /// failures.
-pub fn DocumentError::status(self : DocumentError) -> Int {
+pub fn DocumentError::status(self : DocumentError) -> Int32 {
   self.to_file_system_error().status()
 }
 
@@ -309,7 +309,7 @@ pub fn DocumentError::status(self : DocumentError) -> Int {
 /// lonely `\r`, and `\r\n` each end a line, with the pair counted once. This
 /// scanner intentionally differs from Viewer `TextSnapshot`, which first
 /// normalizes CRLF/CR to LF and then derives its own coordinate table.
-fn build_line_starts(text : String) -> Array[Int] {
+fn build_line_starts(text : String) -> Array[Int32] {
   let starts = [0]
   let len = text.length()
   let mut i = 0

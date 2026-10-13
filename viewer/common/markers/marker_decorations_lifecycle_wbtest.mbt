@@ -15,8 +15,8 @@ fn lifecycle_model(
 ///|
 fn lifecycle_marker(
   message : String,
-  start_column? : Int = 1,
-  end_column? : Int = 2,
+  start_column~ : Int32 = 1,
+  end_column~ : Int32 = 2,
 ) -> MarkerData {
   MarkerData(
     severity=Error,
@@ -35,7 +35,7 @@ test "preloaded markers seed once and same-identity leases refcount" {
   markers.change_one("host", uri, [lifecycle_marker("preloaded")])
   let service = MarkerDecorationsService(markers.marker_service_handle())
   let model = lifecycle_model(uri, "preload.mbt", "alpha")
-  let changed : Array[Int] = []
+  let changed : Array[Int32] = []
   let changed_subscription = service.on_did_change_marker_decorations(m => {
     changed.push(m.identity())
   })
@@ -94,7 +94,7 @@ test "same-URI identities fan out and URI lookups preserve acquisition order" {
   let service = MarkerDecorationsService(markers.marker_service_handle())
   let model_a = lifecycle_model(uri, "a.mbt", "alpha")
   let model_b = lifecycle_model(uri, "b.mbt", "x yz")
-  let events : Array[Int] = []
+  let events : Array[Int32] = []
   let event_subscription = service.on_did_change_marker_decorations(model => {
     events.push(model.identity())
   })
@@ -198,7 +198,7 @@ test "set_value refreshes one owner once without acquiring another lease" {
   let first = service.acquire_model(model)
   let second = service.acquire_model(model)
   let old_id = model.get_all_decorations()[0].id
-  let events : Array[Int] = []
+  let events : Array[Int32] = []
   let event_subscription = service.on_did_change_marker_decorations(changed => {
     events.push(changed.identity())
   })

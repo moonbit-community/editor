@@ -6,7 +6,7 @@
 ///|
 fn assert_hidden_ranges(
   actual : Array[@base_common.Range],
-  expected : Array[(Int, Int)],
+  expected : Array[(Int32, Int32)],
   message : String,
 ) -> Unit raise {
   let mapped = actual.map(r => (r.start_line_number, r.end_line_number))

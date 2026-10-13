@@ -110,8 +110,8 @@ priv enum StepOp {
 /// single span.
 fn push_token(
   tokens : Array[@syntax.LineToken],
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   tag : @syntax.HighlightTag,
 ) -> Unit {
   if tokens.length() > 0 {

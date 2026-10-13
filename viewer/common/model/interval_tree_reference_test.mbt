@@ -28,9 +28,9 @@
 
 ///|
 priv struct Interval {
-  id : Int
-  mut start : Int
-  mut end : Int
+  id : Int32
+  mut start : Int32
+  mut end : Int32
 }
 
 ///|
@@ -68,7 +68,7 @@ fn Oracle::delete(self : Oracle, interval : Interval) -> Unit {
 }
 
 ///|
-fn Oracle::search(self : Oracle, start : Int, end : Int) -> Array[Interval] {
+fn Oracle::search(self : Oracle, start : Int32, end : Int32) -> Array[Interval] {
   let result : Array[Interval] = []
   for interval in self.intervals {
     if interval.start <= end && interval.end >= start {
@@ -80,10 +80,10 @@ fn Oracle::search(self : Oracle, start : Int, end : Int) -> Array[Interval] {
 
 ///|
 priv enum Op {
-  Insert(Int, Int)
-  Delete(Int)
-  Change(Int, Int, Int)
-  Search(Int, Int)
+  Insert(Int32, Int32)
+  Delete(Int32)
+  Change(Int32, Int32, Int32)
+  Search(Int32, Int32)
 }
 
 ///|
@@ -99,7 +99,7 @@ priv struct TestState {
 }
 
 ///|
-fn TestState::new(forced_delta? : Bool = false) -> TestState {
+fn TestState::new(forced_delta~ : Bool = false) -> TestState {
   {
     oracle: Oracle::new(),
     tree: IntervalTree(),
@@ -168,7 +168,10 @@ fn TestState::accept_op(self : TestState, op : Op) -> Unit raise {
 }
 
 ///|
-fn TestState::get_existing_node_id(self : TestState, index : Int) -> Int raise {
+fn TestState::get_existing_node_id(
+  self : TestState,
+  index : Int32,
+) -> Int32 raise {
   let mut curr_index = -1
   for i in 0..<self.tree_nodes.length() {
     if self.tree_nodes[i] is None {
@@ -255,7 +258,7 @@ test "gen01-gen18 under FORCE_OVERFLOWING_TEST (delta = start)" {
 
 ///|
 test "seeded fuzz under FORCE_OVERFLOWING_TEST (delta = start)" {
-  let seeds : Array[UInt] = [11111, 22222, 33333]
+  let seeds : Array[UInt32] = [11111, 22222, 33333]
   for seed in seeds {
     AutoTest::new(seed, forced_delta=true).run()
   }
@@ -263,8 +266,8 @@ test "seeded fuzz under FORCE_OVERFLOWING_TEST (delta = start)" {
 
 ///|
 fn assert_pairs_eq(
-  actual : Array[(Int, Int)],
-  expected : Array[(Int, Int)],
+  actual : Array[(Int32, Int32)],
+  expected : Array[(Int32, Int32)],
 ) -> Unit raise {
   if actual != expected {
     fail("got \{Repr(actual)}, expected \{Repr(expected)}")
@@ -297,7 +300,7 @@ fn assert_tree_invariants(t : @model.IntervalTree) -> Unit raise {
 }
 
 ///|
-fn depth(n : @model.IntervalNode) -> Int raise {
+fn depth(n : @model.IntervalNode) -> Int32 raise {
   if same_interval_node(n, @model.sentinel) {
     // The leafs are black
     return 1
@@ -307,7 +310,7 @@ fn depth(n : @model.IntervalNode) -> Int raise {
 }
 
 ///|
-fn assert_valid_node(n : @model.IntervalNode, delta : Int) -> Unit raise {
+fn assert_valid_node(n : @model.IntervalNode, delta : Int32) -> Unit raise {
   if same_interval_node(n, @model.sentinel) {
     return
   }
@@ -534,11 +537,11 @@ test "force delta overflow" {
 
 ///|
 priv struct Rng {
-  mut state : UInt
+  mut state : UInt32
 }
 
 ///|
-fn Rng::next(self : Rng) -> UInt {
+fn Rng::next(self : Rng) -> UInt32 {
   let mut x = self.state
   x = x ^ (x << 13)
   x = x ^ (x >> 17)
@@ -549,14 +552,14 @@ fn Rng::next(self : Rng) -> UInt {
 
 ///|
 /// `getRandomInt(min, max)`: inclusive on both ends.
-fn Rng::int_in(self : Rng, min : Int, max : Int) -> Int {
+fn Rng::int_in(self : Rng, min : Int32, max : Int32) -> Int32 {
   min +
   (self.next() % (max - min + 1).reinterpret_as_uint()).reinterpret_as_int()
 }
 
 ///|
 /// `getRandomRange(min, max)`.
-fn Rng::range_in(self : Rng, min : Int, max : Int) -> (Int, Int) {
+fn Rng::range_in(self : Rng, min : Int32, max : Int32) -> (Int32, Int32) {
   let begin = self.int_in(min, max)
   let length = if self.int_in(1, 10) <= 2 {
     // large range
@@ -572,13 +575,13 @@ fn Rng::range_in(self : Rng, min : Int, max : Int) -> (Int, Int) {
 priv struct AutoTest {
   rng : Rng
   state : TestState
-  mut insert_cnt : Int
-  mut delete_cnt : Int
-  mut change_cnt : Int
+  mut insert_cnt : Int32
+  mut delete_cnt : Int32
+  mut change_cnt : Int32
 }
 
 ///|
-fn AutoTest::new(seed : UInt, forced_delta? : Bool = false) -> AutoTest {
+fn AutoTest::new(seed : UInt32, forced_delta~ : Bool = false) -> AutoTest {
   let rng : Rng = { state: seed, }
   let insert_cnt = rng.int_in(1, 30) // MIN_INSERTS..MAX_INSERTS
   let change_cnt = rng.int_in(10, 20) // MIN_CHANGE_CNT..MAX_CHANGE_CNT
@@ -620,7 +623,7 @@ fn AutoTest::run(self : AutoTest) -> Unit raise {
 
 ///|
 test "seeded fuzz (getRandomInt loop, seeds 11111/22222/33333/44444/55555)" {
-  let seeds : Array[UInt] = [11111, 22222, 33333, 44444, 55555]
+  let seeds : Array[UInt32] = [11111, 22222, 33333, 44444, 55555]
   for seed in seeds {
     AutoTest::new(seed).run()
   }
@@ -656,9 +659,9 @@ fn create_cormen_tree() -> @model.IntervalTree {
 ///|
 fn assert_interval_search(
   t : @model.IntervalTree,
-  start : Int,
-  end : Int,
-  expected : Array[(Int, Int)],
+  start : Int32,
+  end : Int32,
+  expected : Array[(Int32, Int32)],
 ) -> Unit raise {
   let actual_nodes = t.interval_search(start, end, 0, false, false, 0, false)
   let actual = actual_nodes.map(n => {

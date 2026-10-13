@@ -82,8 +82,8 @@ pub extend HighlightTag with Show::{to_string, output}
 /// code-unit offsets. Token ranges must never split a surrogate pair: the
 /// viewer slices the document text at these offsets.
 pub(all) struct LineToken {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   tag : HighlightTag
 } derive(Eq, Debug)
 
@@ -116,7 +116,7 @@ pub struct TokenizationChangedEvent {
 
 ///|
 priv struct TokenizationSupportEntry {
-  id : Int
+  id : Int32
   tokenizer : &LineTokenizer
 }
 
@@ -134,7 +134,7 @@ priv struct TokenizationSupportEntry {
 /// `LineTokenizer` API and are intentionally absent.
 pub struct TokenizationRegistry {
   priv tokenizers : Map[String, TokenizationSupportEntry]
-  priv next_id : Ref[Int]
+  priv next_id : Ref[Int32]
   priv did_change : @base_common.Emitter[TokenizationChangedEvent]
   priv mut color_map : Array[String]?
 }

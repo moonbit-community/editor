@@ -17,7 +17,7 @@ pub extend InlineDecoration with Debug::{to_repr}
 pub fn InlineDecoration::InlineDecoration(
   range : @base_common.OffsetRange,
   class_name : String,
-  decoration_type? : InlineDecorationType = Regular,
+  decoration_type~ : InlineDecorationType = Regular,
 ) -> InlineDecoration {
   { range, class_name, decoration_type, }
 }

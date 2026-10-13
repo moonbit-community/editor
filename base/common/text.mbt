@@ -5,8 +5,8 @@
 /// line sits between column 1 and column 2). Field names use the repo's
 /// snake_case convention (`line_number`), matching `Range::start_line_number`.
 pub(all) struct Position {
-  line_number : Int
-  column : Int
+  line_number : Int32
+  column : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -21,8 +21,8 @@ pub extend Position with Debug::{to_repr}
 /// repo's snake_case (`end_exclusive`). The name `Range` is reserved for
 /// Monaco's line/column range (see `monaco_range.mbt`).
 pub struct OffsetRange {
-  start : Int
-  end_exclusive : Int
+  start : Int32
+  end_exclusive : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -34,7 +34,7 @@ pub extend OffsetRange with Debug::{to_repr}
 ///|
 /// Builds a position without normalization; callers decide the coordinate
 /// space before conversion through a snapshot.
-pub fn Position::Position(line_number : Int, column : Int) -> Position {
+pub fn Position::Position(line_number : Int32, column : Int32) -> Position {
   { line_number, column, }
 }
 
@@ -45,8 +45,8 @@ pub fn Position::Position(line_number : Int, column : Int) -> Position {
 /// trait-impl syntax.)
 pub fn Position::with_(
   self : Position,
-  line_number? : Int,
-  column? : Int,
+  line_number? : Int32,
+  column? : Int32,
 ) -> Position {
   let new_line_number = line_number.unwrap_or(self.line_number)
   let new_column = column.unwrap_or(self.column)
@@ -62,8 +62,8 @@ pub fn Position::with_(
 /// Mirrors Monaco's `delta(deltaLineNumber, deltaColumn)`.
 pub fn Position::delta(
   self : Position,
-  delta_line_number? : Int = 0,
-  delta_column? : Int = 0,
+  delta_line_number~ : Int32 = 0,
+  delta_column~ : Int32 = 0,
 ) -> Position {
   self.with_(
     line_number=clamp_int(self.line_number + delta_line_number, 1, 2147483647),
@@ -106,7 +106,7 @@ pub fn Position::is_before_or_equal(self : Position, other : Position) -> Bool {
 ///|
 /// Compares two positions for sorting (line, then column). Mirrors Monaco's
 /// static `Position.compare`.
-pub fn Position::compare(a : Position, b : Position) -> Int {
+pub fn Position::compare(a : Position, b : Position) -> Int32 {
   if a.line_number == b.line_number {
     return a.column - b.column
   }
@@ -133,8 +133,8 @@ pub fn Position::to_string(self : Position) -> String {
 /// (`start <= end_exclusive`) the swap is a no-op, so every other method keeps
 /// Monaco's behavior.
 pub fn OffsetRange::OffsetRange(
-  start : Int,
-  end_exclusive : Int,
+  start : Int32,
+  end_exclusive : Int32,
 ) -> OffsetRange {
   if start <= end_exclusive {
     { start, end_exclusive, }
@@ -145,28 +145,31 @@ pub fn OffsetRange::OffsetRange(
 
 ///|
 /// `[start, end_exclusive)`. Mirrors Monaco's static `OffsetRange.fromTo`.
-pub fn OffsetRange::from_to(start : Int, end_exclusive : Int) -> OffsetRange {
+pub fn OffsetRange::from_to(
+  start : Int32,
+  end_exclusive : Int32,
+) -> OffsetRange {
   OffsetRange(start, end_exclusive)
 }
 
 ///|
 /// `[0, length)`. Mirrors Monaco's static `OffsetRange.ofLength`.
-pub fn OffsetRange::of_length(length : Int) -> OffsetRange {
+pub fn OffsetRange::of_length(length : Int32) -> OffsetRange {
   OffsetRange(0, length)
 }
 
 ///|
 /// `[start, start + length)`. Mirrors Monaco's `OffsetRange.ofStartAndLength`.
 pub fn OffsetRange::of_start_and_length(
-  start : Int,
-  length : Int,
+  start : Int32,
+  length : Int32,
 ) -> OffsetRange {
   OffsetRange(start, start + length)
 }
 
 ///|
 /// The empty range `[offset, offset)`. Mirrors Monaco's `OffsetRange.emptyAt`.
-pub fn OffsetRange::empty_at(offset : Int) -> OffsetRange {
+pub fn OffsetRange::empty_at(offset : Int32) -> OffsetRange {
   OffsetRange(offset, offset)
 }
 
@@ -174,8 +177,8 @@ pub fn OffsetRange::empty_at(offset : Int) -> OffsetRange {
 /// `[start, end_exclusive)`, or `None` when `start > end_exclusive`. Mirrors
 /// Monaco's static `OffsetRange.tryCreate`.
 pub fn OffsetRange::try_create(
-  start : Int,
-  end_exclusive : Int,
+  start : Int32,
+  end_exclusive : Int32,
 ) -> OffsetRange? {
   if start > end_exclusive {
     None
@@ -192,13 +195,13 @@ pub fn OffsetRange::is_empty(self : OffsetRange) -> Bool {
 
 ///|
 /// The number of offsets in the range. Mirrors Monaco's `length` getter.
-pub fn OffsetRange::length(self : OffsetRange) -> Int {
+pub fn OffsetRange::length(self : OffsetRange) -> Int32 {
   self.end_exclusive - self.start
 }
 
 ///|
 /// Shifts both endpoints by `offset`. Mirrors Monaco's `delta`.
-pub fn OffsetRange::delta(self : OffsetRange, offset : Int) -> OffsetRange {
+pub fn OffsetRange::delta(self : OffsetRange, offset : Int32) -> OffsetRange {
   OffsetRange(self.start + offset, self.end_exclusive + offset)
 }
 
@@ -206,14 +209,17 @@ pub fn OffsetRange::delta(self : OffsetRange, offset : Int) -> OffsetRange {
 /// Shifts the start by `offset`. Mirrors Monaco's `deltaStart`.
 pub fn OffsetRange::delta_start(
   self : OffsetRange,
-  offset : Int,
+  offset : Int32,
 ) -> OffsetRange {
   OffsetRange(self.start + offset, self.end_exclusive)
 }
 
 ///|
 /// Shifts the end by `offset`. Mirrors Monaco's `deltaEnd`.
-pub fn OffsetRange::delta_end(self : OffsetRange, offset : Int) -> OffsetRange {
+pub fn OffsetRange::delta_end(
+  self : OffsetRange,
+  offset : Int32,
+) -> OffsetRange {
   OffsetRange(self.start, self.end_exclusive + offset)
 }
 
@@ -235,7 +241,7 @@ pub fn OffsetRange::contains_range(
 ///|
 /// Whether `offset` falls inside the half-open range. Mirrors Monaco's
 /// `contains`.
-pub fn OffsetRange::contains(self : OffsetRange, offset : Int) -> Bool {
+pub fn OffsetRange::contains(self : OffsetRange, offset : Int32) -> Bool {
   self.start <= offset && offset < self.end_exclusive
 }
 
@@ -273,7 +279,7 @@ pub fn OffsetRange::intersect(
 pub fn OffsetRange::intersection_length(
   self : OffsetRange,
   other : OffsetRange,
-) -> Int {
+) -> Int32 {
   let start = self.start.max(other.start)
   let end = self.end_exclusive.min(other.end_exclusive)
   (0).max(end - start)
@@ -363,7 +369,7 @@ pub fn OffsetRange::add_range(
 /// below the low bound for an empty model, and this helper tolerates that
 /// (returning a bound) where std `Int::clamp` would `guard min <= max` and
 /// panic. See std-dedup-and-divergence-review.md Step 2.
-pub fn clamp_int(value : Int, low : Int, high : Int) -> Int {
+pub fn clamp_int(value : Int32, low : Int32, high : Int32) -> Int32 {
   if value < low {
     low
   } else if value > high {

@@ -15,7 +15,7 @@
 /// Monaco's `Number.MAX_SAFE_INTEGER` column for `getBottomForLineNumber`: a
 /// column past any line end, clamped down to the line's max column by
 /// `validate_position`.
-let max_safe_column : Int = 2147483647
+let max_safe_column : Int32 = 2147483647
 
 ///|
 /// Full document text, Monaco's `CodeEditorWidget.getValue` (`cew:472`). No
@@ -85,8 +85,8 @@ fn Viewer::get_visible_ranges_plus_viewport_above_below(
 /// (`cew:593`). No model → `-1`.
 pub fn Viewer::get_top_for_line_number(
   self : Viewer,
-  line_number : Int,
-  include_view_zones? : Bool = false,
+  line_number : Int32,
+  include_view_zones~ : Bool = false,
 ) -> Double {
   self.get_vertical_offset_for_position(line_number, 1, include_view_zones~)
 }
@@ -97,8 +97,8 @@ pub fn Viewer::get_top_for_line_number(
 /// → `-1`.
 pub fn Viewer::get_top_for_position(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
 ) -> Double {
   self.get_vertical_offset_for_position(
     line_number,
@@ -114,7 +114,7 @@ pub fn Viewer::get_top_for_position(
 /// `-1`.
 pub fn Viewer::get_bottom_for_line_number(
   self : Viewer,
-  line_number : Int,
+  line_number : Int32,
 ) -> Double {
   self.get_vertical_offset_after_position(
     line_number,
@@ -155,7 +155,7 @@ pub fn Viewer::get_line_height_for_position(
 pub fn Viewer::get_visible_column_from_position(
   self : Viewer,
   position : @base_common.Position,
-) -> Int {
+) -> Int32 {
   guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
   let tab_size = self.configuration.snapshot().options.tab_size
@@ -173,7 +173,7 @@ pub fn Viewer::get_visible_column_from_position(
 fn Viewer::get_statusbar_column(
   self : Viewer,
   position : @base_common.Position,
-) -> Int {
+) -> Int32 {
   guard self.get_model() is Some(model) else { return position.column }
   let position = model.validate_position(position)
   let tab_size = self.configuration.snapshot().options.tab_size
@@ -278,8 +278,8 @@ pub fn Viewer::get_scroll_top(self : Viewer) -> Double {
 /// is no model (the no-model sentinel boundary).
 fn Viewer::model_to_view_position(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
 ) -> @base_common.Position? {
   guard (self.get_model(), self.get_view_model())
     is (Some(model), Some(view_model)) else {
@@ -299,8 +299,8 @@ fn Viewer::model_to_view_position(
 /// No model → `-1`.
 fn Viewer::get_vertical_offset_for_position(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
   include_view_zones~ : Bool,
 ) -> Double {
   guard self.get_view_model() is Some(view_model) else { return -1.0 }
@@ -320,8 +320,8 @@ fn Viewer::get_vertical_offset_for_position(
 /// → `-1`.
 fn Viewer::get_vertical_offset_after_position(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
   include_view_zones~ : Bool,
 ) -> Double {
   guard self.get_view_model() is Some(view_model) else { return -1.0 }
@@ -366,8 +366,8 @@ pub fn Viewer::get_layout_info(self : Viewer) -> @config.EditorLayoutInfo {
 /// `-1`; line not in the rendered window → `-1`.
 pub fn Viewer::get_offset_for_column(
   self : Viewer,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
 ) -> Double {
   guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
@@ -386,7 +386,7 @@ pub fn Viewer::get_offset_for_column(
 /// `view.getLineWidth`: convert the line's max-column model position to its view
 /// line (the last wrapped segment), then measure that view line's width. No real
 /// view → `-1`; line not in the rendered window → `-1`.
-pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int) -> Double {
+pub fn Viewer::get_width_of_line(self : Viewer, line_number : Int32) -> Double {
   guard (self.get_model(), self.get_view_model(), self.get_view())
     is (Some(model), Some(view_model), Some(view)) else {
     return -1.0

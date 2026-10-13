@@ -86,7 +86,7 @@ pub struct Viewer {
   /// This editor's decoration `ownerId` (Monaco's per-widget editor id): the
   /// filter handed to `ViewModelDecorations` and the ownerId of the public
   /// `delta_decorations` API.
-  priv editor_id : Int
+  priv editor_id : Int32
   /// The per-editor contribution owner around the registry's sole concrete
   /// instance map, including its two-phase disposal lifecycle.
   priv contributions : EditorContributions
@@ -111,9 +111,9 @@ priv enum CursorRevealScrollType {
 ///|
 priv struct HorizontalRevealRangeRequest {
   minimal_reveal : Bool
-  view_line_number : Int
-  start_column : Int
-  end_column : Int
+  view_line_number : Int32
+  start_column : Int32
+  end_column : Int32
   start_scroll_top : Double
   stop_scroll_top : Double
   scroll_type : CursorRevealScrollType
@@ -136,7 +136,7 @@ pub extend ViewerViewState with Debug::{to_repr}
 /// measure and patch.
 fn Viewer::Viewer(
   services? : ViewerServices,
-  options? : ViewerOptions = ViewerOptions::default(),
+  options~ : ViewerOptions = ViewerOptions::default(),
   initial_container? : @rdom.Element,
 ) -> Viewer {
   let (services, owns_services) = match services {
@@ -218,7 +218,7 @@ fn Viewer::Viewer(
 /// production constructor always installs the clearable browser timeout.
 fn Viewer::set_hover_host_for_test(
   self : Viewer,
-  schedule : (() -> Unit, Int) -> @base_common.Disposable,
+  schedule : (() -> Unit, Int32) -> @base_common.Disposable,
   test_launch_async_task : (async () -> Unit noraise) -> Unit,
 ) -> Unit {
   match self.content_hover_contribution() {
@@ -270,14 +270,14 @@ fn Viewer::cancel_render_frame(self : Viewer) -> Unit {
 ///|
 /// Process-wide editor id counter (Monaco's per-widget editor id).
 priv struct EditorIdCounter {
-  mut value : Int
+  mut value : Int32
 }
 
 ///|
 let editor_id_counter : EditorIdCounter = { value: 0, }
 
 ///|
-fn next_editor_id() -> Int {
+fn next_editor_id() -> Int32 {
   editor_id_counter.value += 1
   editor_id_counter.value
 }
@@ -288,7 +288,7 @@ fn next_editor_id() -> Int {
 pub fn Viewer::create(
   host : @rdom.Element,
   services? : ViewerServices,
-  options? : ViewerOptions = ViewerOptions::default(),
+  options~ : ViewerOptions = ViewerOptions::default(),
 ) -> Viewer {
   // `EditorConfiguration` constructs its `ElementSizeObserver` before model
   // attachment in Monaco. Seed the same client-box fact before contributions

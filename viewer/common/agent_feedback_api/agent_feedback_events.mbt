@@ -22,7 +22,7 @@ pub extend AgentFeedbackAddedEvent with Debug::{to_repr}
 /// Fired when a reply is appended to an existing feedback thread.
 pub(all) struct AgentFeedbackReplyAddedEvent {
   feedback : AgentFeedback
-  reply_count : Int
+  reply_count : Int32
 } derive(Debug)
 
 ///|
@@ -34,9 +34,9 @@ pub extend AgentFeedbackReplyAddedEvent with Debug::{to_repr}
 pub(all) struct AgentFeedbackSubmittedEvent {
   resource : @base_common.Uri
   items : Array[AgentFeedback]
-  user_count : Int
-  agent_review_count : Int
-  reply_count : Int
+  user_count : Int32
+  agent_review_count : Int32
+  reply_count : Int32
 } derive(Debug)
 
 ///|
@@ -46,8 +46,8 @@ pub extend AgentFeedbackSubmittedEvent with Debug::{to_repr}
 /// The position of a navigation anchor in a caller-supplied item order.
 /// `active_idx` is `-1` when no live anchor exists.
 pub(all) struct AgentFeedbackNavigationBearing {
-  active_idx : Int
-  total_count : Int
+  active_idx : Int32
+  total_count : Int32
 } derive(Eq, Debug)
 
 ///|

@@ -149,8 +149,8 @@ pub fn PartialCursorState::view_state(
 pub struct CursorStateChange {
   old_selections : Array[@core.Selection]?
   selections : Array[@core.Selection]
-  old_model_version_id : Int
-  model_version_id : Int
+  old_model_version_id : Int32
+  model_version_id : Int32
   source : String
   reason : @editor_api.CursorChangeReason
   reached_max_cursor_count : Bool
@@ -164,7 +164,7 @@ pub extend CursorStateChange with Debug::{to_repr}
 /// Internal equality snapshot used by `CursorsController` to distinguish a
 /// full no-op, a view-only change, and a public model-state change.
 struct CursorModelState {
-  model_version_id : Int
+  model_version_id : Int32
   cursor_state : CursorState
 } derive(Eq)
 

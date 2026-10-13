@@ -21,7 +21,7 @@ pub struct MoonCheckDiagnostics {
 pub fn MoonCheckDiagnostics::MoonCheckDiagnostics(
   root : String,
   publish : (@base_common.Uri, String, Array[@language.Diagnostic]) -> Unit,
-  moon_command? : String = "moon",
+  moon_command~ : String = "moon",
 ) -> MoonCheckDiagnostics {
   {
     root: normalize_host_path(root),

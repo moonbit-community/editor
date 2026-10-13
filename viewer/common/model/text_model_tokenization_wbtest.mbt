@@ -2,7 +2,7 @@
 
 ///|
 priv struct ModelTokenizationCountingTokenizer {
-  calls : Ref[Int]
+  calls : Ref[Int32]
 }
 
 ///|
@@ -79,7 +79,7 @@ priv struct ModelTokenizationSchedulerHarness {
   idle : Array[ModelIdleTask]
   zero : Array[ModelScheduledTask]
   delayed : Array[ModelScheduledTask]
-  delay_milliseconds : Array[Int]
+  delay_milliseconds : Array[Int32]
 }
 
 ///|
@@ -87,7 +87,7 @@ fn model_tokenization_scheduler_harness() -> ModelTokenizationSchedulerHarness {
   let idle : Array[ModelIdleTask] = []
   let zero : Array[ModelScheduledTask] = []
   let delayed : Array[ModelScheduledTask] = []
-  let delay_milliseconds : Array[Int] = []
+  let delay_milliseconds : Array[Int32] = []
   let scheduler = TokenizationScheduler(
     idle=callback => {
       let active = Ref(true)

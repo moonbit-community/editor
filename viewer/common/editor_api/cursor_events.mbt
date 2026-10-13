@@ -39,9 +39,9 @@ pub extend CursorPositionChangedEvent with Debug::{to_repr}
 pub(all) struct CursorSelectionChangedEvent {
   selection : @core.Selection
   secondary_selections : Array[@core.Selection]
-  model_version_id : Int
+  model_version_id : Int32
   old_selections : Array[@core.Selection]?
-  old_model_version_id : Int
+  old_model_version_id : Int32
   source : String
   reason : CursorChangeReason
 } derive(Debug)

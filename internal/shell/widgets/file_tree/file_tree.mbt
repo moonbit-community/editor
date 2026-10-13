@@ -265,7 +265,7 @@ fn view_file_row(
 }
 
 ///|
-fn view_indent_guides(depth : Int) -> @html.Html {
+fn view_indent_guides(depth : Int32) -> @html.Html {
   let guides : Array[@html.Html] = []
   for _ in 0..<depth {
     guides.push(@html.span(class="indent-guide", ""))

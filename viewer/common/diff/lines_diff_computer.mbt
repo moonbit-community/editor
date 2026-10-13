@@ -19,7 +19,7 @@ pub(all) struct LinesDiffComputerOptions {
   ignore_trim_whitespace : Bool
   /// `0` disables the computation budget entirely (Monaco's
   /// `InfiniteTimeout`).
-  max_computation_time_ms : Int
+  max_computation_time_ms : Int32
   compute_moves : Bool
 } derive(Eq, Debug)
 

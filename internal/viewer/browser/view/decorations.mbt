@@ -20,7 +20,7 @@
 /// One decoration piece (`<div class="cdr {className}">`) inside its line's
 /// overlay row, at `left` with either a pixel width or `width:100%`.
 struct DecorationOverlayPiece {
-  line_index : Int
+  line_index : Int32
   class_name : String
   left : Double
   /// `None` renders `width:100%` (whole-line pieces and the
@@ -71,7 +71,7 @@ fn filter_and_sort_overlay_decorations(
 ///|
 /// JS `<`/`>` string order: lexicographic by UTF-16 code unit (MoonBit's
 /// `String::compare` is length-first, so compare code units explicitly).
-fn code_unit_compare(left : String, right : String) -> Int {
+fn code_unit_compare(left : String, right : String) -> Int32 {
   let min_len = if left.length() < right.length() {
     left.length()
   } else {
@@ -92,10 +92,10 @@ fn code_unit_compare(left : String, right : String) -> Int {
 /// whole-line pieces first, then the merged normal pieces.
 fn compute_decoration_overlay_pieces(
   decorations : Array[@view_model.ViewModelDecoration],
-  visible_start_line_number : Int,
-  visible_end_line_number : Int,
-  get_line_max_column : (Int) -> Int,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
+  visible_start_line_number : Int32,
+  visible_end_line_number : Int32,
+  get_line_max_column : (Int32) -> Int32,
+  measure : (Int32, Int32, Int32) -> Array[(Double, Double)],
   typical_half_width : Double,
 ) -> Array[DecorationOverlayPiece] {
   let sorted = filter_and_sort_overlay_decorations(decorations)
@@ -115,8 +115,8 @@ fn compute_decoration_overlay_pieces(
 /// `_renderWholeLineDecorations` (`decorations.ts:115-139`).
 fn render_whole_line_decorations(
   decorations : Array[@view_model.ViewModelDecoration],
-  visible_start_line_number : Int,
-  visible_end_line_number : Int,
+  visible_start_line_number : Int32,
+  visible_end_line_number : Int32,
   output : Array[DecorationOverlayPiece],
 ) -> Unit {
   for d in decorations {
@@ -151,10 +151,10 @@ fn render_whole_line_decorations(
 /// touching-range merge loop with the `showIfCollapsed` endColumn-1 pullback.
 fn render_normal_decorations(
   decorations : Array[@view_model.ViewModelDecoration],
-  visible_start_line_number : Int,
-  visible_end_line_number : Int,
-  get_line_max_column : (Int) -> Int,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
+  visible_start_line_number : Int32,
+  visible_end_line_number : Int32,
+  get_line_max_column : (Int32) -> Int32,
+  measure : (Int32, Int32, Int32) -> Array[(Double, Double)],
   typical_half_width : Double,
   output : Array[DecorationOverlayPiece],
 ) -> Unit {
@@ -238,10 +238,10 @@ fn render_normal_decoration(
   class_name : String,
   should_fill_line_on_line_break : Bool,
   show_if_collapsed : Bool,
-  visible_start_line_number : Int,
-  visible_end_line_number : Int,
-  get_line_max_column_local : (Int) -> Int,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
+  visible_start_line_number : Int32,
+  visible_end_line_number : Int32,
+  get_line_max_column_local : (Int32) -> Int32,
+  measure : (Int32, Int32, Int32) -> Array[(Double, Double)],
   typical_half_width : Double,
   output : Array[DecorationOverlayPiece],
 ) -> Unit {
@@ -336,10 +336,10 @@ fn DecorationsOverlay::DecorationsOverlay() -> DecorationsOverlay {
 /// from the row (`height: 100%` in `decorations.css`).
 fn prepare_decorations_render(
   decorations : Array[@view_model.ViewModelDecoration],
-  visible_start_line_number : Int,
-  visible_end_line_number : Int,
-  get_line_max_column : (Int) -> Int,
-  measure : (Int, Int, Int) -> Array[(Double, Double)],
+  visible_start_line_number : Int32,
+  visible_end_line_number : Int32,
+  get_line_max_column : (Int32) -> Int32,
+  measure : (Int32, Int32, Int32) -> Array[(Double, Double)],
   typical_half_width : Double,
 ) -> Array[String] {
   let pieces = compute_decoration_overlay_pieces(

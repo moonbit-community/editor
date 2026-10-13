@@ -11,7 +11,7 @@ let markdown_comment_hidden_source : String = "markdown-comments"
 
 ///|
 priv struct MarkdownCommentContributionState {
-  mut generation : Int
+  mut generation : Int32
   rendered : Map[String, RenderedMarkdownComment]
   listeners : Array[@base_common.Disposable]
 }
@@ -29,7 +29,7 @@ priv struct RenderedMarkdownComment {
   mut rendered_markdown : @browser_markdown.RenderedMarkdown
   size_observer : @markdown_comments_browser.MarkdownCommentSizeObserver
   mut measured_height : Double
-  generation : Ref[Int]
+  generation : Ref[Int32]
 }
 
 ///|
@@ -248,7 +248,7 @@ fn Viewer::markdown_comment_refresh_is_current(
   self : Viewer,
   state : MarkdownCommentContributionState,
   model : @model.TextModel,
-  generation : Int,
+  generation : Int32,
 ) -> Bool {
   if self.disposed || state.generation != generation {
     return false
@@ -265,8 +265,8 @@ fn Viewer::apply_markdown_comment_height(
   state : MarkdownCommentContributionState,
   key : String,
   expected_zone_id : String,
-  entry_generation : Ref[Int],
-  height : Int,
+  entry_generation : Ref[Int32],
+  height : Int32,
 ) -> Unit {
   guard !self.disposed else { return }
   guard entry_generation.val == state.generation else { return }

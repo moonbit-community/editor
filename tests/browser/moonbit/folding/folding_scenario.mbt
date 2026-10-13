@@ -54,7 +54,7 @@ fn run_folding_test() -> Unit {
 fn wait_for_text(
   ctx : @support.BrowserTestContext,
   needle : String,
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   if @support.query_text(".viewer-host").contains(needle) {
     // Two indent regions → two expanded chevrons in the `.cldr` lane

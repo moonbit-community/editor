@@ -22,7 +22,7 @@ priv struct FileTreeModel {
 ///|
 priv struct TreeRow {
   node : TreeNode
-  depth : Int
+  depth : Int32
 }
 
 ///|
@@ -207,7 +207,7 @@ fn visible_rows(root : TreeNode?) -> Array[TreeRow] {
 }
 
 ///|
-fn push_rows(rows : Array[TreeRow], node : TreeNode, depth : Int) -> Unit {
+fn push_rows(rows : Array[TreeRow], node : TreeNode, depth : Int32) -> Unit {
   rows.push({ node, depth, })
   if node.kind == Directory && node.expanded {
     match node.children {

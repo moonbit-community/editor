@@ -51,9 +51,9 @@ pub fn BrowserTestContext::metric(
 pub fn BrowserTestContext::metric_int(
   self : BrowserTestContext,
   name : String,
-  value : Int,
+  value : Int32,
 ) -> Unit {
-  self.metric(name, value.to_json())
+  self.metric(name, Json(value))
 }
 
 ///|
@@ -73,16 +73,22 @@ pub fn BrowserTestContext::metric_string(
   name : String,
   value : String,
 ) -> Unit {
-  self.metric(name, value.to_json())
+  self.metric(name, Json(value))
 }
 
 ///|
 /// Serializes the suite result for the Playwright bridge.
 pub fn BrowserTestContext::to_json(self : BrowserTestContext) -> Json {
   {
-    "suite": self.suite.to_json(),
-    "status": (if self.failures.length() == 0 { "passed" } else { "failed" }).to_json(),
-    "failures": Json::array(self.failures.map(failure => failure.to_json())),
+    "suite": Json(self.suite),
+    "status": Json(
+      if self.failures.length() == 0 {
+        "passed"
+      } else {
+        "failed"
+      },
+    ),
+    "failures": Json::array(self.failures.map(failure => Json(failure))),
     "metrics": Json::object(self.metrics),
   }
 }

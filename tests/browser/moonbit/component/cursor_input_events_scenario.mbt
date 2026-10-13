@@ -237,7 +237,7 @@ fn run_cursor_input_events_test() -> Unit {
 }
 
 ///|
-extern "js" fn record_cursor_content_event(version_id : Int) -> Unit =
+extern "js" fn record_cursor_content_event(version_id : Int32) -> Unit =
   #| (versionId) => {
   #|   (globalThis.__cursorInputEventLog ??= []).push({
   #|     type: 'content',
@@ -247,11 +247,11 @@ extern "js" fn record_cursor_content_event(version_id : Int) -> Unit =
 
 ///|
 extern "js" fn record_cursor_position_event(
-  line : Int,
-  column : Int,
-  committed_line : Int,
-  committed_column : Int,
-  secondary_count : Int,
+  line : Int32,
+  column : Int32,
+  committed_line : Int32,
+  committed_column : Int32,
+  secondary_count : Int32,
   source : String,
   reason : String,
 ) -> Unit =
@@ -264,22 +264,22 @@ extern "js" fn record_cursor_position_event(
 
 ///|
 extern "js" fn record_cursor_selection_event(
-  anchor_line : Int,
-  anchor_column : Int,
-  active_line : Int,
-  active_column : Int,
-  secondary_count : Int,
-  old_selection_count : Int,
-  old_anchor_line : Int,
-  old_anchor_column : Int,
-  old_active_line : Int,
-  old_active_column : Int,
-  committed_anchor_line : Int,
-  committed_anchor_column : Int,
-  committed_active_line : Int,
-  committed_active_column : Int,
-  old_model_version_id : Int,
-  model_version_id : Int,
+  anchor_line : Int32,
+  anchor_column : Int32,
+  active_line : Int32,
+  active_column : Int32,
+  secondary_count : Int32,
+  old_selection_count : Int32,
+  old_anchor_line : Int32,
+  old_anchor_column : Int32,
+  old_active_line : Int32,
+  old_active_column : Int32,
+  committed_anchor_line : Int32,
+  committed_anchor_column : Int32,
+  committed_active_line : Int32,
+  committed_active_column : Int32,
+  old_model_version_id : Int32,
+  model_version_id : Int32,
   source : String,
   reason : String,
 ) -> Unit =
@@ -303,10 +303,10 @@ extern "js" fn install_cursor_input_controls(
   zone_text : @rdom.Element,
   zone_link : @rdom.Element,
   state_json : () -> String,
-  set_position : (Int, Int) -> Unit,
-  set_selection : (Int, Int, Int, Int) -> Unit,
+  set_position : (Int32, Int32) -> Unit,
+  set_selection : (Int32, Int32, Int32, Int32) -> Unit,
   set_value : (String) -> Unit,
-  resize : (Int) -> Unit,
+  resize : (Int32) -> Unit,
   show_zone : () -> Unit,
   focus : () -> Unit,
 ) -> Unit =

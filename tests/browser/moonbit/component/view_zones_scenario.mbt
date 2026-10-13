@@ -39,7 +39,7 @@ extern "js" fn computed_height_phase_snapshot(
   #| })
 
 ///|
-fn view_zones_source_with_line_count(line_count : Int) -> String {
+fn view_zones_source_with_line_count(line_count : Int32) -> String {
   let text = StringBuilder()
   for line in 1..<=line_count {
     if line > 1 {
@@ -571,7 +571,7 @@ fn run_view_zones_test() -> Unit {
 ///|
 fn poll_view_zones_ready(
   ctx : @support.BrowserTestContext,
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   let primary_visible = @support.query_count(
       ".view-zones-host .vz-primary[monaco-visible-view-zone]",
@@ -631,7 +631,7 @@ extern "js" fn install_view_zones_controls(
   set_line_height : (Double) -> Unit,
   set_primary_suppress : (Bool) -> Unit,
   enable_rail : () -> Unit,
-  set_model_line_count : (Int) -> Unit,
+  set_model_line_count : (Int32) -> Unit,
   dispose_viewer : () -> Unit,
   dispose_model : () -> Unit,
   probe_after_dispose : () -> Unit,

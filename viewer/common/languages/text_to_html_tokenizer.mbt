@@ -45,9 +45,9 @@ pub fn tokenize_line_to_html(
   text : String,
   view_line_tokens : @tokens.ViewLineTokens,
   color_map : Array[String],
-  start_offset : Int,
-  end_offset : Int,
-  tab_size : Int,
+  start_offset : Int32,
+  end_offset : Int32,
+  tab_size : Int32,
   use_nbsp : Bool,
 ) -> String {
   let result = StringBuilder()
@@ -160,7 +160,7 @@ pub fn tokenize_line_to_html(
 pub fn tokenize_to_string(
   text : String,
   codec : @services.LanguageIdCodec,
-  tokenize_encoded : (String) -> Array[UInt],
+  tokenize_encoded : (String) -> Array[UInt32],
 ) -> String {
   let result = StringBuilder()
   result.write_string("<div class=\"monaco-tokenized-source\">")

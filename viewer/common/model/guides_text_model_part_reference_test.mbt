@@ -27,8 +27,8 @@
 /// lineText)`. Compares the five fields per line scalar-wise (avoids the
 /// deprecated `Show`-based `assert_eq` on arrays/tuples).
 fn assert_indent_guides(
-  lines : Array[(Int, Int, Int, Int, String)],
-  indent_size : Int,
+  lines : Array[(Int32, Int32, Int32, Int32, String)],
+  indent_size : Int32,
 ) -> Unit raise {
   let sb = StringBuilder()
   for i, l in lines {

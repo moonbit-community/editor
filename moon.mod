@@ -21,7 +21,8 @@ import {
   "moonbitlang/async@0.20.1",
   "moonbit-community/rabbita@0.12.4",
   "moonbit-community/piediff@0.0.10",
-  "Milky2018/diago@0.3.0",
+  "Milky2018/diago@0.3.5",
+  "moonbit-community/casefold@0.1.7",
 }
 
 options(

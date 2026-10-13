@@ -67,7 +67,7 @@ pub fn get_session_editor_comments(
 pub fn compare_session_editor_comments(
   a : SessionEditorComment,
   b : SessionEditorComment,
-) -> Int {
+) -> Int32 {
   let by_resource = a.resource.to_string().compare(b.resource.to_string())
   if by_resource != 0 {
     return by_resource
@@ -88,7 +88,7 @@ pub fn compare_session_editor_comments(
 /// so grouping accounts for long comments that would overlap the next
 /// widget. ~50 characters per widget line, +1 for the item header, plus the
 /// replies at the same rate.
-fn estimate_expanded_comment_lines(comment : SessionEditorComment) -> Int {
+fn estimate_expanded_comment_lines(comment : SessionEditorComment) -> Int32 {
   let chars_per_line = 50
   let text_length = if comment.text.length() > 1 {
     comment.text.length()
@@ -112,7 +112,7 @@ fn estimate_expanded_comment_lines(comment : SessionEditorComment) -> Int {
 /// so a long comment pulls in items below it.
 pub fn group_nearby_session_editor_comments(
   items : Array[SessionEditorComment],
-  line_threshold? : Int = 5,
+  line_threshold~ : Int32 = 5,
 ) -> Array[Array[SessionEditorComment]] {
   if items.is_empty() {
     return []
@@ -154,7 +154,7 @@ pub fn group_nearby_session_editor_comments(
 /// waiting for submission — the count on the host's "Submit N" affordance.
 pub fn get_accepted_agent_feedback_comment_count(
   comments : Array[SessionEditorComment],
-) -> Int {
+) -> Int32 {
   let mut count = 0
   for comment in comments {
     if comment.state == Accepted {

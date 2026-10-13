@@ -51,8 +51,8 @@ pub fn LineRangeMapping::LineRangeMapping(
 /// between the given (sorted) mappings.
 pub fn LineRangeMapping::inverse(
   mapping : Array[LineRangeMapping],
-  original_line_count : Int,
-  modified_line_count : Int,
+  original_line_count : Int32,
+  modified_line_count : Int32,
 ) -> Array[LineRangeMapping] {
   let result : Array[LineRangeMapping] = []
   let mut last_original_end_line_number = 1
@@ -108,7 +108,7 @@ pub fn LineRangeMapping::join(
 }
 
 ///|
-pub fn LineRangeMapping::changed_line_count(self : LineRangeMapping) -> Int {
+pub fn LineRangeMapping::changed_line_count(self : LineRangeMapping) -> Int32 {
   self.original.length().max(self.modified.length())
 }
 

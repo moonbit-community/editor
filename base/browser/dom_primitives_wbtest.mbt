@@ -131,14 +131,14 @@ extern "js" fn dom_input_ownership_root(
 ///|
 extern "js" fn dom_input_ownership_event(
   fixture : DomInputOwnershipFixture,
-  target_index : Int,
+  target_index : Int32,
 ) -> @rdom.Event = "(fixture, targetIndex) => ({ target: fixture.targets[targetIndex] })"
 
 ///|
 extern "js" fn dom_input_ownership_set_selection(
   fixture : DomInputOwnershipFixture,
-  anchor_index : Int,
-  focus_index : Int,
+  anchor_index : Int32,
+  focus_index : Int32,
   collapsed : Bool,
 ) -> Unit =
   #| (fixture, anchorIndex, focusIndex, collapsed) => {

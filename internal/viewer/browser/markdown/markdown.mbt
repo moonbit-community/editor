@@ -20,7 +20,7 @@ pub fn MarkdownRenderOptions::MarkdownRenderOptions(
   action_handler? : (String) -> Unit,
   code_block_renderer? : (@markdown_core.MarkdownCodeBlock, String?) -> String,
   on_size_changed? : () -> Unit,
-  allow_remote_images? : Bool = false,
+  allow_remote_images~ : Bool = false,
 ) -> MarkdownRenderOptions {
   {
     language_id,
@@ -47,7 +47,7 @@ pub(all) struct RenderedMarkdown {
 /// children are replaced. Disposing a result never removes the target itself.
 pub fn render_markdown(
   markdown : String,
-  options? : MarkdownRenderOptions = MarkdownRenderOptions(),
+  options~ : MarkdownRenderOptions = MarkdownRenderOptions(),
   target? : @rdom.Element,
 ) -> RenderedMarkdown {
   let converted = @markdown_core.render_markdown(

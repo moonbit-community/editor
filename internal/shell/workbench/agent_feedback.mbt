@@ -16,7 +16,7 @@ fn feedback_storage_key(resource : @base_common.Uri) -> String {
 ///|
 /// Items restored from storage get ids in their own namespace so they can
 /// never collide with the service's session-scoped `viewer-feedback-N` ids.
-let restored_feedback_count : Ref[Int] = Ref(0)
+let restored_feedback_count : Ref[Int32] = Ref(0)
 
 ///|
 /// Subscribes the workbench to the feedback service's change event and

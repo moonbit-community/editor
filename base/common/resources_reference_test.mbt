@@ -13,7 +13,7 @@ fn assert_equal_uri(
   actual : @common.Uri,
   expected : @common.Uri,
   msg? : String,
-  ignore_case? : Bool = false,
+  ignore_case~ : Bool = false,
 ) -> Unit raise {
   let util = if ignore_case {
     @common.ext_uri_ignore_path_case
@@ -563,8 +563,8 @@ fn assert_relative_path(
   u1 : @common.Uri,
   u2 : @common.Uri,
   expected_path : String?,
-  ignore_join? : Bool = false,
-  ignore_case? : Bool = false,
+  ignore_join~ : Bool = false,
+  ignore_case~ : Bool = false,
 ) -> Unit raise {
   let util = if ignore_case {
     @common.ext_uri_ignore_path_case

@@ -73,7 +73,7 @@ fn mount_host() -> @rdom.Element? {
 fn run_next_sample(
   viewer : @viewer.Viewer,
   large_text : String,
-  sample_index : Ref[Int],
+  sample_index : Ref[Int32],
   sample_start : Ref[Double],
 ) -> Unit {
   sample_start.val = @support.now_ms()
@@ -108,7 +108,7 @@ fn record_sample(
   viewer_ref : Ref[@viewer.Viewer?],
   large_text : String,
   done : Ref[Bool],
-  sample_index : Ref[Int],
+  sample_index : Ref[Int32],
   sample_start : Ref[Double],
   samples : Array[Double],
 ) -> Unit {
@@ -186,7 +186,7 @@ fn sample_summary(samples : Array[Double]) -> (Double, Double, Double) {
 }
 
 ///|
-fn large_source_text(count : Int) -> String {
+fn large_source_text(count : Int32) -> String {
   let builder = StringBuilder()
   for index in 0..<count {
     builder.write_string("///|\n")

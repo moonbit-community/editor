@@ -10,6 +10,12 @@ pub(all) enum LogLevel {
 } derive(Eq, Debug)
 
 ///|
+pub extend LogLevel with Eq::{not_equal, equal}
+
+///|
+pub extend LogLevel with Debug::{to_repr}
+
+///|
 /// Structured log event emitted by app and viewer services.
 pub(all) struct LogEntry {
   level : LogLevel
@@ -17,6 +23,12 @@ pub(all) struct LogEntry {
   message : String
   details : Array[(String, String)]
 } derive(Eq, Debug)
+
+///|
+pub extend LogEntry with Eq::{not_equal, equal}
+
+///|
+pub extend LogEntry with Debug::{to_repr}
 
 ///|
 /// Minimal logger sink abstraction. Methods are `noraise` so logging cannot
@@ -51,10 +63,13 @@ pub impl Logger for NullLogger with fn flush(_self) {
 }
 
 ///|
+pub extend NullLogger with Logger::{flush, log}
+
+///|
 /// In-memory logger used by tests and harness-facing diagnostics.
 pub struct MemoryLogger {
   entries : Array[LogEntry]
-  flush_count : Ref[Int]
+  flush_count : Ref[Int32]
 }
 
 ///|
@@ -72,7 +87,7 @@ pub fn MemoryLogger::entries(self : MemoryLogger) -> Array[LogEntry] {
 
 ///|
 /// Number of flush calls observed by the memory sink.
-pub fn MemoryLogger::flush_count(self : MemoryLogger) -> Int {
+pub fn MemoryLogger::flush_count(self : MemoryLogger) -> Int32 {
   self.flush_count.val
 }
 
@@ -87,6 +102,9 @@ pub impl Logger for MemoryLogger with fn log(self, entry) {
 pub impl Logger for MemoryLogger with fn flush(self) {
   self.flush_count.val = self.flush_count.val + 1
 }
+
+///|
+pub extend MemoryLogger with Logger::{flush, log}
 
 ///|
 /// Logger sink that fans each entry and flush to multiple sinks.
@@ -120,6 +138,9 @@ pub impl Logger for MultiplexLogger with fn flush(self) {
 }
 
 ///|
+pub extend MultiplexLogger with Logger::{flush, log}
+
+///|
 /// Thresholded logging facade used by services that should not know the sink
 /// implementation.
 pub struct LogService {
@@ -140,8 +161,8 @@ pub struct LogHandle {
 /// Creates a log service with an optional threshold and sink.
 #alias(new, deprecated)
 pub fn LogService::LogService(
-  level? : LogLevel = Info,
-  logger? : &Logger = NullLogger(),
+  level~ : LogLevel = Info,
+  logger~ : &Logger = NullLogger(),
 ) -> LogService {
   { level, logger, }
 }
@@ -167,7 +188,7 @@ pub fn LogHandle::warn(
   self : LogHandle,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   (self.warn_callback)(category, message, details)
 }
@@ -178,7 +199,7 @@ pub fn LogHandle::error(
   self : LogHandle,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   (self.error_callback)(category, message, details)
 }
@@ -197,7 +218,7 @@ pub fn LogService::trace(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Trace, category, message, details, })
 }
@@ -208,7 +229,7 @@ pub fn LogService::debug(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Debug, category, message, details, })
 }
@@ -219,7 +240,7 @@ pub fn LogService::info(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Info, category, message, details, })
 }
@@ -230,7 +251,7 @@ pub fn LogService::warn(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Warning, category, message, details, })
 }
@@ -241,7 +262,7 @@ pub fn LogService::error(
   self : LogService,
   category : String,
   message : String,
-  details? : Array[(String, String)] = [],
+  details~ : Array[(String, String)] = [],
 ) -> Unit {
   self.log({ level: Error, category, message, details, })
 }
@@ -279,7 +300,7 @@ fn should_log(configured : LogLevel, entry : LogLevel) -> Bool {
 }
 
 ///|
-fn level_rank(level : LogLevel) -> Int {
+fn level_rank(level : LogLevel) -> Int32 {
   match level {
     Off => 99
     Trace => 0

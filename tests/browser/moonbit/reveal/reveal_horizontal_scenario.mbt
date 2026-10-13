@@ -66,7 +66,7 @@ fn poll_reveal(
   last_scroll_left : Ref[Double],
   last_scroll_top : Ref[Double],
   done : Ref[Bool],
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   if done.val {
     return
@@ -127,14 +127,14 @@ fn mount_host() -> @rdom.Element? {
 ///|
 /// 1-based model line to reveal: well below the ~6 lines the 120px viewport
 /// shows.
-fn reveal_line() -> Int {
+fn reveal_line() -> Int32 {
   30
 }
 
 ///|
 /// 1-based model column to reveal: far past the ~20 columns the 240px viewport
 /// shows, so a horizontal scroll is required.
-fn reveal_column() -> Int {
+fn reveal_column() -> Int32 {
   100
 }
 
@@ -142,7 +142,7 @@ fn reveal_column() -> Int {
 /// 60 lines, each long enough that column 100 sits well to the right of the
 /// viewport.
 fn reveal_source_text() -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for i in 0..<60 {
     if i > 0 {
       out.write_char('\n')

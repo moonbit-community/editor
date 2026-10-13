@@ -5,13 +5,13 @@ pub struct ViewModelOptions {
   /// the same way): the line-breaks computer derives
   /// `columnsForFullWidthChar` from the typical advance widths.
   font_info : @config.FontInfo
-  soft_wrap_column : Int
-  tab_size : Int
+  soft_wrap_column : Int32
+  tab_size : Int32
   wrapping_indent : @editor_api.WrappingIndent
   /// The owning editor's id — the `ownerId` filter for decoration queries
   /// (Monaco's `editorId` handed to `ViewModelDecorations`). `0` means "no
   /// editor": only ownerId-0 decorations match.
-  editor_id : Int
+  editor_id : Int32
   /// `renderValidationDecorations`. Monaco defaults to `Editable` (which
   /// hides validation decorations in readonly editors); the `Viewer` passes
   /// `On` — see `filter_validation_decorations`.
@@ -19,15 +19,21 @@ pub struct ViewModelOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewModelOptions with Eq::{not_equal, equal}
+
+///|
+pub extend ViewModelOptions with Debug::{to_repr}
+
+///|
 /// Builds options while clamping wrapping column and tab size.
 /// `wrapping_indent` defaults to `Same`, Monaco's default.
 pub fn ViewModelOptions::ViewModelOptions(
-  font_info? : @config.FontInfo = @config.FontInfo::default(),
-  soft_wrap_column? : Int = 0,
-  tab_size? : Int = 2,
-  wrapping_indent? : @editor_api.WrappingIndent = Same,
-  editor_id? : Int = 0,
-  render_validation_decorations? : @editor_api.RenderValidationDecorations = Editable,
+  font_info~ : @config.FontInfo = @config.FontInfo::default(),
+  soft_wrap_column~ : Int32 = 0,
+  tab_size~ : Int32 = 2,
+  wrapping_indent~ : @editor_api.WrappingIndent = Same,
+  editor_id~ : Int32 = 0,
+  render_validation_decorations~ : @editor_api.RenderValidationDecorations = Editable,
 ) -> ViewModelOptions {
   {
     font_info,
@@ -48,9 +54,9 @@ pub fn ViewModelOptions::no_wrap() -> ViewModelOptions {
 ///|
 /// Options with soft wrapping enabled at the given column.
 pub fn ViewModelOptions::soft_wrap(
-  column : Int,
-  tab_size? : Int = 2,
-  wrapping_indent? : @editor_api.WrappingIndent = Same,
+  column : Int32,
+  tab_size~ : Int32 = 2,
+  wrapping_indent~ : @editor_api.WrappingIndent = Same,
 ) -> ViewModelOptions {
   ViewModelOptions(soft_wrap_column=column, tab_size~, wrapping_indent~)
 }

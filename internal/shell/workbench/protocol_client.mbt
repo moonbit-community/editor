@@ -5,7 +5,7 @@ let pending_requests : Map[String, (@remote_protocol.ServerPacket) -> Unit] = Ma
 )
 
 ///|
-let request_counter : Ref[Int] = Ref(0)
+let request_counter : Ref[Int32] = Ref(0)
 
 ///|
 /// Sends a client packet over the live protocol socket. Installed at mount

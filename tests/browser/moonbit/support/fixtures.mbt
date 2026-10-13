@@ -5,7 +5,7 @@ pub extern "js" fn query_text(selector : String) -> String =
 
 ///|
 /// Number of elements matching `selector`.
-pub extern "js" fn query_count(selector : String) -> Int =
+pub extern "js" fn query_count(selector : String) -> Int32 =
   #| (selector) => document.querySelectorAll(selector).length
 
 ///|
@@ -15,7 +15,7 @@ pub extern "js" fn query_attribute(selector : String, name : String) -> String =
 
 ///|
 /// Browser timer helper for MoonBit-authored test code.
-pub extern "js" fn set_timeout(callback : () -> Unit, ms : Int) -> Unit =
+pub extern "js" fn set_timeout(callback : () -> Unit, ms : Int32) -> Unit =
   #| (callback, ms) => {
   #|   globalThis.setTimeout(callback, Number(ms) || 0);
   #| }

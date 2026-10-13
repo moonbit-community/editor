@@ -62,7 +62,7 @@ priv struct ContentHoverContributionState {
   controller : @hover_browser.ContentHoverController
   mut widget : @hover_browser.ContentHoverWidget?
   mut widget_view : @hover.HoverWidgetView?
-  mut schedule_timeout : (() -> Unit, Int) -> @base_common.Disposable
+  mut schedule_timeout : (() -> Unit, Int32) -> @base_common.Disposable
   mut launch_async_task : (async () -> Unit noraise) -> Unit
 }
 
@@ -410,7 +410,7 @@ fn EditorContributionRegistry::register_editor_command(
   precondition : (Viewer) -> Bool,
   run : (Viewer) -> Unit,
   keybindings : Array[(String, Bool, Bool)],
-  shift_keybindings? : Array[(String, Bool, Bool)] = [],
+  shift_keybindings~ : Array[(String, Bool, Bool)] = [],
 ) -> Unit {
   let command : EditorCommand = { id, precondition, run, }
   self.commands.set(command.id, RegisteredEditor(command))
@@ -448,7 +448,7 @@ fn EditorContributionRegistry::register_core_editor_command(
   command : CoreEditorCommand,
   keybinding_when : (Viewer) -> Bool,
   keybindings : Array[(String, Bool, Bool)],
-  shift_keybindings? : Array[(String, Bool, Bool)] = [],
+  shift_keybindings~ : Array[(String, Bool, Bool)] = [],
 ) -> Unit {
   self.commands.set(command.id, RegisteredCore(command))
   for binding in keybindings {

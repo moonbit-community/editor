@@ -35,11 +35,11 @@ fn AsyncFeatureGate::release(self : AsyncFeatureGate, outcome : String) -> Bool 
 
 ///|
 priv struct AsyncFeatureCall {
-  id : Int
+  id : Int32
   kind : String
   model : @model.TextModel
-  model_id : Int
-  internal_version : Int
+  model_id : Int32
+  internal_version : Int32
   token : @language.CancellationToken
   gate : AsyncFeatureGate
   mut released : Bool
@@ -79,7 +79,7 @@ fn AsyncHoverReport::to_json(self : AsyncHoverReport) -> Json {
 
 ///|
 priv struct AsyncFeatureHarness {
-  next_call_id : Ref[Int]
+  next_call_id : Ref[Int32]
   calls : Array[AsyncFeatureCall]
   models : Array[@model.TextModel]
 }
@@ -93,7 +93,7 @@ fn AsyncFeatureHarness::new() -> AsyncFeatureHarness {
 fn AsyncFeatureHarness::model_id(
   self : AsyncFeatureHarness,
   model : @model.TextModel,
-) -> Int {
+) -> Int32 {
   for index, known in self.models {
     if known.same(model) {
       return index + 1
@@ -136,7 +136,7 @@ fn AsyncFeatureHarness::started_json(self : AsyncFeatureHarness) -> String {
 ///|
 fn AsyncFeatureHarness::release(
   self : AsyncFeatureHarness,
-  call_id : Int,
+  call_id : Int32,
   outcome : String,
 ) -> Bool {
   guard outcome.length() > 0 else { return false }
@@ -199,7 +199,7 @@ impl @language.HoverProvider for DeferredAsyncFeatureProvider with fn provide_ho
     None
   } else {
     let offset = model.get_offset_at(position)
-    let end_offset = Int::min(offset + 1, model.snapshot.text.length())
+    let end_offset = Int32::min(offset + 1, model.snapshot.text.length())
     Some({
       range: model.get_range_at(offset, end_offset),
       contents: [PlainText(outcome)],
@@ -361,7 +361,7 @@ fn mount_async_feature_host() -> @rdom.Element? {
 extern "js" fn install_async_feature_controls(
   started_json : () -> String,
   state_json : () -> String,
-  release : (Int, String) -> Bool,
+  release : (Int32, String) -> Bool,
   set_value : (String) -> Unit,
   replace_same_uri : (String) -> Unit,
   dispose_model : () -> Unit,

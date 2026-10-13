@@ -5,6 +5,9 @@ pub struct HoverView {
 } derive(Eq)
 
 ///|
+pub extend HoverView with Eq::{not_equal, equal}
+
+///|
 /// Monaco `IHoverPart.isValidForHoverAnchor` (markdown + marker participants):
 /// the part still applies to the new anchor when the anchor is a range anchor
 /// and the part's range contains the anchor range (`anchor.type ===
@@ -46,13 +49,13 @@ let hover_delay_ms = 300
 /// delay, the sync (markers / decorations) compute runs after the remaining
 /// half — so at the full delay — and a loading message is shown at three times
 /// the delay if the async compute has not finished.
-pub let hover_first_wait_ms : Int = hover_delay_ms / 2
+pub let hover_first_wait_ms : Int32 = hover_delay_ms / 2
 
 ///|
-pub let hover_second_wait_ms : Int = hover_delay_ms - hover_first_wait_ms
+pub let hover_second_wait_ms : Int32 = hover_delay_ms - hover_first_wait_ms
 
 ///|
-pub let hover_loading_message_ms : Int = 3 * hover_delay_ms
+pub let hover_loading_message_ms : Int32 = 3 * hover_delay_ms
 
 ///|
 /// Pure configured-delay arithmetic from Monaco's HoverOperation getters.
@@ -66,8 +69,14 @@ pub struct HoverTiming {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverTiming with Eq::{not_equal, equal}
+
+///|
+pub extend HoverTiming with Debug::{to_repr}
+
+///|
 /// Derives the exact half/full/triple-delay schedule for one configured delay.
-pub fn HoverTiming::from_delay(delay_ms : Int) -> HoverTiming {
+pub fn HoverTiming::from_delay(delay_ms : Int32) -> HoverTiming {
   let hover_time_ms = delay_ms.to_double()
   let first_wait_ms = hover_time_ms / 2.0
   {
@@ -95,12 +104,24 @@ pub(all) enum HoverStartMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverStartMode with Eq::{not_equal, equal}
+
+///|
+pub extend HoverStartMode with Debug::{to_repr}
+
+///|
 /// Typed origin of a hover start from Monaco's `HoverStartSource`.
 pub(all) enum HoverStartSource {
   HoverStartMouse
   HoverStartClick
   HoverStartKeyboard
 } derive(Eq, Debug)
+
+///|
+pub extend HoverStartSource with Eq::{not_equal, equal}
+
+///|
+pub extend HoverStartSource with Debug::{to_repr}
 
 ///|
 /// Source-shaped options retained by one hover operation.
@@ -112,13 +133,19 @@ pub struct HoverOperationOptions {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverOperationOptions with Eq::{not_equal, equal}
+
+///|
+pub extend HoverOperationOptions with Debug::{to_repr}
+
+///|
 /// Builds one immutable operation-options snapshot with source defaults.
 #alias(new, deprecated)
 pub fn HoverOperationOptions::HoverOperationOptions(
   anchor : HoverAnchor,
-  should_focus? : Bool = false,
-  source? : HoverStartSource = HoverStartMouse,
-  insist_on_keeping_hover_visible? : Bool = false,
+  should_focus~ : Bool = false,
+  source~ : HoverStartSource = HoverStartMouse,
+  insist_on_keeping_hover_visible~ : Bool = false,
 ) -> HoverOperationOptions {
   { should_focus, anchor, source, insist_on_keeping_hover_visible, }
 }
@@ -130,8 +157,8 @@ pub fn HoverOperationOptions::HoverOperationOptions(
 /// version at construction.
 pub struct HoverRequestStamp {
   priv model : @model.TextModel
-  priv model_version_id : Int
-  priv generation : Int
+  priv model_version_id : Int32
+  priv generation : Int32
   priv cancellation_token : @language.CancellationToken
 }
 
@@ -140,7 +167,7 @@ pub struct HoverRequestStamp {
 /// version. Callers must retain the exact operation generation/token owner.
 fn HoverRequestStamp::new(
   model : @model.TextModel,
-  generation : Int,
+  generation : Int32,
   cancellation_token : @language.CancellationToken,
 ) -> HoverRequestStamp {
   {
@@ -167,7 +194,7 @@ pub fn HoverRequestStamp::cancellation_token(
 
 ///|
 /// Returns the monotonic operation generation captured by this request.
-pub fn HoverRequestStamp::generation(self : HoverRequestStamp) -> Int {
+pub fn HoverRequestStamp::generation(self : HoverRequestStamp) -> Int32 {
   self.generation
 }
 
@@ -177,7 +204,7 @@ pub fn HoverRequestStamp::generation(self : HoverRequestStamp) -> Int {
 pub fn HoverRequestStamp::is_current(
   self : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
 ) -> Bool {
   if self.cancellation_token.is_cancellation_requested() ||
     self.generation != current_generation ||
@@ -204,15 +231,27 @@ pub struct HoverResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend HoverResult with Eq::{not_equal, equal}
+
+///|
+pub extend HoverResult with Debug::{to_repr}
+
+///|
 /// Host work selected by `HoverOperation::start`. Timers and computation stay
 /// host-owned; this value makes every valid start-mode/state branch explicit
 /// and deterministic.
 pub enum HoverOperationStartEffect {
   HoverOperationNoStart
-  HoverOperationScheduleDelayed(Int)
-  HoverOperationRunAsyncAndSync(Int)
-  HoverOperationRunSync(Int)
+  HoverOperationScheduleDelayed(Int32)
+  HoverOperationRunAsyncAndSync(Int32)
+  HoverOperationRunSync(Int32)
 } derive(Eq, Debug)
+
+///|
+pub extend HoverOperationStartEffect with Eq::{not_equal, equal}
+
+///|
+pub extend HoverOperationStartEffect with Debug::{to_repr}
 
 ///|
 /// Monaco `HoverOperationState` (`hoverOperation.ts`). `FirstWait` / `SecondWait`
@@ -229,6 +268,9 @@ pub enum HoverOpState {
 } derive(Eq)
 
 ///|
+pub extend HoverOpState with Eq::{not_equal, equal}
+
+///|
 /// Monaco `HoverOperation`: the fine-tuned hover timing / aggregation core. It
 /// is a pure state container; the viewer drives the three debounced schedulers
 /// and the sync / async computes (through the browser-host timers and the
@@ -238,11 +280,14 @@ pub enum HoverOpState {
 /// (the role Monaco's scheduler / iterable cancellation plays).
 pub struct HoverOperation {
   state : HoverOpState
-  token : Int
+  token : Int32
   parts : Array[HoverPart]
   async_done : Bool
   options : HoverOperationOptions?
 } derive(Eq)
+
+///|
+pub extend HoverOperation with Eq::{not_equal, equal}
 
 ///|
 /// Creates the initial idle operation at generation zero.
@@ -252,7 +297,7 @@ pub fn HoverOperation::idle() -> HoverOperation {
 
 ///|
 /// Creates an idle operation retaining the supplied monotonic generation.
-pub fn HoverOperation::idle_at(token : Int) -> HoverOperation {
+pub fn HoverOperation::idle_at(token : Int32) -> HoverOperation {
   { state: HoverOpIdle, token, parts: [], async_done: false, options: None, }
 }
 
@@ -330,19 +375,25 @@ pub fn HoverOperation::result(self : HoverOperation) -> HoverResult? {
 /// owns the clearable timer handle; this value owns the deterministic schedule
 /// generation, selected delay, and latest options read by the callback.
 pub struct HoverDebouncer {
-  priv default_delay_ms : Int
-  priv generation : Int
+  priv default_delay_ms : Int32
+  priv generation : Int32
   priv scheduled : Bool
-  priv delay_ms : Int
+  priv delay_ms : Int32
   priv options : HoverOperationOptions?
 } derive(Eq, Debug)
+
+///|
+pub extend HoverDebouncer with Eq::{not_equal, equal}
+
+///|
+pub extend HoverDebouncer with Debug::{to_repr}
 
 ///|
 /// Creates an idle latest-options debouncer with a caller-selected fallback
 /// delay. Browser timer ownership remains outside this pure value.
 #alias(new, deprecated)
 pub fn HoverDebouncer::HoverDebouncer(
-  default_delay_ms? : Int = 0,
+  default_delay_ms~ : Int32 = 0,
 ) -> HoverDebouncer {
   {
     default_delay_ms,
@@ -359,8 +410,8 @@ pub fn HoverDebouncer::HoverDebouncer(
 pub fn HoverDebouncer::schedule(
   self : HoverDebouncer,
   options : HoverOperationOptions,
-  delay_ms? : Int = -1,
-) -> (Int, HoverDebouncer) {
+  delay_ms~ : Int32 = -1,
+) -> (Int32, HoverDebouncer) {
   let generation = self.generation + 1
   let delay_ms = if delay_ms < 0 { self.default_delay_ms } else { delay_ms }
   (
@@ -381,7 +432,7 @@ pub fn HoverDebouncer::cancel(self : HoverDebouncer) -> HoverDebouncer {
 /// A stale or canceled callback is a no-op.
 pub fn HoverDebouncer::take(
   self : HoverDebouncer,
-  generation : Int,
+  generation : Int32,
 ) -> (HoverOperationOptions?, HoverDebouncer) {
   if !self.scheduled || generation != self.generation {
     return (None, self)
@@ -398,10 +449,10 @@ pub(all) enum HoverEffect {
   /// Delayed start (Monaco `start(Delayed)`): schedule the async trigger at
   /// `hover_first_wait_ms` and the loading message at `hover_loading_message_ms`
   /// for this anchor token.
-  HoverScheduleDelayed(Int)
+  HoverScheduleDelayed(Int32)
   /// Immediate start from Idle: launch the async stream, then run the sync
   /// computer without arming the delay/loading schedulers.
-  HoverRunAsyncAndSync(Int)
+  HoverRunAsyncAndSync(Int32)
 }
 
 ///|
@@ -431,6 +482,9 @@ pub struct HoverController {
 } derive(Eq)
 
 ///|
+pub extend HoverController with Eq::{not_equal, equal}
+
+///|
 /// Creates an idle controller with generation zero and no shown result.
 pub fn HoverController::empty() -> HoverController {
   HoverController::empty_at(0)
@@ -439,7 +493,7 @@ pub fn HoverController::empty() -> HoverController {
 ///|
 /// Creates an empty controller without resetting the caller-owned monotonic
 /// generation. Browser/controller teardown uses this instead of reusing zero.
-pub fn HoverController::empty_at(generation : Int) -> HoverController {
+pub fn HoverController::empty_at(generation : Int32) -> HoverController {
   {
     anchor: None,
     operation: HoverOperation::idle_at(generation),
@@ -503,10 +557,10 @@ pub fn HoverController::start_showing_or_update_hover(
   anchor : HoverAnchor,
   sticky_mouse_getting_closer : Bool,
   show_at_position? : @base_common.Position,
-  mode? : HoverStartMode = HoverStartDelayed,
-  source? : HoverStartSource = HoverStartMouse,
-  should_focus? : Bool = false,
-  live_widget_visible? : Bool = false,
+  mode~ : HoverStartMode = HoverStartDelayed,
+  source~ : HoverStartSource = HoverStartMouse,
+  should_focus~ : Bool = false,
+  live_widget_visible~ : Bool = false,
 ) -> (HoverEffect, HoverController) {
   let content_hover_is_visible = live_widget_visible || self.view is Some(_)
   if !content_hover_is_visible {
@@ -609,9 +663,9 @@ pub fn HoverController::start_hover_operation_if_necessary(
   self : HoverController,
   anchor : HoverAnchor,
   insist~ : Bool,
-  mode? : HoverStartMode = HoverStartDelayed,
-  source? : HoverStartSource = HoverStartMouse,
-  should_focus? : Bool = false,
+  mode~ : HoverStartMode = HoverStartDelayed,
+  source~ : HoverStartSource = HoverStartMouse,
+  should_focus~ : Bool = false,
 ) -> (HoverEffect, HoverController) {
   match self.anchor {
     Some(current) =>
@@ -651,7 +705,7 @@ pub fn HoverController::start_hover_operation_if_necessary(
 /// — without the schedulers — is Monaco's immediate (`start(Immediate)`) path.
 pub fn HoverController::op_trigger_async(
   self : HoverController,
-  token : Int,
+  token : Int32,
 ) -> (Bool, HoverController) {
   if token != self.operation.token {
     return (false, self)
@@ -675,7 +729,7 @@ pub fn HoverController::op_trigger_async(
 /// emit the accumulated result.
 pub fn HoverController::op_trigger_sync(
   self : HoverController,
-  token : Int,
+  token : Int32,
   sync_parts : Array[HoverPart],
 ) -> HoverController {
   if token != self.operation.token {
@@ -696,7 +750,7 @@ pub fn HoverController::op_trigger_sync(
 /// switch to showing the loading message.
 pub fn HoverController::op_trigger_loading(
   self : HoverController,
-  token : Int,
+  token : Int32,
 ) -> HoverController {
   if token != self.operation.token {
     return self
@@ -719,7 +773,7 @@ pub fn HoverController::op_trigger_loading(
 /// `_result` and re-fires): accumulate and emit.
 pub fn HoverController::op_async_item(
   self : HoverController,
-  token : Int,
+  token : Int32,
   parts : Array[HoverPart],
 ) -> HoverController {
   if token != self.operation.token || parts.length() == 0 {
@@ -735,7 +789,7 @@ pub fn HoverController::op_async_item(
 /// if we were waiting on it, complete to `Idle`, then emit.
 pub fn HoverController::op_async_done(
   self : HoverController,
-  token : Int,
+  token : Int32,
 ) -> HoverController {
   if token != self.operation.token {
     return self
@@ -764,7 +818,7 @@ fn HoverController::accepts_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
 ) -> Bool {
   request.generation == self.operation.token &&
   request.is_current(current_model, current_generation)
@@ -777,7 +831,7 @@ pub fn HoverController::op_trigger_async_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
 ) -> (Bool, HoverController) {
   if !self.accepts_request(request, current_model, current_generation) {
     return (false, self)
@@ -792,7 +846,7 @@ pub fn HoverController::op_trigger_sync_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
   sync_parts : Array[HoverPart],
 ) -> HoverController {
   if !self.accepts_request(request, current_model, current_generation) {
@@ -807,7 +861,7 @@ pub fn HoverController::op_trigger_loading_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
 ) -> HoverController {
   if !self.accepts_request(request, current_model, current_generation) {
     return self
@@ -821,7 +875,7 @@ pub fn HoverController::op_async_item_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
   parts : Array[HoverPart],
 ) -> HoverController {
   if !self.accepts_request(request, current_model, current_generation) {
@@ -836,7 +890,7 @@ pub fn HoverController::op_async_done_request(
   self : HoverController,
   request : HoverRequestStamp,
   current_model : @model.TextModel?,
-  current_generation : Int,
+  current_generation : Int32,
 ) -> HoverController {
   if !self.accepts_request(request, current_model, current_generation) {
     return self
@@ -962,6 +1016,9 @@ pub struct HoverWidgetView {
   anchor_range : @base_common.Range
   parts : Array[HoverPart]
 } derive(Eq)
+
+///|
+pub extend HoverWidgetView with Eq::{not_equal, equal}
 
 ///|
 /// Whether a hover widget is currently on screen (resolved content or the

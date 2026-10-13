@@ -28,6 +28,9 @@ pub suberror UriError {
 } derive(Debug)
 
 ///|
+pub extend UriError with Debug::{to_repr}
+
+///|
 /// Uniform Resource Identifier (URI) http://tools.ietf.org/html/rfc3986.
 /// This class is a simple parser which creates the basic component parts
 /// (http://tools.ietf.org/html/rfc3986#section-3) with minimal validation
@@ -86,13 +89,22 @@ pub impl Hash for Uri with fn hash_combine(self, hasher) {
 /// Mirrors the `debug.description` label `URI(${this.toString()})`
 /// (uri.ts:421) without touching the `_formatted` cache.
 pub impl Debug for Uri with fn to_repr(self) {
-  to_repr("URI(\{as_formatted(self, false)})")
+  Repr("URI(\{as_formatted(self, false)})")
 }
+
+///|
+pub extend Uri with Eq::{not_equal, equal}
+
+///|
+pub extend Uri with Hash::{hash, hash_combine}
+
+///|
+pub extend Uri with Debug::{to_repr}
 
 ///|
 /// `_schemePattern` (uri.ts:11): `^\w[\w\d+.-]*$` where `\w` is
 /// `[A-Za-z0-9_]`.
-fn is_scheme_word_char(code : Int) -> Bool {
+fn is_scheme_word_char(code : Int32) -> Bool {
   (code >= 'a'.to_int() && code <= 'z'.to_int()) ||
   (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
   (code >= '0'.to_int() && code <= '9'.to_int()) ||
@@ -356,7 +368,7 @@ fn parse_components(value : String) -> (String, String, String, String, String) 
 /// `URI.parse` (uri.ts:271): creates a new URI from a string, e.g.
 /// `http://www.example.com/some/path`, `file:///usr/home`, or
 /// `scheme:with/path`. Components are percent-decoded before validation.
-pub fn Uri::parse(value : String, strict? : Bool = false) -> Uri raise UriError {
+pub fn Uri::parse(value : String, strict~ : Bool = false) -> Uri raise UriError {
   let (scheme, authority, path, query, fragment) = parse_components(value)
   Uri::new_(
     scheme,
@@ -414,11 +426,11 @@ pub fn Uri::file(path : String) -> Uri {
 /// command arguments etc. Unless `strict` the scheme defaults to `file`.
 pub fn Uri::from(
   scheme~ : String,
-  authority? : String = "",
-  path? : String = "",
-  query? : String = "",
-  fragment? : String = "",
-  strict? : Bool = false,
+  authority~ : String = "",
+  path~ : String = "",
+  query~ : String = "",
+  fragment~ : String = "",
+  strict~ : Bool = false,
 ) -> Uri raise UriError {
   Uri::new_(scheme, authority, path, query, fragment, strict)
 }
@@ -491,7 +503,7 @@ pub fn Uri::join_path(uri : Uri, path_fragment : Array[String]) -> Uri {
 /// guaranteed to round-trip through `Uri::parse` into an equal URI. The
 /// result is percent-encoded (mostly ignoring scheme-specific rules) and is
 /// meant for externalization or transport, not display.
-pub fn Uri::to_string(self : Uri, skip_encoding? : Bool = false) -> String {
+pub fn Uri::to_string(self : Uri, skip_encoding~ : Bool = false) -> String {
   if !skip_encoding {
     match self.formatted_cache {
       Some(formatted) => formatted
@@ -527,7 +539,7 @@ pub fn Uri::fs_path(self : Uri) -> String {
 ///|
 /// `encodeTable` (uri.ts:517) — reserved characters
 /// https://tools.ietf.org/html/rfc3986#section-2.2.
-fn encode_table(code : Int) -> String? {
+fn encode_table(code : Int32) -> String? {
   match code {
     58 => Some("%3A") // gen-delims: colon
     47 => Some("%2F") // slash
@@ -556,10 +568,10 @@ fn encode_table(code : Int) -> String? {
 let hex_digits_upper : String = "0123456789ABCDEF"
 
 ///|
-fn write_percent_byte(sb : StringBuilder, byte : Int) -> Unit {
+fn write_percent_byte(sb : StringBuilder, byte : Int32) -> Unit {
   sb.write_char('%')
-  sb.write_char(Int::unsafe_to_char(hex_digits_upper[byte >> 4].to_int()))
-  sb.write_char(Int::unsafe_to_char(hex_digits_upper[byte & 0xF].to_int()))
+  sb.write_char(Int32::unsafe_to_char(hex_digits_upper[byte >> 4].to_int()))
+  sb.write_char(Int32::unsafe_to_char(hex_digits_upper[byte & 0xF].to_int()))
 }
 
 ///|
@@ -571,8 +583,8 @@ fn write_percent_byte(sb : StringBuilder, byte : Int) -> Unit {
 fn write_native_encoded(
   sb : StringBuilder,
   s : String,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Unit {
   let mut i = start
   while i < end {
@@ -647,13 +659,13 @@ fn encode_uri_component_fast(
       }
       // check if we write into a new string (by default we try to return the param)
       match res {
-        Some(sb) => sb.write_char(Int::unsafe_to_char(code))
+        Some(sb) => sb.write_char(Int32::unsafe_to_char(code))
         None => ()
       }
     } else {
       // encoding needed, we need to allocate a new string
       if res is None {
-        let sb = StringBuilder::new()
+        let sb = StringBuilder()
         sb.write_string(js_slice(uri_component, 0, end=pos))
         res = Some(sb)
       }
@@ -714,7 +726,7 @@ fn encode_uri_component_minimal(path : String) -> String {
     if code == '#'.to_int() || code == '?'.to_int() {
       let sb = match res {
         None => {
-          let sb = StringBuilder::new()
+          let sb = StringBuilder()
           res = Some(sb)
           sb
         }
@@ -831,14 +843,14 @@ fn as_formatted(uri : Uri, skip_encoding : Bool) -> String {
       let code = char_code_at(path, 1)
       if code >= 'A'.to_int() && code <= 'Z'.to_int() {
         path = "/" +
-          Int::unsafe_to_char(code + 32).to_string() +
+          Int32::unsafe_to_char(code + 32).to_string() +
           ":" +
           js_slice(path, 3) // "/c:".length === 3
       }
     } else if path.length() >= 2 && char_code_at(path, 1) == char_colon {
       let code = char_code_at(path, 0)
       if code >= 'A'.to_int() && code <= 'Z'.to_int() {
-        path = Int::unsafe_to_char(code + 32).to_string() +
+        path = Int32::unsafe_to_char(code + 32).to_string() +
           ":" +
           js_slice(path, 2) // "/c:".length === 3
       }
@@ -862,7 +874,7 @@ fn as_formatted(uri : Uri, skip_encoding : Bool) -> String {
 }
 
 ///|
-fn last_index_of_char(s : String, code : Int) -> Int {
+fn last_index_of_char(s : String, code : Int32) -> Int32 {
   for i = s.length() - 1; i >= 0; i = i - 1 {
     if s[i].to_int() == code {
       return i
@@ -879,7 +891,7 @@ priv suberror UriDecodeError {
 }
 
 ///|
-fn hex_digit_value(code : Int) -> Int raise UriDecodeError {
+fn hex_digit_value(code : Int32) -> Int32 raise UriDecodeError {
   if code >= '0'.to_int() && code <= '9'.to_int() {
     code - '0'.to_int()
   } else if code >= 'A'.to_int() && code <= 'F'.to_int() {
@@ -893,7 +905,7 @@ fn hex_digit_value(code : Int) -> Int raise UriDecodeError {
 
 ///|
 /// Reads a `%XX` escape starting at `at`: `%` plus two hex digits.
-fn read_percent_byte(s : String, at : Int) -> Int raise UriDecodeError {
+fn read_percent_byte(s : String, at : Int32) -> Int32 raise UriDecodeError {
   if at + 2 >= s.length() || s[at].to_int() != '%'.to_int() {
     raise UriDecodeError("URI malformed")
   }
@@ -907,7 +919,7 @@ fn read_percent_byte(s : String, at : Int) -> Int raise UriDecodeError {
 /// surrogate/out-of-range code points all fail, exactly the inputs that make
 /// the JS builtin throw `URIError`.
 fn decode_uri_component(str : String) -> String raise UriDecodeError {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let len = str.length()
   let mut i = 0
   let mut chunk_start = 0
@@ -916,7 +928,7 @@ fn decode_uri_component(str : String) -> String raise UriDecodeError {
       sb.write_string(js_slice(str, chunk_start, end=i))
       let byte0 = read_percent_byte(str, i)
       if byte0 < 0x80 {
-        sb.write_char(Int::unsafe_to_char(byte0))
+        sb.write_char(Int32::unsafe_to_char(byte0))
         i += 3
       } else {
         // multi-byte sequence: every continuation must itself be a
@@ -957,7 +969,7 @@ fn decode_uri_component(str : String) -> String raise UriDecodeError {
           }
           code_point = (code_point << 6) | (cont & 0x3F)
         }
-        sb.write_char(Int::unsafe_to_char(code_point))
+        sb.write_char(Int32::unsafe_to_char(code_point))
         i += 3 * (extra + 1)
       }
       chunk_start = i
@@ -987,8 +999,8 @@ fn decode_uri_component_graceful(str : String) -> String {
 ///|
 /// `%XY` where X and Y are `[0-9A-Za-z]` — the (deliberately loose)
 /// `_rEncodedAsHex` character class (uri.ts:740).
-fn is_encoded_as_hex_at(str : String, pos : Int) -> Bool {
-  fn hexish(code : Int) -> Bool {
+fn is_encoded_as_hex_at(str : String, pos : Int32) -> Bool {
+  fn hexish(code : Int32) -> Bool {
     (code >= '0'.to_int() && code <= '9'.to_int()) ||
     (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
     (code >= 'a'.to_int() && code <= 'z'.to_int())
@@ -1018,7 +1030,7 @@ fn percent_decode(str : String) -> String {
   if !found {
     return str
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut chunk_start = 0
   let mut i = 0
   while i < len {

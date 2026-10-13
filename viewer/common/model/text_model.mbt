@@ -2,17 +2,17 @@
 /// Readonly editor model identity plus immutable text snapshot, plus the
 /// Monaco decoration fields (the one mutable part; the decoration API lives
 /// in `text_model_decorations.mbt`).
-const LARGE_FILE_SIZE_THRESHOLD : Int = 20 * 1024 * 1024
+const LARGE_FILE_SIZE_THRESHOLD : Int32 = 20 * 1024 * 1024
 
 ///|
-const LARGE_FILE_LINE_COUNT_THRESHOLD : Int = 300 * 1000
+const LARGE_FILE_LINE_COUNT_THRESHOLD : Int32 = 300 * 1000
 
 ///|
 pub struct TextModel {
   uri : @base_common.Uri
   display_name : String
   language_id : String
-  version : Int
+  version : Int32
   revision : String
   /// Mutable since the `set_value` flush lane: swapped whole
   /// (`_setValueFromTextBuffer`'s `this._buffer = textBuffer`,
@@ -36,17 +36,17 @@ pub struct TextModel {
   /// content lane (`_increaseVersionId`). Together with the stable model
   /// identity this is async freshness authority; the host-facing `version`
   /// is caller-owned metadata.
-  priv mut version_id : Int
+  priv mut version_id : Int32
   // Content events (`_eventEmitter` textModel.ts:244; `_viewModels` :303)
   priv event_emitter : DidChangeContentEmitter
   priv view_models : Array[ViewModelCallbacks]
   // #region Decorations (textModel.ts:285-290; `_onDidChangeDecorations` :225)
   /// Full process-local identity used for exact model-instance comparisons.
-  priv identity : Int
+  priv identity : Int32
   /// Stable decoration-id namespace prefix derived from `identity`.
   priv decoration_id_namespace : String
-  mut delta_decoration_call_cnt : Int
-  mut last_decoration_id : Int
+  mut delta_decoration_call_cnt : Int32
+  mut last_decoration_id : Int32
   /// Mutable since the `set_value` flush lane: replaced wholesale
   /// ("Destroy all my decorations", `textModel.ts:526-528`).
   mut decorations : Map[String, IntervalNode]
@@ -57,10 +57,13 @@ pub struct TextModel {
 
 ///|
 pub impl Debug for TextModel with fn to_repr(self) {
-  to_repr(
+  Repr(
     "<TextModel \{self.uri.to_string()} v\{self.version} decorations: \{self.decorations.length()}>",
   )
 }
+
+///|
+pub extend TextModel with Debug::{to_repr}
 
 ///|
 /// Whether two handles name the same stable text-model instance.
@@ -74,7 +77,7 @@ pub fn TextModel::same(self : TextModel, other : TextModel) -> Bool {
 /// Most callers should prefer `same`; this numeric form exists for maps that
 /// cannot key directly by `TextModel` without falling back to reference
 /// equality.
-pub fn TextModel::identity(self : TextModel) -> Int {
+pub fn TextModel::identity(self : TextModel) -> Int32 {
   self.identity
 }
 
@@ -89,7 +92,7 @@ pub fn TextModel::TextModel(
   uri : @base_common.Uri,
   display_name : String,
   language_id : String,
-  version : Int,
+  version : Int32,
   revision : String,
   text : String,
 ) -> TextModel {
@@ -114,7 +117,7 @@ fn new_text_model(
   uri : @base_common.Uri,
   display_name : String,
   language_id : String,
-  version : Int,
+  version : Int32,
   revision : String,
   text : String,
   support_resolver : ((String) -> InternalTokenizationSupportAdapter?)?,
@@ -246,7 +249,7 @@ pub fn TextModel::is_too_large_for_tokenization(self : TextModel) -> Bool {
 
 ///|
 /// Number of currently attached Viewer instances.
-pub fn TextModel::get_attached_editor_count(self : TextModel) -> Int {
+pub fn TextModel::get_attached_editor_count(self : TextModel) -> Int32 {
   self.tokenization_state.attached_count.val
 }
 
@@ -398,7 +401,7 @@ pub fn TextModel::might_contain_non_basic_ascii(self : TextModel) -> Bool {
 pub fn TextModel::get_offset_at(
   self : TextModel,
   position : @base_common.Position,
-) -> Int {
+) -> Int32 {
   let position = self.validate_position_impl(
     position.line_number,
     position.column,
@@ -412,7 +415,7 @@ pub fn TextModel::get_offset_at(
 /// (`textModel.ts:776`).
 pub fn TextModel::get_position_at(
   self : TextModel,
-  offset : Int,
+  offset : Int32,
 ) -> @base_common.Position {
   let offset = @base_common.clamp_int(offset, 0, self.snapshot.get_length())
   self.snapshot.get_position_at(offset)
@@ -429,7 +432,7 @@ pub fn TextModel::get_value(self : TextModel) -> String {
 ///|
 /// Length of `get_value` in UTF-16 code units. Mirrors `getValueLength`
 /// (`textModel.ts:819`).
-pub fn TextModel::get_value_length(self : TextModel) -> Int {
+pub fn TextModel::get_value_length(self : TextModel) -> Int32 {
   self.get_value_length_in_range(self.get_full_model_range())
 }
 
@@ -449,13 +452,13 @@ pub fn TextModel::get_value_in_range(
 pub fn TextModel::get_value_length_in_range(
   self : TextModel,
   range : @base_common.Range,
-) -> Int {
+) -> Int32 {
   self.snapshot.get_value_length_in_range(self.validate_range(range))
 }
 
 ///|
 /// Number of logical lines. Mirrors `getLineCount` (`textModel.ts:846`).
-pub fn TextModel::get_line_count(self : TextModel) -> Int {
+pub fn TextModel::get_line_count(self : TextModel) -> Int32 {
   self.snapshot.line_count()
 }
 
@@ -464,7 +467,7 @@ pub fn TextModel::get_line_count(self : TextModel) -> Int {
 /// `getLineContent` (`textModel.ts:851`).
 pub fn TextModel::get_line_content(
   self : TextModel,
-  line_number : Int,
+  line_number : Int32,
 ) -> String {
   self.snapshot.get_line_content(line_number)
 }
@@ -472,7 +475,10 @@ pub fn TextModel::get_line_content(
 ///|
 /// Content length of the one-based `line_number`, EOL excluded. Mirrors
 /// `getLineLength` (`textModel.ts:860`).
-pub fn TextModel::get_line_length(self : TextModel, line_number : Int) -> Int {
+pub fn TextModel::get_line_length(
+  self : TextModel,
+  line_number : Int32,
+) -> Int32 {
   self.snapshot.get_line_length(line_number)
 }
 
@@ -499,8 +505,8 @@ pub fn TextModel::get_eol(self : TextModel) -> String {
 /// (`textModel.ts:892`).
 pub fn TextModel::get_line_min_column(
   _self : TextModel,
-  _line_number : Int,
-) -> Int {
+  _line_number : Int32,
+) -> Int32 {
   1
 }
 
@@ -509,8 +515,8 @@ pub fn TextModel::get_line_min_column(
 /// `getLineMaxColumn` (`textModel.ts:897`).
 pub fn TextModel::get_line_max_column(
   self : TextModel,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   self.snapshot.get_line_max_column(line_number)
 }
 
@@ -520,8 +526,8 @@ pub fn TextModel::get_line_max_column(
 /// (`textModel.ts:905`).
 pub fn TextModel::get_line_first_non_whitespace_column(
   self : TextModel,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   self.snapshot.get_line_first_non_whitespace_column(line_number)
 }
 
@@ -531,8 +537,8 @@ pub fn TextModel::get_line_first_non_whitespace_column(
 /// `getLineLastNonWhitespaceColumn` (`textModel.ts:913`).
 pub fn TextModel::get_line_last_non_whitespace_column(
   self : TextModel,
-  line_number : Int,
-) -> Int {
+  line_number : Int32,
+) -> Int32 {
   self.snapshot.get_line_last_non_whitespace_column(line_number)
 }
 
@@ -551,8 +557,8 @@ pub fn TextModel::get_full_model_range(self : TextModel) -> @base_common.Range {
 /// plain clamp). Inputs are integers, so Monaco's `NaN`/float coercion is moot.
 fn TextModel::validate_position_impl(
   self : TextModel,
-  line_number : Int,
-  column : Int,
+  line_number : Int32,
+  column : Int32,
   surrogate : Bool,
 ) -> @base_common.Position {
   let snapshot = self.snapshot
@@ -666,7 +672,7 @@ pub fn TextModel::validate_range(
 /// init 1 (`:370`), bumped by every content change. The decoration trees
 /// cache against it. `_assertNotDisposed`: N-A (readonly reads survive
 /// dispose, see the region header).
-pub fn TextModel::get_version_id(self : TextModel) -> Int {
+pub fn TextModel::get_version_id(self : TextModel) -> Int32 {
   self.version_id
 }
 
@@ -684,7 +690,7 @@ fn TextModel::increase_version_id(self : TextModel) -> Unit {
 pub fn TextModel::modify_position(
   self : TextModel,
   position : @base_common.Position,
-  offset : Int,
+  offset : Int32,
 ) -> @base_common.Position {
   let valid = self.validate_position_impl(
     position.line_number,
@@ -744,8 +750,8 @@ pub fn TextModel::set_value(self : TextModel, value : String) -> Unit {
 fn TextModel::create_content_changed_2(
   self : TextModel,
   range : @base_common.Range,
-  range_offset : Int,
-  range_length : Int,
+  range_offset : Int32,
+  range_length : Int32,
   _range_end_position : @base_common.Position,
   text : String,
   is_undoing : Bool,

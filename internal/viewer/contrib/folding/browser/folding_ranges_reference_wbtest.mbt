@@ -15,17 +15,17 @@ fn assert_equal_ranges(
   msg : String,
 ) -> Unit raise {
   if range1 != range2 {
-    fail("\{msg}: \{to_repr(range1)} != \{to_repr(range2)}")
+    fail("\{msg}: \{Repr(range1)} != \{Repr(range2)}")
   }
 }
 
 ///|
 /// The suite's `foldRange` literal helper.
 fn fold_range(
-  from : Int,
-  to : Int,
-  collapsed? : Bool = false,
-  source? : FoldSource = Provider,
+  from : Int32,
+  to : Int32,
+  collapsed~ : Bool = false,
+  source~ : FoldSource = Provider,
   type_? : String,
 ) -> FoldRange {
   {

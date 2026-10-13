@@ -1,6 +1,7 @@
 ///|
+#warnings("-deprecated")
 test "ViewerOptions builders preserve an immutable opaque snapshot" {
-  let original = ViewerOptions::default()
+  let original = @viewer.ViewerOptions::default()
   let updated = original
     .with_placeholder("loading")
     .with_theme("light")
@@ -31,24 +32,25 @@ test "ViewerOptions builders preserve an immutable opaque snapshot" {
       line_height=21.0,
     ),
   )
-  assert_eq(original, ViewerOptions::default())
+  assert_eq(original, @viewer.ViewerOptions::default())
   assert_false(original.soft_wrap())
   assert_true(updated.soft_wrap())
   assert_eq(updated.line_height(), 21.0)
 }
 
 ///|
+#warnings("-deprecated")
 test "ViewerOptions builders preserve constructor normalization" {
   assert_eq(
-    ViewerOptions::default().with_tab_size(0),
+    @viewer.ViewerOptions::default().with_tab_size(0),
     ViewerOptions(tab_size=1),
   )
   assert_eq(
-    ViewerOptions::default().with_line_numbers_min_chars(0),
+    @viewer.ViewerOptions::default().with_line_numbers_min_chars(0),
     ViewerOptions(line_numbers_min_chars=1),
   )
   assert_eq(
-    ViewerOptions::default().with_line_decorations_width(-1),
+    @viewer.ViewerOptions::default().with_line_decorations_width(-1),
     ViewerOptions(line_decorations_width=0),
   )
 }

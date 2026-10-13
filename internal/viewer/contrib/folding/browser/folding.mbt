@@ -22,8 +22,8 @@
 /// takes the computed count and the applied limit, `None` standing for the
 /// source's `false` ("not limited").
 pub(all) struct FoldingLimitReporter {
-  limit : () -> Int
-  update : (Int, Int?) -> Unit
+  limit : () -> Int32
+  update : (Int32, Int32?) -> Unit
 }
 
 ///|
@@ -32,7 +32,7 @@ pub(all) struct FoldingLimitReporter {
 /// (`folding.ts`): whether any selection starts within the given inclusive
 /// line range.
 pub struct SelectedLines {
-  starts_inside : (Int, Int) -> Bool
+  starts_inside : (Int32, Int32) -> Bool
 }
 
 ///|
@@ -61,7 +61,7 @@ pub const FOLDING_CONTROLLER_ID : String = "editor.contrib.folding"
 ///|
 /// The controller's `mouseDownInfo` (`folding.ts:112`).
 pub(all) struct FoldingMouseDownInfo {
-  line_number : Int
+  line_number : Int32
   icon_clicked : Bool
 }
 

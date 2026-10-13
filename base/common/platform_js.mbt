@@ -3,7 +3,7 @@
 /// `navigator.userAgent` browser sniff Monaco uses (`platform.ts`'s
 /// `isMacintosh = _userAgent.indexOf('Macintosh') >= 0` family). `0` when
 /// neither exists.
-extern "js" fn detect_platform_code() -> Int =
+extern "js" fn detect_platform_code() -> Int32 =
   #| () => {
   #|   if (typeof process !== "undefined" && process.platform) {
   #|     if (process.platform === "darwin") return 1;

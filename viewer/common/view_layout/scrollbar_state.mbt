@@ -27,9 +27,9 @@ pub struct ScrollbarState {
 /// Creates scrollbar geometry state for one axis.
 #alias(new, deprecated)
 pub fn ScrollbarState::ScrollbarState(
-  arrow_size? : Double = 0.0,
+  arrow_size~ : Double = 0.0,
   scrollbar_size~ : Double,
-  opposite_scrollbar_size? : Double = 0.0,
+  opposite_scrollbar_size~ : Double = 0.0,
 ) -> ScrollbarState {
   let state : ScrollbarState = {
     arrow_size: arrow_size.round(),

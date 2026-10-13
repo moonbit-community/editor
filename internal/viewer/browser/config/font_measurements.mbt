@@ -12,7 +12,7 @@ pub struct FontMeasurementsImpl {
   priv did_change : @base_common.Emitter[Unit]
   priv read_widths : (@common_config.BareFontInfo, Array[CharWidthRequest]) -> Unit
   priv read_pixel_ratio : () -> Double
-  priv schedule_timeout : (() -> Unit, Int) -> Unit
+  priv schedule_timeout : (() -> Unit, Int32) -> Unit
 }
 
 ///|
@@ -31,7 +31,7 @@ let instance : FontMeasurementsImpl = {
 fn new_font_measurements_for_test(
   read_widths : (@common_config.BareFontInfo, Array[CharWidthRequest]) -> Unit,
   read_pixel_ratio : () -> Double,
-  schedule_timeout : (() -> Unit, Int) -> Unit,
+  schedule_timeout : (() -> Unit, Int32) -> Unit,
 ) -> FontMeasurementsImpl {
   {
     cache_keys: [],
@@ -311,6 +311,6 @@ fn max_double(left : Double, right : Double) -> Double {
 }
 
 ///|
-fn schedule_timeout(callback : () -> Unit, ms : Int) -> Unit {
+fn schedule_timeout(callback : () -> Unit, ms : Int32) -> Unit {
   @base_browser.schedule_timeout(callback, ms) |> ignore
 }

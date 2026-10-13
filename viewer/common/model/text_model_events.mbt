@@ -48,6 +48,12 @@ pub(all) enum RawContentChangedType {
 } derive(Eq, Debug)
 
 ///|
+pub extend RawContentChangedType with Eq::{not_equal, equal}
+
+///|
+pub extend RawContentChangedType with Debug::{to_repr}
+
+///|
 /// The `ModelRawChange` union (`textModelEvents.ts:451`): `ModelRawFlush`
 /// (`:233`), `ModelRawLineChanged` (`:308`), `ModelRawLinesDeleted` (`:380`),
 /// `ModelRawLinesInserted` (`:406`), `ModelRawEOLChanged` (`:444`), with each
@@ -55,19 +61,22 @@ pub(all) enum RawContentChangedType {
 #warnings("-unused_constructor")
 pub enum ModelRawChange {
   ModelRawFlush
-  ModelRawLineChanged(line_number~ : Int, line_number_post_edit~ : Int)
+  ModelRawLineChanged(line_number~ : Int32, line_number_post_edit~ : Int32)
   ModelRawLinesDeleted(
-    from_line_number~ : Int,
-    to_line_number~ : Int,
-    last_untouched_line_post_edit~ : Int
+    from_line_number~ : Int32,
+    to_line_number~ : Int32,
+    last_untouched_line_post_edit~ : Int32
   )
   ModelRawLinesInserted(
-    from_line_number~ : Int,
-    from_line_number_post_edit~ : Int,
-    count~ : Int
+    from_line_number~ : Int32,
+    from_line_number_post_edit~ : Int32,
+    count~ : Int32
   )
   ModelRawEOLChanged
 } derive(Debug)
+
+///|
+pub extend ModelRawChange with Debug::{to_repr}
 
 ///|
 /// Each class's `changeType` member (`textModelEvents.ts:234,309,381,407,445`).
@@ -89,10 +98,13 @@ pub fn ModelRawChange::change_type(
 pub struct ModelRawContentChangedEvent {
   changes : Array[ModelRawChange]
   /// The new version id the model has transitioned to.
-  version_id : Int
+  version_id : Int32
   is_undoing : Bool
   is_redoing : Bool
 } derive(Debug)
+
+///|
+pub extend ModelRawContentChangedEvent with Debug::{to_repr}
 
 ///|
 /// `containsEvent` (`textModelEvents.ts:483-491`).
@@ -129,12 +141,15 @@ pub struct ModelContentChange {
   /// The range that got replaced.
   range : @base_common.Range
   /// The offset of the range that got replaced.
-  range_offset : Int
+  range_offset : Int32
   /// The length of the range that got replaced.
-  range_length : Int
+  range_length : Int32
   /// The new text for the range.
   text : String
 } derive(Debug)
+
+///|
+pub extend ModelContentChange with Debug::{to_repr}
 
 ///|
 /// The public `IModelContentChangedEvent` (`textModelEvents.ts:42-85`) minus
@@ -146,7 +161,7 @@ pub struct ModelContentChangedEvent {
   /// The (new) end-of-line character.
   eol : String
   /// The new version id the model has transitioned to.
-  version_id : Int
+  version_id : Int32
   is_undoing : Bool
   is_redoing : Bool
   /// All decorations were lost with this edit; the model was reset.
@@ -155,11 +170,17 @@ pub struct ModelContentChangedEvent {
 } derive(Debug)
 
 ///|
+pub extend ModelContentChangedEvent with Debug::{to_repr}
+
+///|
 /// `InternalModelContentChangeEvent` (`textModelEvents.ts:562-594`).
 pub struct InternalModelContentChangeEvent {
   raw_content_changed_event : ModelRawContentChangedEvent
   content_changed_event : ModelContentChangedEvent
 } derive(Debug)
+
+///|
+pub extend InternalModelContentChangeEvent with Debug::{to_repr}
 
 ///|
 /// `InternalModelContentChangeEvent.merge` (`textModelEvents.ts:568-572`).
@@ -207,7 +228,7 @@ fn merge_change_events(
 /// `resultingSelection` write drops with the unported field (file header).
 struct DidChangeContentEmitter {
   emitter : @base_common.Emitter[InternalModelContentChangeEvent]
-  mut deferred_cnt : Int
+  mut deferred_cnt : Int32
   mut deferred_event : InternalModelContentChangeEvent?
 }
 

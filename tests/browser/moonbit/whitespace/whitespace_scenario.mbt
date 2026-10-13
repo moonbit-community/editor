@@ -61,7 +61,7 @@ fn run_whitespace_test() -> Unit {
 fn poll_whitespace(
   ctx : @support.BrowserTestContext,
   done : Ref[Bool],
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   if done.val {
     return

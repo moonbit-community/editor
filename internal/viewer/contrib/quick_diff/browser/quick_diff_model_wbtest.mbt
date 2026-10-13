@@ -1,9 +1,9 @@
 ///|
 fn mapping(
-  original_start : Int,
-  original_end_exclusive : Int,
-  modified_start : Int,
-  modified_end_exclusive : Int,
+  original_start : Int32,
+  original_end_exclusive : Int32,
+  modified_start : Int32,
+  modified_end_exclusive : Int32,
 ) -> @diff.DetailedLineRangeMapping {
   DetailedLineRangeMapping(
     LineRange(original_start, original_end_exclusive),

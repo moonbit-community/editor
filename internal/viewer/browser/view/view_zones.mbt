@@ -101,7 +101,7 @@ priv struct RegisteredViewZone {
 /// `ToInt32`.
 priv struct ComputedViewZoneProps {
   is_in_hidden_area : Bool
-  after_view_line_number : Int
+  after_view_line_number : Int32
   height_in_px : Double
   min_width_in_px : Double
 }
@@ -111,7 +111,7 @@ priv struct ComputedViewZoneProps {
 priv struct ViewZonesContext {
   view_model : @view_model.ViewModel
   log_service : @log.LogHandle
-  read_configuration : () -> (Int, Double, Double)
+  read_configuration : () -> (Int32, Double, Double)
   emit_view_zones_changed : () -> Unit
 }
 
@@ -124,7 +124,7 @@ pub struct ViewZones {
   priv dom_node_cache : FastViewZoneDomNode
   priv margin_dom_node_cache : FastViewZoneDomNode
   priv zones : Map[String, RegisteredViewZone]
-  priv mut line_height : Int
+  priv mut line_height : Int32
   priv mut content_width : Double
   priv mut content_left : Double
   priv mut context : ViewZonesContext?
@@ -135,7 +135,7 @@ pub struct ViewZones {
 ///|
 fn ViewZones::ViewZones(
   document : @rdom.Document,
-  read_initial_configuration? : () -> (Int, Double, Double) = () => {
+  read_initial_configuration~ : () -> (Int32, Double, Double) = () => {
     (0, 0.0, 0.0)
   },
 ) -> ViewZones {
@@ -190,7 +190,7 @@ fn ViewZones::install_context(
   self : ViewZones,
   view_model : @view_model.ViewModel,
   log_service : @log.LogHandle,
-  read_configuration : () -> (Int, Double, Double),
+  read_configuration : () -> (Int32, Double, Double),
   emit_view_zones_changed : () -> Unit,
 ) -> Unit {
   self.context = Some({
@@ -384,7 +384,7 @@ fn ViewZones::zone_keys_snapshot(self : ViewZones) -> Array[String] {
 fn ViewZones::zone_ordinal(
   _self : ViewZones,
   zone : @editor_browser.ViewZone,
-) -> Int {
+) -> Int32 {
   match zone.ordinal {
     Some(ordinal) => ordinal
     None => zone.after_column.unwrap_or(10000)
@@ -657,7 +657,7 @@ fn ViewZones::report_callback_error(
 fn ViewZones::render(
   self : ViewZones,
   visible_whitespaces : Array[@view_layout.ViewWhitespaceViewportData],
-  big_numbers_delta : Int,
+  big_numbers_delta : Int32,
   scroll_top : Double,
   scroll_width : Double,
 ) -> Unit {
@@ -748,7 +748,7 @@ fn view_zone_double_max(left : Double, right : Double) -> Double {
 }
 
 ///|
-fn css_pixels(value : Int) -> String {
+fn css_pixels(value : Int32) -> String {
   value.to_string() + "px"
 }
 

@@ -6,7 +6,7 @@
 /// state and returns one fact for the ViewModel's outgoing dispatcher.
 pub struct CursorsController {
   model : @model.TextModel
-  mut known_model_version_id : Int
+  mut known_model_version_id : Int32
   mut context : CursorContext
   mut cursor : Cursor
   mut is_handling : Bool
@@ -150,8 +150,8 @@ fn CursorsController::normalize(self : CursorsController) -> Unit {
 pub fn CursorsController::set_cursor_state(
   self : CursorsController,
   state : PartialCursorState?,
-  source? : String = "keyboard",
-  reason? : @editor_api.CursorChangeReason = NotSet,
+  source~ : String = "keyboard",
+  reason~ : @editor_api.CursorChangeReason = NotSet,
 ) -> CursorStateChange? {
   let state = match state {
     None => return None
@@ -198,8 +198,8 @@ pub fn CursorsController::set_cursor_state(
 pub fn CursorsController::set_model_cursor_state(
   self : CursorsController,
   model_state : SingleCursorState,
-  source? : String = "keyboard",
-  reason? : @editor_api.CursorChangeReason = NotSet,
+  source~ : String = "keyboard",
+  reason~ : @editor_api.CursorChangeReason = NotSet,
 ) -> CursorStateChange? {
   self.set_cursor_state(
     Some(CursorState::from_model_state(model_state)),
@@ -214,8 +214,8 @@ pub fn CursorsController::set_model_cursor_state(
 pub fn CursorsController::set_view_cursor_state(
   self : CursorsController,
   view_state : SingleCursorState,
-  source? : String = "keyboard",
-  reason? : @editor_api.CursorChangeReason = NotSet,
+  source~ : String = "keyboard",
+  reason~ : @editor_api.CursorChangeReason = NotSet,
 ) -> CursorStateChange? {
   self.set_cursor_state(
     Some(CursorState::from_view_state(view_state)),
@@ -232,8 +232,8 @@ pub fn CursorsController::move_to(
   self : CursorsController,
   view_position : @base_common.Position,
   in_selection_mode : Bool,
-  source? : String = "keyboard",
-  reason? : @editor_api.CursorChangeReason = NotSet,
+  source~ : String = "keyboard",
+  reason~ : @editor_api.CursorChangeReason = NotSet,
 ) -> CursorStateChange? {
   self.set_view_cursor_state(
     self.cursor.view_state.moved(in_selection_mode, view_position),

@@ -1,7 +1,7 @@
 ///|
 struct DevServerConfig {
   root : String
-  port : Int
+  port : Int32
   asset_dir : String
   moon_command : String
 }
@@ -56,7 +56,7 @@ fn parse_args(args : ArrayView[String]) -> DevServerConfig {
 }
 
 ///|
-fn parse_port(value : String, fallback : Int) -> Int {
+fn parse_port(value : String, fallback : Int32) -> Int32 {
   @string.parse_int(value, base=10) catch {
     _ => fallback
   }

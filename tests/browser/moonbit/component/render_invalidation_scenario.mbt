@@ -355,7 +355,7 @@ fn run_render_invalidation_test() -> Unit {
 fn poll_render_invalidation_ready(
   ctx : @support.BrowserTestContext,
   root : @rdom.Element,
-  remaining : Int,
+  remaining : Int32,
 ) -> Unit {
   let line_count = @support.query_count(".render-invalidation-host .view-line")
   let validation_count = @support.query_count(
@@ -388,10 +388,10 @@ extern "js" fn install_render_invalidation_controls(
   set_highlight : (String) -> Unit,
   set_focus_only : (Bool) -> Unit,
   set_validation : (String) -> Unit,
-  set_tab_size : (Int) -> Unit,
+  set_tab_size : (Int32) -> Unit,
   set_wrap : (Bool) -> Unit,
   whitespace_round_trip : () -> Unit,
-  set_position : (Int, Int) -> Unit,
+  set_position : (Int32, Int32) -> Unit,
   add_spacing_decoration : () -> Unit,
   remove_spacing_decoration : () -> Unit,
   decoration_round_trip : () -> Unit,
@@ -399,8 +399,8 @@ extern "js" fn install_render_invalidation_controls(
   focus : () -> Unit,
   set_compensated_layout : () -> Unit,
   layout_json : () -> String,
-  set_min_chars : (Int) -> Unit,
-  set_line_count : (Int) -> Unit,
+  set_min_chars : (Int32) -> Unit,
+  set_line_count : (Int32) -> Unit,
   replace_zone : () -> Unit,
   zone_counts_json : () -> String,
   recolor_tokens : () -> Unit,

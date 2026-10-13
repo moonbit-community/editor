@@ -14,6 +14,12 @@ pub(all) enum CursorChangeReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend CursorChangeReason with Eq::{not_equal, equal}
+
+///|
+pub extend CursorChangeReason with Debug::{to_repr}
+
+///|
 /// Monaco's `ICursorPositionChangedEvent`. The viewer is single-cursor, so
 /// `secondary_positions` is always empty.
 pub(all) struct CursorPositionChangedEvent {
@@ -24,15 +30,21 @@ pub(all) struct CursorPositionChangedEvent {
 } derive(Debug)
 
 ///|
+pub extend CursorPositionChangedEvent with Debug::{to_repr}
+
+///|
 /// Monaco's `ICursorSelectionChangedEvent`, reduced to the viewer's
 /// single-cursor contract. `old_selections` is absent for a content flush and
 /// contains the former primary selection for ordinary transitions.
 pub(all) struct CursorSelectionChangedEvent {
   selection : @core.Selection
   secondary_selections : Array[@core.Selection]
-  model_version_id : Int
+  model_version_id : Int32
   old_selections : Array[@core.Selection]?
-  old_model_version_id : Int
+  old_model_version_id : Int32
   source : String
   reason : CursorChangeReason
 } derive(Debug)
+
+///|
+pub extend CursorSelectionChangedEvent with Debug::{to_repr}

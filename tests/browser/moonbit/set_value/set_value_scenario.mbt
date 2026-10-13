@@ -172,7 +172,7 @@ fn run_set_value_test() -> Unit {
 fn wait_for_text(
   ctx : @support.BrowserTestContext,
   needle : String,
-  remaining : Int,
+  remaining : Int32,
   body : () -> Unit,
 ) -> Unit {
   if @support.query_text(".viewer-host").contains(needle) {

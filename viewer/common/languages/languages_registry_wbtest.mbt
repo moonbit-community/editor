@@ -213,7 +213,7 @@ fn markdown_comment_block(markdown : String) -> @language.MarkdownCommentBlock {
 ///|
 priv struct RecordingMarkdownCommentProvider {
   blocks : Array[@language.MarkdownCommentBlock]
-  calls : Ref[Int]
+  calls : Ref[Int32]
 }
 
 ///|

@@ -15,11 +15,11 @@ priv struct TestTextModel {
 /// Splits text into logical lines on newline (the suite uses newline only).
 fn TestTextModel::create(text : String) -> TestTextModel {
   let lines : Array[String] = []
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for ch in text {
     if ch == '\n' {
       lines.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(ch)
     }
@@ -45,14 +45,14 @@ priv struct ModelDecorationOptions {
 /// Builds decoration options, defaulting every optional field the way an absent
 /// JavaScript property would.
 fn ModelDecorationOptions::ModelDecorationOptions(
-  description? : String = "",
+  description~ : String = "",
   class_name? : String,
   inline_class_name? : String,
-  inline_class_name_affects_letter_spacing? : Bool = false,
+  inline_class_name_affects_letter_spacing~ : Bool = false,
   before_content_class_name? : String,
   after_content_class_name? : String,
-  affects_font? : Bool = false,
-  is_whole_line? : Bool = false,
+  affects_font~ : Bool = false,
+  is_whole_line~ : Bool = false,
 ) -> ModelDecorationOptions {
   ignore(description)
   ignore(class_name)
@@ -215,7 +215,7 @@ fn ReferenceInlineModelDecorationsComputer::get_decorations(
 ///|
 fn ReferenceInlineModelDecorationsComputer::get_inline_decorations(
   self : ReferenceInlineModelDecorationsComputer,
-  model_line_number : Int,
+  model_line_number : Int32,
 ) -> Array[Array[InlineDecoration]] {
   self.computer.get_inline_decorations(model_line_number)
 }
@@ -578,7 +578,7 @@ test "no injections returns empty" {
     get_injection_options: fn(_l) -> Array[ResolvedInjectedTextOptions]? {
       None
     },
-    get_injection_offsets: fn(_l) -> Array[Int]? { None },
+    get_injection_offsets: fn(_l) -> Array[Int32]? { None },
     get_break_offsets: fn(_l) { [10] },
     get_wrapped_text_indent_length: fn(_l) { 0 },
     get_base_view_line_number: fn(_l) { 1 },

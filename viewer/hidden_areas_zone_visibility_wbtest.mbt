@@ -1,5 +1,5 @@
 ///|
-fn hidden_area_zone_test_height(viewer : Viewer, zone_id : String) -> Int {
+fn hidden_area_zone_test_height(viewer : Viewer, zone_id : String) -> Int32 {
   for whitespace in viewer.test_view_model().get_whitespaces() {
     if whitespace.id == zone_id {
       return whitespace.height

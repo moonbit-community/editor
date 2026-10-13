@@ -2,22 +2,28 @@
 /// Line-renderer viewport data derived from the backend-neutral view model and
 /// layout state.
 pub(all) struct ViewportData {
-  start_line_number : Int
-  end_line_number : Int
+  start_line_number : Int32
+  end_line_number : Int32
   relative_vertical_offset : Array[Double]
-  line_height : Int
+  line_height : Int32
   visible_range : @base_common.Range
-  big_numbers_delta : Int
+  big_numbers_delta : Int32
   lines : Array[ViewLineRenderingData]
   line_decorations : Array[Array[LineDecoration]]
   view_zones : Array[ViewWhitespaceViewportData]
 } derive(Eq, Debug)
 
 ///|
+pub extend ViewportData with Eq::{not_equal, equal}
+
+///|
+pub extend ViewportData with Debug::{to_repr}
+
+///|
 /// Line-rendering data for a one-based line number inside this viewport.
 pub fn ViewportData::line_data(
   self : ViewportData,
-  line_number : Int,
+  line_number : Int32,
 ) -> ViewLineRenderingData? {
   let index = line_number - self.start_line_number
   if index >= 0 && index < self.lines.length() {
@@ -31,7 +37,7 @@ pub fn ViewportData::line_data(
 /// Line decorations for a one-based line number inside this viewport.
 pub fn ViewportData::decorations_for_line(
   self : ViewportData,
-  line_number : Int,
+  line_number : Int32,
 ) -> Array[LineDecoration] {
   let index = line_number - self.start_line_number
   match self.line_decorations.get(index) {

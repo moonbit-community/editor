@@ -12,8 +12,8 @@ pub(all) struct MarkdownCommentDom {
 /// range. Projection and ViewZone registration remain root responsibilities.
 #alias(new, deprecated)
 pub fn MarkdownCommentDom::MarkdownCommentDom(
-  start_line_number : Int,
-  end_line_number_exclusive : Int,
+  start_line_number : Int32,
+  end_line_number_exclusive : Int32,
 ) -> MarkdownCommentDom {
   let document = @rdom.document()
   let outer = document.create_element("div")
@@ -33,7 +33,7 @@ pub fn MarkdownCommentDom::MarkdownCommentDom(
 /// callback owns generation and zone-id stale checks before relayout.
 pub fn MarkdownCommentDom::observe_size(
   self : MarkdownCommentDom,
-  on_height_changed : (Int) -> Unit,
+  on_height_changed : (Int32) -> Unit,
 ) -> MarkdownCommentSizeObserver {
   let disposed = Ref(false)
   let frame_scheduled = Ref(false)
@@ -156,7 +156,7 @@ extern "js" fn markdown_comment_measured_height(
   outer : @rdom.Element,
   content : @rdom.Element,
   allow_hidden : Bool,
-) -> Int =
+) -> Int32 =
   #| (outer, content, allowHidden) => {
   #|   const direct = Math.trunc(content?.offsetHeight ?? 0);
   #|   if (direct > 0 || !allowHidden || content?.isConnected !== true) return direct;

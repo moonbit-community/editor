@@ -270,7 +270,7 @@ test "View dispatcher retains eight handlers in source order and gives each the 
 ///|
 priv struct CountingViewEventHandler {
   mut dirty : Bool
-  mut force_count : Int
+  mut force_count : Int32
   seen : Array[String]
 }
 
@@ -406,7 +406,7 @@ extern "js" fn view_event_test_attribute(
 extern "js" fn view_event_test_attribute_write_count(
   element : @rdom.Element,
   name : String,
-) -> Int =
+) -> Int32 =
   #| (element, name) => element.attributeWriteCount?.get(name) ?? 0
 
 ///|
@@ -441,11 +441,11 @@ extern "js" fn view_event_test_reset_dom_metrics() -> Unit =
   #| }
 
 ///|
-extern "js" fn view_event_test_style_write_count() -> Int =
+extern "js" fn view_event_test_style_write_count() -> Int32 =
   #| () => globalThis.__moonbitViewerScrollMetrics?.styleWrites ?? 0
 
 ///|
-extern "js" fn view_event_test_view_layer_mutation_count() -> Int =
+extern "js" fn view_event_test_view_layer_mutation_count() -> Int32 =
   #| () => Object.values(globalThis.__moonbitViewerScrollMetrics?.viewLayer ?? {})
   #|   .reduce((total, value) => total + Number(value), 0)
 
@@ -457,10 +457,10 @@ extern "js" fn view_event_test_clear_dom_metrics() -> Unit =
 fn view_event_test_line_input(
   content : String,
   render_whitespace : @editor_api.RenderWhitespace,
-  space_width? : Double = 7.2,
-  middot_width? : Double = 7.2,
-  wsmiddot_width? : Double = 7.2,
-  use_monospace_optimizations? : Bool = true,
+  space_width~ : Double = 7.2,
+  middot_width~ : Double = 7.2,
+  wsmiddot_width~ : Double = 7.2,
+  use_monospace_optimizations~ : Bool = true,
 ) -> @view_layout.RenderLineInput {
   @view_layout.RenderLineInput::from_view_line(
     {
@@ -1295,7 +1295,7 @@ fn view_event_test_overlay_render_context(
   view_model : @view_model.ViewModel,
   layout : @view_layout.ViewLayout,
   view_lines : ViewLines,
-  cursor_column : Int,
+  cursor_column : Int32,
 ) -> (RenderingContext, RestrictedRenderingContext) {
   let selection = @core.Selection(
     Position(1, cursor_column),

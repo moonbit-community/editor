@@ -5,8 +5,8 @@
 ///|
 test "folding: contribution computes indent regions on model attach" {
   with_test_viewer("a\n  b\n  c\nd\n  e", viewer => {
-    guard viewer.folding_controller() is Some(controller)
-    guard controller.folding_model is Some(folding_model)
+    guard! viewer.folding_controller() is Some(controller)
+    guard! controller.folding_model is Some(folding_model)
     let regions = folding_model.regions()
     assert_eq(regions.length(), 2)
     assert_eq(regions.get_start_line_number(0), 1)
@@ -21,9 +21,9 @@ test "folding: toggling a region folds its lines out of the view axis" {
   with_test_viewer("a\n  b\n  c\nd\n  e", viewer => {
     let view_model = viewer.test_view_model()
     assert_eq(view_model.line_count(), 5)
-    guard viewer.folding_controller() is Some(controller)
-    guard controller.folding_model is Some(folding_model)
-    guard folding_model.get_region_at_line(1) is Some(region)
+    guard! viewer.folding_controller() is Some(controller)
+    guard! controller.folding_model is Some(folding_model)
+    guard! folding_model.get_region_at_line(1) is Some(region)
     folding_model.toggle_collapse_state([region])
     // Lines 2-3 fold away; the header and the second block stay.
     assert_eq(view_model.line_count(), 3)
@@ -57,7 +57,7 @@ test "folding: toggling a region folds its lines out of the view axis" {
     }
     assert_true(saw_collapsed)
     // Toggling back restores every line.
-    guard folding_model.get_region_at_line(1) is Some(region_again)
+    guard! folding_model.get_region_at_line(1) is Some(region_again)
     folding_model.toggle_collapse_state([region_again])
     assert_eq(view_model.line_count(), 5)
     assert_eq(view_model.get_hidden_areas().length(), 0)
@@ -74,7 +74,7 @@ test "folding: fold and unfold actions work off the selection" {
     assert_eq(view_model.line_count(), 2)
     // The caret was inside the fold; `onHiddenRangesChanges` snapped it to
     // the header line.
-    guard viewer.get_selection() is Some(selection)
+    guard! viewer.get_selection() is Some(selection)
     assert_eq(selection.start().line_number, 1)
     viewer.set_position(Position(1, 1))
     viewer.folding_unfold_action()
@@ -86,9 +86,9 @@ test "folding: fold and unfold actions work off the selection" {
 test "folding: disabling the option clears folds and detaches the model state" {
   with_test_viewer("a\n  b\n  c\nd", viewer => {
     let view_model = viewer.test_view_model()
-    guard viewer.folding_controller() is Some(controller)
-    guard controller.folding_model is Some(folding_model)
-    guard folding_model.get_region_at_line(1) is Some(region)
+    guard! viewer.folding_controller() is Some(controller)
+    guard! controller.folding_model is Some(folding_model)
+    guard! folding_model.get_region_at_line(1) is Some(region)
     folding_model.toggle_collapse_state([region])
     assert_eq(view_model.line_count(), 2)
     viewer.update_options(ViewerOptions(folding=false))

@@ -80,8 +80,8 @@ extern "js" fn pointer_monitor_test_dispatch(
   element : @rdom.Element,
   on_owning_window : Bool,
   event_type : String,
-  buttons : Int,
-  pointer_id : Int,
+  buttons : Int32,
+  pointer_id : Int32,
 ) -> Bool =
   #| (element, onOwningWindow, type, buttons, pointerId) => {
   #|   const target = onOwningWindow ? element.ownerDocument.defaultView : element;
@@ -106,7 +106,7 @@ extern "js" fn pointer_monitor_test_listener_count(
   element : @rdom.Element,
   on_owning_window : Bool,
   event_type : String,
-) -> Int =
+) -> Int32 =
   #| (element, onOwningWindow, type) => {
   #|   const target = onOwningWindow ? element.ownerDocument.defaultView : element;
   #|   return target.listenerCount(type);
@@ -115,19 +115,19 @@ extern "js" fn pointer_monitor_test_listener_count(
 ///|
 extern "js" fn pointer_monitor_test_global_listener_count(
   event_type : String,
-) -> Int =
+) -> Int32 =
   #| (type) => window.listenerCount(type)
 
 ///|
 extern "js" fn pointer_monitor_test_capture_calls(
   element : @rdom.Element,
-) -> Int =
+) -> Int32 =
   #| (element) => element.captureCalls
 
 ///|
 extern "js" fn pointer_monitor_test_release_calls(
   element : @rdom.Element,
-) -> Int =
+) -> Int32 =
   #| (element) => element.releaseCalls
 
 ///|

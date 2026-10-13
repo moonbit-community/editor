@@ -33,6 +33,12 @@ pub struct LineRangeMapping {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineRangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend LineRangeMapping with Debug::{to_repr}
+
+///|
 pub fn LineRangeMapping::LineRangeMapping(
   original_range : @base_common.LineRange,
   modified_range : @base_common.LineRange,
@@ -45,8 +51,8 @@ pub fn LineRangeMapping::LineRangeMapping(
 /// between the given (sorted) mappings.
 pub fn LineRangeMapping::inverse(
   mapping : Array[LineRangeMapping],
-  original_line_count : Int,
-  modified_line_count : Int,
+  original_line_count : Int32,
+  modified_line_count : Int32,
 ) -> Array[LineRangeMapping] {
   let result : Array[LineRangeMapping] = []
   let mut last_original_end_line_number = 1
@@ -83,6 +89,9 @@ pub impl Show for LineRangeMapping with fn output(self, logger) {
 }
 
 ///|
+pub extend LineRangeMapping with Show::{output}
+
+///|
 pub fn LineRangeMapping::flip(self : LineRangeMapping) -> LineRangeMapping {
   LineRangeMapping(self.modified, self.original)
 }
@@ -99,7 +108,7 @@ pub fn LineRangeMapping::join(
 }
 
 ///|
-pub fn LineRangeMapping::changed_line_count(self : LineRangeMapping) -> Int {
+pub fn LineRangeMapping::changed_line_count(self : LineRangeMapping) -> Int32 {
   self.original.length().max(self.modified.length())
 }
 
@@ -116,6 +125,12 @@ pub struct DetailedLineRangeMapping {
   /// represents the character-level diff in this line range.
   inner_changes : Array[RangeMapping]?
 } derive(Eq, Debug)
+
+///|
+pub extend DetailedLineRangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend DetailedLineRangeMapping with Debug::{to_repr}
 
 ///|
 pub fn DetailedLineRangeMapping::DetailedLineRangeMapping(
@@ -139,6 +154,9 @@ pub impl Show for DetailedLineRangeMapping with fn output(self, logger) {
 }
 
 ///|
+pub extend DetailedLineRangeMapping with Show::{output}
+
+///|
 pub fn DetailedLineRangeMapping::flip(
   self : DetailedLineRangeMapping,
 ) -> DetailedLineRangeMapping {
@@ -158,6 +176,12 @@ pub struct RangeMapping {
   /// The modified range.
   modified_range : @base_common.Range
 } derive(Eq, Debug)
+
+///|
+pub extend RangeMapping with Eq::{not_equal, equal}
+
+///|
+pub extend RangeMapping with Debug::{to_repr}
 
 ///|
 pub fn RangeMapping::RangeMapping(
@@ -180,6 +204,9 @@ pub fn RangeMapping::to_string(self : RangeMapping) -> String {
 pub impl Show for RangeMapping with fn output(self, logger) {
   logger.write_string(self.to_string())
 }
+
+///|
+pub extend RangeMapping with Show::{output}
 
 ///|
 pub fn RangeMapping::flip(self : RangeMapping) -> RangeMapping {

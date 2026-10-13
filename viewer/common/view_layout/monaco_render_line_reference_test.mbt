@@ -22,7 +22,7 @@ test "monaco lineDecorations normalizer reference suite" {
   let content = "abcabcabcabcabcabcabcabcabcabc"
   assert_segments(
     "Bug 9827",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 11, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -30,7 +30,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "issue #3462",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(15, 21, "mtkw"),
       LineDecoration(20, 21, "inline-folded"),
     ]),
@@ -38,7 +38,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts separate decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 2, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -46,7 +46,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts adjacent decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 3, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -54,7 +54,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts overlapping decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(3, 4, "c2"),
     ]),
@@ -62,7 +62,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts duplicated base decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(3, 4, "c2"),
@@ -71,7 +71,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts three duplicated base decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -81,7 +81,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts duplicated overlap decorations",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -92,7 +92,7 @@ test "monaco lineDecorations normalizer reference suite" {
   )
   assert_segments(
     "ViewLineParts overlap with longer tail",
-    LineDecorationsNormalizer::normalize(content, [
+    @view_layout.LineDecorationsNormalizer::normalize(content, [
       LineDecoration(1, 4, "c1"),
       LineDecoration(1, 4, "c1*"),
       LineDecoration(1, 4, "c1**"),
@@ -2011,19 +2011,19 @@ test "getColumnOfLinePartOffset 5 - twice indented line, tab size 4" {
 
 ///|
 fn segment(
-  start_offset : Int,
-  end_offset : Int,
+  start_offset : Int32,
+  end_offset : Int32,
   class_name : String,
-  metadata? : Int = 0,
-) -> DecorationSegment {
+  metadata~ : Int32 = 0,
+) -> @view_layout.DecorationSegment {
   { start_offset, end_offset, class_name, metadata, }
 }
 
 ///|
 fn assert_segments(
   name : String,
-  actual : Array[DecorationSegment],
-  expected : Array[DecorationSegment],
+  actual : Array[@view_layout.DecorationSegment],
+  expected : Array[@view_layout.DecorationSegment],
 ) -> Unit raise {
   guard actual == expected else {
     fail("Monaco lineDecorations port failed: \{name}")
@@ -2032,24 +2032,24 @@ fn assert_segments(
 
 ///|
 /// A token part `mtk<cls>` ending at `end_index` (Monaco's `createPart`).
-fn p(end_index : Int, cls : Int) -> LinePart {
+fn p(end_index : Int32, cls : Int32) -> @view_layout.LinePart {
   LinePart(end_index, "mtk" + cls.to_string())
 }
 
 ///|
 /// A line decoration (Monaco's `new LineDecoration`).
 fn dec(
-  start_column : Int,
-  end_column : Int,
+  start_column : Int32,
+  end_column : Int32,
   class_name : String,
-  decoration_type : InlineDecorationType,
-) -> LineDecoration {
+  decoration_type : @view_layout.InlineDecorationType,
+) -> @view_layout.LineDecoration {
   LineDecoration(start_column, end_column, class_name, decoration_type~)
 }
 
 ///|
 /// An on-line selection range (Monaco's `new OffsetRange`).
-fn sel(start : Int, end_exclusive : Int) -> @base_common.OffsetRange {
+fn sel(start : Int32, end_exclusive : Int32) -> @base_common.OffsetRange {
   OffsetRange(start, end_exclusive)
 }
 
@@ -2058,25 +2058,25 @@ fn sel(start : Int, end_exclusive : Int) -> @base_common.OffsetRange {
 /// of 10).
 fn monaco_input(
   content : String,
-  tokens : Array[LinePart],
-  line_decorations? : Array[LineDecoration] = [],
-  tab_size? : Int = 4,
-  contains_rtl? : Bool = false,
-  is_basic_ascii? : Bool = true,
-  continues_with_wrapped_line? : Bool = false,
-  use_monospace_optimizations? : Bool = false,
-  can_use_halfwidth_rightwards_arrow? : Bool = true,
-  faux_indent_length? : Int = 0,
-  stop_rendering_line_after? : Int = -1,
-  render_whitespace? : @editor_api.RenderWhitespace = None,
-  render_control_characters? : Bool = false,
-  font_ligatures? : Bool = false,
-  space_width? : Double = 10.0,
-  middot_width? : Double = 10.0,
-  wsmiddot_width? : Double = 10.0,
-  selections_on_line? : Array[@base_common.OffsetRange] = [],
-) -> RenderLineInput {
-  let data : ViewLineRenderingData = {
+  tokens : Array[@view_layout.LinePart],
+  line_decorations~ : Array[@view_layout.LineDecoration] = [],
+  tab_size~ : Int32 = 4,
+  contains_rtl~ : Bool = false,
+  is_basic_ascii~ : Bool = true,
+  continues_with_wrapped_line~ : Bool = false,
+  use_monospace_optimizations~ : Bool = false,
+  can_use_halfwidth_rightwards_arrow~ : Bool = true,
+  faux_indent_length~ : Int32 = 0,
+  stop_rendering_line_after~ : Int32 = -1,
+  render_whitespace~ : @editor_api.RenderWhitespace = None,
+  render_control_characters~ : Bool = false,
+  font_ligatures~ : Bool = false,
+  space_width~ : Double = 10.0,
+  middot_width~ : Double = 10.0,
+  wsmiddot_width~ : Double = 10.0,
+  selections_on_line~ : Array[@base_common.OffsetRange] = [],
+) -> @view_layout.RenderLineInput {
+  let data : @view_layout.ViewLineRenderingData = {
     min_column: 1,
     max_column: content.length() + 1,
     content,
@@ -2090,7 +2090,7 @@ fn monaco_input(
     text_direction: LTR,
     has_variable_fonts: false,
   }
-  RenderLineInput::from_view_line(
+  @view_layout.RenderLineInput::from_view_line(
     data,
     line_decorations~,
     use_monospace_optimizations~,
@@ -2111,25 +2111,25 @@ fn monaco_input(
 /// Renders one line with Monaco's test defaults (`renderViewLine`).
 fn mr(
   content : String,
-  tokens : Array[LinePart],
-  line_decorations? : Array[LineDecoration] = [],
-  tab_size? : Int = 4,
-  contains_rtl? : Bool = false,
-  is_basic_ascii? : Bool = true,
-  continues_with_wrapped_line? : Bool = false,
-  use_monospace_optimizations? : Bool = false,
-  can_use_halfwidth_rightwards_arrow? : Bool = true,
-  faux_indent_length? : Int = 0,
-  stop_rendering_line_after? : Int = -1,
-  render_whitespace? : @editor_api.RenderWhitespace = None,
-  render_control_characters? : Bool = false,
-  font_ligatures? : Bool = false,
-  space_width? : Double = 10.0,
-  middot_width? : Double = 10.0,
-  wsmiddot_width? : Double = 10.0,
-  selections_on_line? : Array[@base_common.OffsetRange] = [],
-) -> RenderLineOutput2 {
-  render_view_line2(
+  tokens : Array[@view_layout.LinePart],
+  line_decorations~ : Array[@view_layout.LineDecoration] = [],
+  tab_size~ : Int32 = 4,
+  contains_rtl~ : Bool = false,
+  is_basic_ascii~ : Bool = true,
+  continues_with_wrapped_line~ : Bool = false,
+  use_monospace_optimizations~ : Bool = false,
+  can_use_halfwidth_rightwards_arrow~ : Bool = true,
+  faux_indent_length~ : Int32 = 0,
+  stop_rendering_line_after~ : Int32 = -1,
+  render_whitespace~ : @editor_api.RenderWhitespace = None,
+  render_control_characters~ : Bool = false,
+  font_ligatures~ : Bool = false,
+  space_width~ : Double = 10.0,
+  middot_width~ : Double = 10.0,
+  wsmiddot_width~ : Double = 10.0,
+  selections_on_line~ : Array[@base_common.OffsetRange] = [],
+) -> @view_layout.RenderLineOutput2 {
+  @view_layout.render_view_line2(
     monaco_input(
       content,
       tokens,
@@ -2156,7 +2156,7 @@ fn mr(
 ///|
 /// Inner HTML with this package's `view-line-content` wrapper stripped, so it
 /// matches Monaco's inflated snapshot HTML.
-fn inner(out : RenderLineOutput2) -> String {
+fn inner(out : @view_layout.RenderLineOutput2) -> String {
   let wrapper = "<span class=\"view-line-content\">"
   out.html[wrapper.length():out.html.length() - "</span>".length()].to_owned()
 }
@@ -2164,7 +2164,7 @@ fn inner(out : RenderLineOutput2) -> String {
 ///|
 /// The inflated `CharacterMapping` in Monaco's compact
 /// `[partIndex,charIndex,visibleColumn]` form (the `*.1.snap` shape).
-fn cmap(out : RenderLineOutput2) -> String {
+fn cmap(out : @view_layout.RenderLineOutput2) -> String {
   let sb = StringBuilder()
   sb.write_string("[")
   for entry in out.character_mapping.entries {
@@ -2178,7 +2178,10 @@ fn cmap(out : RenderLineOutput2) -> String {
 
 ///|
 /// Asserts the inner HTML equals Monaco's inflated snapshot HTML.
-fn assert_html(out : RenderLineOutput2, expected : String) -> Unit raise {
+fn assert_html(
+  out : @view_layout.RenderLineOutput2,
+  expected : String,
+) -> Unit raise {
   guard inner(out) == expected else {
     fail("Monaco render html mismatch:\n got: \{inner(out)}\n exp: \{expected}")
   }
@@ -2186,7 +2189,10 @@ fn assert_html(out : RenderLineOutput2, expected : String) -> Unit raise {
 
 ///|
 /// Asserts the inflated mapping equals Monaco's snapshot and that it round-trips.
-fn assert_map(out : RenderLineOutput2, expected : String) -> Unit raise {
+fn assert_map(
+  out : @view_layout.RenderLineOutput2,
+  expected : String,
+) -> Unit raise {
   guard cmap(out) == expected else {
     fail(
       "Monaco render mapping mismatch:\n got: \{cmap(out)}\n exp: \{expected}",
@@ -2211,11 +2217,11 @@ fn assert_map(out : RenderLineOutput2, expected : String) -> Unit raise {
 
 ///|
 fn assert_get_column(
-  out : RenderLineOutput2,
-  part_index : Int,
-  part_length : Int,
-  char_index : Int,
-  expected_column : Int,
+  out : @view_layout.RenderLineOutput2,
+  part_index : Int32,
+  part_length : Int32,
+  char_index : Int32,
+  expected_column : Int32,
 ) -> Unit raise {
   let actual = out.character_mapping.get_column(
     { part_index, char_index, },

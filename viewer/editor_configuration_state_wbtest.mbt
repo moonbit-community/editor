@@ -1,6 +1,6 @@
 ///|
 fn test_configuration_state(
-  options? : ViewerOptions = ViewerOptions::default(),
+  options~ : ViewerOptions = ViewerOptions::default(),
 ) -> EditorConfigurationState {
   EditorConfigurationState(
     options,

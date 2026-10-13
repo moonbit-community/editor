@@ -12,6 +12,12 @@ pub(all) enum VerticalRevealType {
 } derive(Eq, Debug)
 
 ///|
+pub extend VerticalRevealType with Eq::{not_equal, equal}
+
+///|
+pub extend VerticalRevealType with Debug::{to_repr}
+
+///|
 /// The minimal `scroll_top` that brings the 1-based **view**-line range
 /// `[start_line, end_line]` into the viewport, aligned per `vertical_type`.
 /// A 1:1 port of Monaco's `ViewLines._computeScrollTopToRevealRange`
@@ -40,11 +46,11 @@ pub(all) enum VerticalRevealType {
 /// scroll range, mirroring Monaco's `validateScrollPosition` step.
 pub fn ViewLayout::compute_scroll_top_to_reveal_range(
   self : ViewLayout,
-  start_line : Int,
-  end_line : Int,
+  start_line : Int32,
+  end_line : Int32,
   vertical_type : VerticalRevealType,
-  source? : String = "",
-  minimal_reveal? : Bool = false,
+  source~ : String = "",
+  minimal_reveal~ : Bool = false,
 ) -> Double {
   // The source uses the future viewport so consecutive animated reveal
   // requests compose against their already-requested destination.
@@ -147,7 +153,7 @@ pub fn ViewLayout::compute_scroll_left_to_reveal(
   self : ViewLayout,
   ranges : Array[(Double, Double)],
   vertical_scrollbar_width~ : Double,
-  minimal_reveal? : Bool = false,
+  minimal_reveal~ : Bool = false,
 ) -> Double? {
   guard ranges.length() > 0 else { return None }
   let mut box_start_x = ranges[0].0.round()
@@ -189,8 +195,8 @@ fn compute_minimum_scrolling(
   viewport_end : Double,
   box_start : Double,
   box_end : Double,
-  reveal_at_start? : Bool = false,
-  reveal_at_end? : Bool = false,
+  reveal_at_start~ : Bool = false,
+  reveal_at_end~ : Bool = false,
 ) -> Double {
   let viewport_start = viewport_start.to_int().to_double()
   let viewport_end = viewport_end.to_int().to_double()

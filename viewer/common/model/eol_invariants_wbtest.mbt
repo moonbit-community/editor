@@ -137,10 +137,10 @@ test "fixed-LF construction corpus keeps one coherent coordinate system" {
 /// after normalized EOLs, line-start/range boundaries, and either half of a
 /// valid pair through the snapshot's offset slice.
 test "lone surrogate code units survive EOL and range boundaries" {
-  let d800 = Int::unsafe_to_char(0xD800).to_string()
-  let dbff = Int::unsafe_to_char(0xDBFF).to_string()
-  let dc00 = Int::unsafe_to_char(0xDC00).to_string()
-  let dfff = Int::unsafe_to_char(0xDFFF).to_string()
+  let d800 = Int32::unsafe_to_char(0xD800).to_string()
+  let dbff = Int32::unsafe_to_char(0xDBFF).to_string()
+  let dc00 = Int32::unsafe_to_char(0xDC00).to_string()
+  let dfff = Int32::unsafe_to_char(0xDFFF).to_string()
   for held in [d800, dbff, dc00, dfff] {
     let leading = TextSnapshot("\r" + held)
     eol_assert_same_code_units(leading.get_value(), "\n" + held)
@@ -162,8 +162,8 @@ test "lone surrogate code units survive EOL and range boundaries" {
     )
   }
   let pair = "\u{1F60A}"
-  let high = Int::unsafe_to_char(0xD83D).to_string()
-  let low = Int::unsafe_to_char(0xDE0A).to_string()
+  let high = Int32::unsafe_to_char(0xD83D).to_string()
+  let low = Int32::unsafe_to_char(0xDE0A).to_string()
   let pair_snapshot = TextSnapshot(pair)
   eol_assert_same_code_units(pair_snapshot.slice(OffsetRange(0, 1)), high)
   eol_assert_same_code_units(pair_snapshot.slice(OffsetRange(1, 2)), low)
@@ -233,8 +233,8 @@ test "metadata is derived from complete normalized text" {
 /// metadata from the complete stored value.
 test "held-unit ORACLE local adaptation preserves one unit and fresh metadata" {
   let bom = "\u{FEFF}"
-  let d800 = Int::unsafe_to_char(0xD800).to_string()
-  let dbff = Int::unsafe_to_char(0xDBFF).to_string()
+  let d800 = Int32::unsafe_to_char(0xD800).to_string()
+  let dbff = Int32::unsafe_to_char(0xDBFF).to_string()
   let bare_cr = TextSnapshot("\r")
   assert_eq(bare_cr.text, "\n")
   assert_eq(bare_cr.get_length(), 1)

@@ -12,26 +12,35 @@
 ///|
 /// A range of lines (1-based), `[start_line_number, end_line_number_exclusive)`.
 pub(all) struct LineRange {
-  start_line_number : Int
-  end_line_number_exclusive : Int
+  start_line_number : Int32
+  end_line_number_exclusive : Int32
 } derive(Eq, Debug)
 
 ///|
+pub extend LineRange with Eq::{not_equal, equal}
+
+///|
+pub extend LineRange with Debug::{to_repr}
+
+///|
 pub fn LineRange::LineRange(
-  start_line_number : Int,
-  end_line_number_exclusive : Int,
+  start_line_number : Int32,
+  end_line_number_exclusive : Int32,
 ) -> LineRange {
   { start_line_number, end_line_number_exclusive, }
 }
 
 ///|
-pub fn LineRange::of_length(start_line_number : Int, length : Int) -> LineRange {
+pub fn LineRange::of_length(
+  start_line_number : Int32,
+  length : Int32,
+) -> LineRange {
   LineRange(start_line_number, start_line_number + length)
 }
 
 ///|
 /// Indicates if this line range contains the given line number.
-pub fn LineRange::contains(self : LineRange, line_number : Int) -> Bool {
+pub fn LineRange::contains(self : LineRange, line_number : Int32) -> Bool {
   self.start_line_number <= line_number &&
   line_number < self.end_line_number_exclusive
 }
@@ -49,7 +58,7 @@ pub fn LineRange::is_empty(self : LineRange) -> Bool {
 }
 
 ///|
-pub fn LineRange::delta(self : LineRange, offset : Int) -> LineRange {
+pub fn LineRange::delta(self : LineRange, offset : Int32) -> LineRange {
   LineRange(
     self.start_line_number + offset,
     self.end_line_number_exclusive + offset,
@@ -58,7 +67,7 @@ pub fn LineRange::delta(self : LineRange, offset : Int) -> LineRange {
 
 ///|
 /// The number of lines this line range spans.
-pub fn LineRange::length(self : LineRange) -> Int {
+pub fn LineRange::length(self : LineRange) -> Int32 {
   self.end_line_number_exclusive - self.start_line_number
 }
 
@@ -141,7 +150,7 @@ pub struct LineRangeSet {
 ///|
 #alias(new, deprecated)
 pub fn LineRangeSet::LineRangeSet(
-  normalized_ranges? : Array[LineRange] = [],
+  normalized_ranges~ : Array[LineRange] = [],
 ) -> LineRangeSet {
   { normalized_ranges, }
 }
@@ -183,7 +192,7 @@ pub fn LineRangeSet::add_range(self : LineRangeSet, range : LineRange) -> Unit {
 }
 
 ///|
-pub fn LineRangeSet::contains(self : LineRangeSet, line_number : Int) -> Bool {
+pub fn LineRangeSet::contains(self : LineRangeSet, line_number : Int32) -> Bool {
   match
     find_last_monotonous(self.normalized_ranges[:], r => {
       r.start_line_number <= line_number
@@ -279,7 +288,7 @@ pub fn LineRangeSet::to_string(self : LineRangeSet) -> String {
 fn find_first_idx_monotonous_or_arr_len(
   array : ArrayView[LineRange],
   predicate : (LineRange) -> Bool,
-) -> Int {
+) -> Int32 {
   let mut i = 0
   let mut j = array.length()
   while i < j {
@@ -297,7 +306,7 @@ fn find_first_idx_monotonous_or_arr_len(
 fn find_last_idx_monotonous(
   array : ArrayView[LineRange],
   predicate : (LineRange) -> Bool,
-) -> Int {
+) -> Int32 {
   let mut i = 0
   let mut j = array.length()
   while i < j {
@@ -327,7 +336,7 @@ fn find_last_monotonous(
 ///|
 fn array_splice_insert(
   array : Array[LineRange],
-  index : Int,
+  index : Int32,
   item : LineRange,
 ) -> Unit {
   array.push(item)
@@ -342,8 +351,8 @@ fn array_splice_insert(
 ///|
 fn array_splice_replace(
   array : Array[LineRange],
-  start : Int,
-  delete_count : Int,
+  start : Int32,
+  delete_count : Int32,
   item : LineRange,
 ) -> Unit {
   let rest : Array[LineRange] = []

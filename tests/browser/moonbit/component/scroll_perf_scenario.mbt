@@ -109,7 +109,7 @@ fn run_scroll_perf_test() -> Unit {
 }
 
 ///|
-fn scroll_perf_mount_host(visible_lines : Int) -> @rdom.Element? {
+fn scroll_perf_mount_host(visible_lines : Int32) -> @rdom.Element? {
   match @rdom.document().query_selector("#app").to_option() {
     Some(app) => {
       let host = @rdom.document().create_element("div")
@@ -142,7 +142,7 @@ fn scroll_perf_source_text(wide : Bool) -> String {
 }
 
 ///|
-extern "js" fn scroll_perf_int_param(name : String, fallback : Int) -> Int =
+extern "js" fn scroll_perf_int_param(name : String, fallback : Int32) -> Int32 =
   #| (name, fallback) => {
   #|   const value = Number(new URLSearchParams(location.search).get(name));
   #|   return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
@@ -157,11 +157,11 @@ extern "js" fn install_scroll_perf_controls(
   set_scroll_position : (Double, Double) -> Unit,
   get_scroll_top : () -> Double,
   get_scroll_left : () -> Double,
-  get_public_scroll_events : () -> Int,
+  get_public_scroll_events : () -> Int32,
   replace_model : () -> Unit,
   detach_model : () -> Unit,
   dispose_viewer : () -> Unit,
-  set_selection : (Int) -> Unit,
+  set_selection : (Int32) -> Unit,
 ) -> Unit =
   #| (
   #|   setScrollPosition,

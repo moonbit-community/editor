@@ -17,7 +17,7 @@ priv struct LanguageFeatureEntry[T] {
 /// to reject a result from a registration disposed during the await.
 priv struct LanguageFeatureSnapshot[T] {
   entry : LanguageFeatureEntry[T]
-  provider_index : Int
+  provider_index : Int32
 }
 
 ///|
@@ -88,7 +88,7 @@ pub struct LanguageHandle {
   ]?
   priv hover_at_callback : async (
     @model.TextModel,
-    Int,
+    Int32,
     @language.CancellationToken,
   ) -> @language.Hover? noraise
 }
@@ -149,8 +149,8 @@ pub fn LanguageHandle::get_language_configuration(
 pub async fn LanguageHandle::hover_at(
   self : LanguageHandle,
   model : @model.TextModel,
-  offset : Int,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  offset : Int32,
+  token~ : @language.CancellationToken = @language.CancellationToken::none(),
 ) -> @language.Hover? noraise {
   (self.hover_at_callback)(model, offset, token)
 }
@@ -253,9 +253,9 @@ fn Languages::markdown_comment_provider_result_with_log_handle(
 pub async fn Languages::hover_at(
   self : Languages,
   model : @model.TextModel,
-  offset : Int,
+  offset : Int32,
   log_service : @log.LogService,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  token~ : @language.CancellationToken = @language.CancellationToken::none(),
 ) -> @language.Hover? noraise {
   self.hover_at_with_log_handle(model, offset, log_service.log_handle(), token~)
 }
@@ -264,9 +264,9 @@ pub async fn Languages::hover_at(
 async fn Languages::hover_at_with_log_handle(
   self : Languages,
   model : @model.TextModel,
-  offset : Int,
+  offset : Int32,
   log_service : @log.LogHandle,
-  token? : @language.CancellationToken = @language.CancellationToken::none(),
+  token~ : @language.CancellationToken = @language.CancellationToken::none(),
 ) -> @language.Hover? noraise {
   if token.is_cancellation_requested() {
     return None
@@ -340,7 +340,7 @@ fn log_provider_failure(
   log_service : @log.LogHandle,
   category : String,
   model : @model.TextModel,
-  index : Int,
+  index : Int32,
 ) -> Unit {
   log_service.warn(category, "provider failed", details=[
     ("model", model.uri.to_string()),

@@ -14,9 +14,10 @@ pub struct MoonbitTokenizer {
 }
 #alias(new, deprecated)
 pub fn MoonbitTokenizer::MoonbitTokenizer() -> Self
+pub fn MoonbitTokenizer::initial_state(Self) -> @syntax.TokenizerState
+pub fn MoonbitTokenizer::tokenize_line(Self, String, @syntax.TokenizerState) -> (Array[@syntax.LineToken], @syntax.TokenizerState)
 pub impl @syntax.LineTokenizer for MoonbitTokenizer
 
 // Type aliases
 
 // Traits
-

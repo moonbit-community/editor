@@ -152,10 +152,10 @@ fn DoubleResourceMap::values_by_owner(
 /// Live per-severity statistics, `MarkerStats` (`markerService.ts:80`). Subscribes
 /// to the service's change event and accumulates deltas per resource.
 struct MarkerStats {
-  mut errors : Int
-  mut warnings : Int
-  mut infos : Int
-  mut unknowns : Int
+  mut errors : Int32
+  mut warnings : Int32
+  mut infos : Int32
+  mut unknowns : Int32
   data : Map[String, MarkerStatistics]
   service : MarkerService
 }
@@ -578,7 +578,7 @@ pub fn MarkerService::change_all(
 ///|
 /// `_accept` (`markerService.ts:399`): no severities filter, or the marker's
 /// severity bit is present in the requested bitmask.
-fn MarkerService::accept(marker : Marker, severities : Int?) -> Bool {
+fn MarkerService::accept(marker : Marker, severities : Int32?) -> Bool {
   match severities {
     None => true
     Some(s) => (s & marker.severity.value()) == marker.severity.value()
@@ -639,7 +639,7 @@ pub fn MarkerService::clear_resource(
 pub fn MarkerService::markers_for_resource(
   self : MarkerService,
   resource : @base_common.Uri,
-  limit? : Int = 0,
+  limit~ : Int32 = 0,
 ) -> Array[Marker] {
   self.read(MarkerReadOptions(resource~, take=limit))
 }

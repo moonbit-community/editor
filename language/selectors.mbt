@@ -7,12 +7,18 @@ pub struct LanguageFilter {
 } derive(Debug)
 
 ///|
+pub extend LanguageFilter with Debug::{to_repr}
+
+///|
 /// Monaco-shaped language selector used during provider dispatch.
 pub(all) enum LanguageSelector {
   LanguageId(String)
   LanguageFilter(LanguageFilter)
   LanguageSelectorList(Array[LanguageSelector])
 } derive(Debug)
+
+///|
+pub extend LanguageSelector with Debug::{to_repr}
 
 ///|
 /// Builds a selector filter with optional fields.
